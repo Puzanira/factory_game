@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cffef0b057c8a46519d04c8091fccdc8, type: 3}
+  m_Name: PrefabLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::LastShift.Data.PrefabLibrary
+  engineer: {fileID: 8511646190896783966, guid: d1442866563e24142a8a85beeff2c887, type: 3}
+  doorMachine: {fileID: 2816718459346719977, guid: 47c644eb5965a49ea804f57ce97d1c5d, type: 3}
+  conveyorMachine: {fileID: 8296147972117347021, guid: facd88b3bf15f4d5f9310eed84d685fa, type: 3}
+  roboticArmMachine: {fileID: 2865331216110584102, guid: 69526dd73d0ef452bae2ba51de042a15, type: 3}
+  mobileUnitMachine: {fileID: 5241811940789185931, guid: 6f6110678b0964866a6ed67a04411711, type: 3}
+  droneMachine: {fileID: 7891918176609822762, guid: a186d16fa92b94ecebbd2c730b50ab29, type: 3}
+  alarmMachine: {fileID: 8428755141216719543, guid: d9c7a797db7c94f1d8ea982bb11d4c84, type: 3}
+  hazardEmitterMachine: {fileID: 2137317044494298483, guid: 9078b3c7223034e25953ae2e51d3dad9, type: 3}
+  steamHazard: {fileID: 3392764421905945031, guid: e0a1acb0f84a3460caeff7ccc2fb6f76, type: 3}
+  coldHazard: {fileID: 3450890207980835855, guid: cfd450dca527845c9826098949dec6d3, type: 3}
+  slipperyFloor: {fileID: 3906947598942727046, guid: ad917df2c5ced4544b7bdec6b9c9a69b, type: 3}
+  dangerZone: {fileID: 6614440440213269020, guid: 30f609569d23c4dc893fa9ae8b933fc9, type: 3}
+  repairObjective: {fileID: 5449526534707499308, guid: 0f005a82d72fe4fd3b9499ca724a0b6c, type: 3}
+  exitDoor: {fileID: 6360839714427448535, guid: 0a8b0684c89e941f7afb9ca23af82ab0, type: 3}
+  uiRoot: {fileID: 5806319120408317473, guid: 12f36d88b5b1a40328ef14fbaaa90670, type: 3}

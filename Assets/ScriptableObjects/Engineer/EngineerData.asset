@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c381cf95d294f4ea098bfb62277ea983, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LastShift.Data.EngineerData
+  moveSpeed: 2.25
+  panicMoveSpeed: 2.8
+  retreatMoveSpeed: 3
+  stressMax: 100
+  stressDecayPerSec: 3.5
+  panicEnterThreshold: 70
+  panicExitThreshold: 30
+  resolveMax: 100
+  resolveLossMultiplier: 1
+  lossArmGrab: 7
+  lossHazardEnter: 10
+  lossNoPath: 7
+  lossRouteBlocked: 6
+  lossObjectiveDamaged: 12
+  lossEscalation: 22
+  lossAlarmPerSec: 1.1
+  lossDronePerSec: 1.4
+  repeatEffectWindow: 5
+  dangerWeight: 3
+  noPathGraceSeconds: 4
+  repairRange: 1.15
+  defaultStunDuration: 1.6

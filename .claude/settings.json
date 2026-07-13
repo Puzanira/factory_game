@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity\" -batchmode -projectPath /Users/reb/factory_game -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -logFile /private/tmp/claude-501/-Users-reb-factory-game/f7a31455-c93b-4820-96bc-c6b21a7ffb20/scratchpad/smoke_v2.log)",
+      "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -projectPath /Users/reb/factory_game -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -smokeScene Level_02_PackagingLine -logFile /private/tmp/claude-501/-Users-reb-factory-game/f7a31455-c93b-4820-96bc-c6b21a7ffb20/scratchpad/smoke_l2.log)",
+      "Bash(echo \"L2_EXIT=$?\")",
+      "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -projectPath /Users/reb/factory_game -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -smokeScene Level_03_ColdStorage -logFile /private/tmp/claude-501/-Users-reb-factory-game/f7a31455-c93b-4820-96bc-c6b21a7ffb20/scratchpad/smoke_l3.log)",
+      "Bash(echo \"L3_EXIT=$?\")",
+      "Bash(tar -czf /private/tmp/claude-501/-Users-reb-factory-game/f7a31455-c93b-4820-96bc-c6b21a7ffb20/scratchpad/backup_pass2.tar.gz Assets ProjectSettings)",
+      "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -quit -projectPath /Users/reb/factory_game -executeMethod LastShift.EditorTools.ProjectBuilder.BuildAll -logFile /private/tmp/claude-501/-Users-reb-factory-game/f7a31455-c93b-4820-96bc-c6b21a7ffb20/scratchpad/build_v3.log)",
+      "Bash(echo \"BUILD_EXIT=$?\")",
+      "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -projectPath /Users/reb/factory_game -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -logFile /private/tmp/claude-501/-Users-reb-factory-game/f7a31455-c93b-4820-96bc-c6b21a7ffb20/scratchpad/smoke_v3.log)",
+      "Bash(echo \"SMOKE_EXIT=$?\")",
+      "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -projectPath /Users/reb/factory_game -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -smokeScene Level_03_ColdStorage -smokeFinal -logFile /private/tmp/claude-501/-Users-reb-factory-game/f7a31455-c93b-4820-96bc-c6b21a7ffb20/scratchpad/smoke_final.log)",
+      "Bash(echo \"FINAL_EXIT=$?\")",
+      "Bash(ls /Applications/Unity/Hub/Editor/ 2>/dev/null; cat /Users/reb/factory_game/ProjectSettings/ProjectVersion.txt)",
+      "Read(//Applications/Unity/Hub/Editor/**)",
+      "Bash(ls /Users/reb/factory_game/Temp/UnityLockfile 2>/dev/null && echo \"LOCKED\" || echo \"not locked\"; ls \"/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity\" 2>/dev/null; pgrep -fl \"Unity\" | head -5)",
+      "Read(//Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/**)",
+      "Bash(\"/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity\" -batchmode -quit -projectPath /Users/reb/factory_game -executeMethod LastShift.EditorTools.AudioProjectBuilder.BuildAudio -logFile /private/tmp/claude-501/-Users-reb-factory-game/5d135aa4-2732-4dfb-b1d2-311671ea29d1/scratchpad/audio_build.log)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(echo \"LSOF_EXIT=$?\")",
+      "Bash(ps -o pid,etime,ppid,stat,command -p 56915)",
+      "Read(//Users/reb/Library/Logs/Unity/**)",
+      "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -quit -projectPath /Users/reb/factory_game -executeMethod LastShift.EditorTools.AudioProjectBuilder.BuildAudio -logFile /private/tmp/claude-501/-Users-reb-factory-game/5d135aa4-2732-4dfb-b1d2-311671ea29d1/scratchpad/audio_build2.log)",
+      "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -quit -projectPath /Users/reb/factory_game -executeMethod LastShift.EditorTools.AudioProjectBuilder.ValidateAudio -logFile /private/tmp/claude-501/-Users-reb-factory-game/5d135aa4-2732-4dfb-b1d2-311671ea29d1/scratchpad/audio_validate.log)",
+      "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -quit -projectPath /Users/reb/factory_game -executeMethod LastShift.EditorTools.AudioProjectBuilder.BuildAudio -logFile /private/tmp/claude-501/-Users-reb-factory-game/5d135aa4-2732-4dfb-b1d2-311671ea29d1/scratchpad/audio_build3.log)",
+      "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -quit -projectPath /Users/reb/factory_game -executeMethod LastShift.EditorTools.AudioProjectBuilder.ValidateAudio -logFile /private/tmp/claude-501/-Users-reb-factory-game/5d135aa4-2732-4dfb-b1d2-311671ea29d1/scratchpad/audio_validate2.log)",
+      "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -projectPath /Users/reb/factory_game -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -logFile /private/tmp/claude-501/-Users-reb-factory-game/5d135aa4-2732-4dfb-b1d2-311671ea29d1/scratchpad/smoke1.log)",
+      "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -projectPath /Users/reb/factory_game -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -smokeScene Level_03_ColdStorage -smokeFinal -logFile /private/tmp/claude-501/-Users-reb-factory-game/5d135aa4-2732-4dfb-b1d2-311671ea29d1/scratchpad/smoke_final3.log)",
+      "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -projectPath /Users/reb/factory_game -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -smokeScene Level_02_PackagingLine -logFile /private/tmp/claude-501/-Users-reb-factory-game/5d135aa4-2732-4dfb-b1d2-311671ea29d1/scratchpad/smoke_l2.log)",
+      "Bash(awk '{print $5, $9}')",
+      "Bash(xxd -l 44 terminal_confirm.wav)",
+      "Bash(awk '{print $2, $10, $11}')",
+      "Bash(kill 59214)",
+      "Bash(kill -9 59214)",
+      "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -projectPath /Users/reb/factory_game -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -smokeScene Level_02_PackagingLine -logFile /private/tmp/claude-501/-Users-reb-factory-game/5d135aa4-2732-4dfb-b1d2-311671ea29d1/scratchpad/smoke_l2b.log)"
+    ]
+  }
+}

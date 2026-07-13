@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ce1f542faae654287b09af42ab45b2d1, type: 3}
+  m_Name: Level_02_PackagingLine
+  m_EditorClassIdentifier: Assembly-CSharp::LastShift.Data.LevelData
+  levelIndex: 1
+  roomName: "\u0423\u041F\u0410\u041A\u041E\u0412\u041E\u0427\u041D\u0410\u042F \u041B\u0418\u041D\u0418\u042F"
+  sceneName: Level_02_PackagingLine
+  nextSceneName: Level_03_ColdStorage
+  finalLevel: 0
+  engineerData: {fileID: 11400000, guid: d3e21d272cfdc490395181ebafc4adca, type: 2}
+  escalationData: {fileID: 11400000, guid: f417a5b416ce942c29f258618852844a, type: 2}
+  maxPressure: 100

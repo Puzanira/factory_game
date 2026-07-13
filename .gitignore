@@ -1,0 +1,39 @@
+# Unity — генерируемые папки (восстанавливаются при открытии проекта)
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Bb]uild/
+/[Bb]uilds/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+
+# Файлы решений/проектов C# — Unity пересоздаёт их из скриптов
+*.csproj
+*.sln
+*.slnx
+*.user
+*.pidb
+*.booproj
+*.svd
+*.mdb
+*.opendb
+*.VC.db
+
+# IDE
+/.vscode/
+/.idea/
+/.vs/
+
+# macOS
+.DS_Store
+
+# Крэш-репорты Unity
+sysinfo.txt
+*.stackdump
+crashlytics-build.properties
+
+# Лог генератора проекта (только дописывается, шумит в диффах)
+Assets/Documentation/BuildLog.txt
+Assets/Documentation/BuildLog.txt.meta

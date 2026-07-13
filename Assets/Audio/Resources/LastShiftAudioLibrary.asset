@@ -1,0 +1,124 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d017b919308f74ce7a5b843c7d737147, type: 3}
+  m_Name: LastShiftAudioLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::LastShift.Audio.AudioLibrary
+  clips:
+  - clipName: terminal_move
+    clip: {fileID: 8300000, guid: f5301d8fe0eff4e6091868b351214112, type: 3}
+  - clipName: terminal_confirm
+    clip: {fileID: 8300000, guid: cfda26df325ca4cb2a806498b31d9f90, type: 3}
+  - clipName: terminal_denied
+    clip: {fileID: 8300000, guid: 8803306d3597040129d221dc4c551214, type: 3}
+  - clipName: terminal_cooldown
+    clip: {fileID: 8300000, guid: 4ce5fb473694f4ff4baa82e665ac0a10, type: 3}
+  - clipName: terminal_ready
+    clip: {fileID: 8300000, guid: 08ba218fc6bc843c3a387de12a255e75, type: 3}
+  - clipName: ui_pause_move
+    clip: {fileID: 8300000, guid: 4e8581e404e234ebd804545d39d92dcc, type: 3}
+  - clipName: ui_pause_confirm
+    clip: {fileID: 8300000, guid: 327a12e2fc10d461e8f1ccb233915408, type: 3}
+  - clipName: intro_page
+    clip: {fileID: 8300000, guid: a3ea9092aad954db28be1775cc792a96, type: 3}
+  - clipName: relay_click
+    clip: {fileID: 8300000, guid: 209a4afdafa9549a38bb386f0fbb4d1e, type: 3}
+  - clipName: valve_click
+    clip: {fileID: 8300000, guid: 04ba8f6a250da4b9c8aef846034901fa, type: 3}
+  - clipName: door_open
+    clip: {fileID: 8300000, guid: 7fe0887b85bfe425694956655a27354d, type: 3}
+  - clipName: door_close
+    clip: {fileID: 8300000, guid: abca23cb73dbb42dea89752aaa2f8d8b, type: 3}
+  - clipName: door_warn
+    clip: {fileID: 8300000, guid: ec064995ff5664ebd8af65334bed18cd, type: 3}
+  - clipName: conveyor_loop
+    clip: {fileID: 8300000, guid: cdf05c788696c45a7bfd9edd11eb6341, type: 3}
+  - clipName: conveyor_reverse
+    clip: {fileID: 8300000, guid: 32e9904eb1edd4930a245922cc3e92d8, type: 3}
+  - clipName: arm_windup
+    clip: {fileID: 8300000, guid: e7f40c5713fb74092bee2627352d36af, type: 3}
+  - clipName: arm_strike
+    clip: {fileID: 8300000, guid: 4d7afcae90aa24dd49a784f7d8c6c6e1, type: 3}
+  - clipName: press_slam
+    clip: {fileID: 8300000, guid: 6d8cae145ea96484faf077e6513754f1, type: 3}
+  - clipName: arm_hit
+    clip: {fileID: 8300000, guid: 5fe7e8047d5694d1bb2fa657676dd464, type: 3}
+  - clipName: servo_soft
+    clip: {fileID: 8300000, guid: 083e335e36b944ea09e7a5617f34ce6f, type: 3}
+  - clipName: forklift_start
+    clip: {fileID: 8300000, guid: 6cfa0dc85b5d1479bb7c2b43457423b2, type: 3}
+  - clipName: forklift_loop
+    clip: {fileID: 8300000, guid: c6550ca1610fb467ca118f5aa0b98dcc, type: 3}
+  - clipName: forklift_beep
+    clip: {fileID: 8300000, guid: 19fddbea1ff6d43a8901ee4d1b28f54e, type: 3}
+  - clipName: forklift_bump
+    clip: {fileID: 8300000, guid: d2e0b89ed16e04a7d984301d5ab8511c, type: 3}
+  - clipName: forklift_brake
+    clip: {fileID: 8300000, guid: 9a34b3594ee5b47f6b8bfdceef1aa463, type: 3}
+  - clipName: drone_loop
+    clip: {fileID: 8300000, guid: cfac9a23a2730495f9d8ad258f060f99, type: 3}
+  - clipName: drone_scan
+    clip: {fileID: 8300000, guid: 607bbb718d81a450e9fd00a298c5fd50, type: 3}
+  - clipName: drone_alert
+    clip: {fileID: 8300000, guid: 55c768d9c3b524202ab43664a666045d, type: 3}
+  - clipName: alarm_loop
+    clip: {fileID: 8300000, guid: ed86e6ede0cf1415b888ada2591be379, type: 3}
+  - clipName: scanner_loop
+    clip: {fileID: 8300000, guid: 725ebf7c540e84a5eb2048762af87dc0, type: 3}
+  - clipName: escalation_start
+    clip: {fileID: 8300000, guid: 8a7390021956a4320b4aa379e031e014, type: 3}
+  - clipName: escalation_loop
+    clip: {fileID: 8300000, guid: 2003dc3ed823f4d28b763baf05c1268d, type: 3}
+  - clipName: tension_loop
+    clip: {fileID: 8300000, guid: 168257d482cc14003a8bfc1ecbf8ffa6, type: 3}
+  - clipName: steam_loop
+    clip: {fileID: 8300000, guid: 60baffafa8a184a2cbc1cc9e926a0b9c, type: 3}
+  - clipName: steam_burst
+    clip: {fileID: 8300000, guid: 677f9415b46074149adf515a42ad62d2, type: 3}
+  - clipName: cold_fan_loop
+    clip: {fileID: 8300000, guid: 4bd14bcee1cd841a6a2f3931020593b7, type: 3}
+  - clipName: spray_splash
+    clip: {fileID: 8300000, guid: 069c5e0fe88fd45e89b7a4066315bc9a, type: 3}
+  - clipName: slip_wet
+    clip: {fileID: 8300000, guid: 9fed40f1b64df45d182671dde936840d, type: 3}
+  - clipName: ice_crackle
+    clip: {fileID: 8300000, guid: 2a26d298d7f1a4bcbbb174d33248cbf6, type: 3}
+  - clipName: spark_crackle
+    clip: {fileID: 8300000, guid: 79946278c9b9348b1bd84a01b862cf25, type: 3}
+  - clipName: footstep
+    clip: {fileID: 8300000, guid: 8ea03a7c44c0b48fb8969fd0f09b2aae, type: 3}
+  - clipName: engineer_repair
+    clip: {fileID: 8300000, guid: 1354b8f6dafb0498ba4475c66a2c5098, type: 3}
+  - clipName: engineer_panic
+    clip: {fileID: 8300000, guid: 9ad220dfdf2d241cda56e2608581c788, type: 3}
+  - clipName: stun_zap
+    clip: {fileID: 8300000, guid: db7b2467eb10d4c01ac9fce7f2311602, type: 3}
+  - clipName: repair_done
+    clip: {fileID: 8300000, guid: 76140fbc7cbbf4d18b1b4bc2c95c2769, type: 3}
+  - clipName: blocked_thud
+    clip: {fileID: 8300000, guid: c1df86ee1a8994baebbc16991ffbdd94, type: 3}
+  - clipName: ambient_l1_loop
+    clip: {fileID: 8300000, guid: 20195fb75313d464399e1ffdf26866fa, type: 3}
+  - clipName: ambient_l2_loop
+    clip: {fileID: 8300000, guid: f00101a48cd804e62b38a83c3f82d6de, type: 3}
+  - clipName: ambient_l3_loop
+    clip: {fileID: 8300000, guid: b04c36ecf99394f2893ae1853ac3c053, type: 3}
+  - clipName: music_drone_loop
+    clip: {fileID: 8300000, guid: 5bb9ee91cbe9942acbf40286ed505ae1, type: 3}
+  - clipName: intro_drone_loop
+    clip: {fileID: 8300000, guid: 1505ec7b42b6e46f38d6d2b3a6d4aa0c, type: 3}
+  - clipName: factory_victory
+    clip: {fileID: 8300000, guid: 06dd2b81ee84e4bbdb1270746ca59f5e, type: 3}
+  - clipName: room_won
+    clip: {fileID: 8300000, guid: bed4aadd24983423ead99bd057eccfae, type: 3}
+  - clipName: factory_defeat
+    clip: {fileID: 8300000, guid: ce70f64a07331427a827da2656eafabd, type: 3}
+  mixer: {fileID: 24100000, guid: d288ad1581e4548f1b243c0a5b0c4ef8, type: 2}

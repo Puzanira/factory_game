@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(osascript -e 'tell application id \"com.unity3d.UnityEditor5.x\" to quit')",
+      "Bash(osascript -e 'tell application \"Unity\" to quit')",
+      "Bash(\"/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity\" -batchmode -projectPath /Users/reb/factory_game -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -logFile /private/tmp/claude-501/-Users-reb-factory-game/f7a31455-c93b-4820-96bc-c6b21a7ffb20/scratchpad/smoke2.log)",
+      "Bash(echo \"EXIT_CODE=$?\")",
+      "Bash(nohup \"/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity\" -projectPath /Users/reb/factory_game)",
+      "Bash(disown)",
+      "Bash(tar -czf /private/tmp/claude-501/-Users-reb-factory-game/f7a31455-c93b-4820-96bc-c6b21a7ffb20/scratchpad/backup_working_slice.tar.gz Assets ProjectSettings)",
+      "Bash(python3 -)"
+    ]
+  }
+}
