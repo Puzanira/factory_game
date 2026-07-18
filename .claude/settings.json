@@ -55,7 +55,19 @@
       "Bash('/Applications/Arduino IDE.app/Contents/Resources/app/lib/backend/resources/arduino-cli' upload -p /dev/cu.usbserial-110 --fqbn arduino:avr:nano /private/tmp/claude-501/-Users-reb-Documents-GitHub-factory-game/ea8c9481-8acb-43cf-9f65-970bf3cf274e/scratchpad/sketch_game_jul15a)",
       "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -projectPath /Users/reb/Documents/GitHub/factory_game -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -logFile /private/tmp/claude-501/-Users-reb-Documents-GitHub-factory-game/ea8c9481-8acb-43cf-9f65-970bf3cf274e/scratchpad/smoke.log)",
       "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -projectPath /Users/reb/Documents/GitHub/factory_game -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -smokeScene Level_03_ColdStorage -smokeFinal -logFile /private/tmp/claude-501/-Users-reb-Documents-GitHub-factory-game/ea8c9481-8acb-43cf-9f65-970bf3cf274e/scratchpad/smoke_final.log)",
-      "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -projectPath /Users/reb/Documents/GitHub/factory_game -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -logFile /private/tmp/claude-501/-Users-reb-Documents-GitHub-factory-game/ea8c9481-8acb-43cf-9f65-970bf3cf274e/scratchpad/smoke2.log)"
+      "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -projectPath /Users/reb/Documents/GitHub/factory_game -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -logFile /private/tmp/claude-501/-Users-reb-Documents-GitHub-factory-game/ea8c9481-8acb-43cf-9f65-970bf3cf274e/scratchpad/smoke2.log)",
+      "Bash(echo \"exit:$?\")",
+      "Bash(echo \"loc-refs:$?\")",
+      "Bash(echo \"bindings:$?\")",
+      "Bash(echo \"keys:$?\")",
+      "Bash(pgrep -fl Unity | grep -vi grep | head; echo \"---\"; ls /Users/reb/Documents/GitHub/factory_game/Temp/UnityLockfile 2>/dev/null; ls /Applications/ | grep -i unity; ls \"/Applications/Unity/Hub/Editor/\" 2>/dev/null)",
+      "Bash(echo \"done:$?\")",
+      "Bash(rsync -a --delete /Users/reb/Documents/GitHub/factory_game/Assets /Users/reb/Documents/GitHub/factory_game/Packages /Users/reb/Documents/GitHub/factory_game/ProjectSettings /Users/reb/Documents/GitHub/factory_game/Library /Users/reb/Documents/GitHub/factory_game/UserSettings /private/tmp/claude-501/-Users-reb-Documents-GitHub-factory-game/f607afa9-b65d-46a1-b9d0-e1cdc3553097/scratchpad/smoke_project/)",
+      "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -projectPath /private/tmp/claude-501/-Users-reb-Documents-GitHub-factory-game/f607afa9-b65d-46a1-b9d0-e1cdc3553097/scratchpad/smoke_project -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -smokeScene Level_02_PackagingLine -smokeDefeat -logFile /private/tmp/claude-501/-Users-reb-Documents-GitHub-factory-game/f607afa9-b65d-46a1-b9d0-e1cdc3553097/scratchpad/smoke_defeat.log)",
+      "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -projectPath /private/tmp/claude-501/-Users-reb-Documents-GitHub-factory-game/f607afa9-b65d-46a1-b9d0-e1cdc3553097/scratchpad/smoke_project -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -smokeScene Level_03_ColdStorage -smokeFinal -logFile /private/tmp/claude-501/-Users-reb-Documents-GitHub-factory-game/f607afa9-b65d-46a1-b9d0-e1cdc3553097/scratchpad/smoke_final.log)",
+      "Bash(echo \"stale:$?\")",
+      "Bash(echo \"qr-text:$?\")",
+      "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -projectPath /private/tmp/claude-501/-Users-reb-Documents-GitHub-factory-game/f607afa9-b65d-46a1-b9d0-e1cdc3553097/scratchpad/smoke_project -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -logFile /private/tmp/claude-501/-Users-reb-Documents-GitHub-factory-game/f607afa9-b65d-46a1-b9d0-e1cdc3553097/scratchpad/smoke_boot.log)"
     ]
   }
 }

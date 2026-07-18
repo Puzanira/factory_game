@@ -10,8 +10,8 @@ namespace LastShift.Core
 {
     /// <summary>
     /// Per-room orchestrator: builds the room and UI, spawns the engineer, tracks the
-    /// objective sequence, routes global keyboard input (Esc/R/Enter/Q), and handles
-    /// room completion / failure / scene flow.
+    /// objective sequence, routes the shared logical input (Up/Down/Enter + Esc), and
+    /// handles room completion / failure / scene flow.
     /// </summary>
     public class LevelManager : MonoBehaviour
     {
@@ -242,35 +242,14 @@ namespace LastShift.Core
         {
             if (roomComplete)
             {
-                if (levelData.finalLevel)
-                {
-                    // Final «ЗАВОД ПОБЕДИЛ» menu: Up/Down select, Enter confirms, Esc jumps to quit.
-                    if (GameInput.UpPressed) endPanel.MoveSelection(-1);
-                    if (GameInput.DownPressed) endPanel.MoveSelection(+1);
-                    if (GameInput.EscapePressed) endPanel.SelectQuit();
-                    if (GameInput.ConfirmPressed)
-                    {
-                        UiSfx.Confirm();
-                        switch (endPanel.SelectedIndex)
-                        {
-                            case 1: SceneLoader.Load(GameManager.Level1Scene); break;
-                            case 2: SceneLoader.Quit(); break;
-                            default: SceneLoader.Load(GameManager.BootScene); break;
-                        }
-                    }
-                }
-                else
-                {
-                    if (GameInput.ConfirmPressed) { UiSfx.Confirm(); SceneLoader.Load(levelData.nextSceneName); }
-                }
+                if (levelData.finalLevel) HandleEndMenu();
+                else if (GameInput.ConfirmPressed) { UiSfx.Confirm(); SceneLoader.Load(levelData.nextSceneName); }
                 return;
             }
 
             if (roomFailed)
             {
-                // Defeat screen: Enter retries the room (quit stays available
-                // through the pause menu after the restart).
-                if (GameInput.ConfirmPressed) { UiSfx.Confirm(); SceneLoader.Reload(); }
+                HandleEndMenu();
                 return;
             }
 
@@ -305,6 +284,25 @@ namespace LastShift.Core
 
             // Editor-only fast-forward; does nothing in released builds.
             Time.timeScale = GameInput.SpeedHeld ? 3f : 1f;
+        }
+
+        /// <summary>
+        /// Shared «ПОВТОРИТЬ ЦЕХ» / «ВЫЙТИ ИЗ ИГРЫ» menu on the defeat and final
+        /// victory screens: Up/Down select (wrapping), Enter confirms, Esc jumps
+        /// to quit. Restart always reloads the *current* room.
+        /// </summary>
+        void HandleEndMenu()
+        {
+            if (endPanel == null || !endPanel.HasMenu) return;
+            if (GameInput.UpPressed) endPanel.MoveSelection(-1);
+            if (GameInput.DownPressed) endPanel.MoveSelection(+1);
+            if (GameInput.EscapePressed) endPanel.SelectQuit();
+            if (GameInput.ConfirmPressed)
+            {
+                UiSfx.Confirm();
+                if (endPanel.SelectedIndex == EndRoomPanel.OptionQuit) SceneLoader.Quit();
+                else SceneLoader.Reload();
+            }
         }
 
         void SetPaused(bool value)

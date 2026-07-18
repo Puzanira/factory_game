@@ -1,11 +1,19 @@
 # LAST SHIFT / ПОСЛЕДНЯЯ СМЕНА — Vertical Slice
 
+> **Pass 7 (2026-07-18): unified restart/quit menu.** The defeat screen
+> «ЦЕХ СТАБИЛИЗИРОВАН» and the final «ЗАВОД ПОБЕДИЛ» screen now show the same
+> two-option terminal menu — **«ПОВТОРИТЬ ЦЕХ» / «ВЫЙТИ ИЗ ИГРЫ»** — below the
+> result text, driven by the shared Up/Down/Enter logical actions (keyboard and
+> Arduino). «ПОВТОРИТЬ ЦЕХ» always reloads the *current* room; the pause-menu
+> restart entry was renamed to «ПОВТОРИТЬ ЦЕХ». The old final-screen options
+> «НАЧАТЬ ЗАНОВО» / «ВЕРНУТЬСЯ К ПЕРВОМУ ЦЕХУ» and the Enter-to-retry defeat
+> prompt were removed. **Клавиши Q и R не используются.**
+
 > **Pass 6 (2026-07-18): input simplified to three actions.** The whole game is now
 > driven by exactly NavigatePrevious / NavigateNext / Submit (keyboard Up / Down /
 > Enter; Arduino joystick + two buttons), plus Escape for pause/back.
 > **Потенциометр, а также клавиши Q и R удалены из схемы управления.**
-> The defeat screen retries with Enter; restart/quit live only in the pause and
-> end-screen menus. An outdated Arduino sketch still sending POT messages is safely
+> An outdated Arduino sketch still sending POT messages is safely
 > ignored (one console warning). See «УПРАВЛЕНИЕ» below.
 
 > **Pass 5 (2026-07-18): Arduino controller input.** The game now *additionally* accepts
@@ -55,8 +63,8 @@ When he evacuates the third room alive, the vertical slice is complete —
 > **Pass 3 (2026-07-12):** Boot flow is now **Title Card «ПОСЛЕДНЯЯ СМЕНА» → 4-page
 > Russian intro briefing → Level 1** (Enter advances pages, Esc opens «ПРОПУСТИТЬ
 > ИНСТРУКТАЖ?», all keyboard-only, shown on every new game). The final Level-3 screen
-> is now **«ЗАВОД ПОБЕДИЛ»** with a Up/Down/Enter menu («НАЧАТЬ ЗАНОВО / ВЕРНУТЬСЯ К
-> ПЕРВОМУ ЦЕХУ / ВЫЙТИ ИЗ ИГРЫ») and a red-to-green calm-down light transition.
+> is now **«ЗАВОД ПОБЕДИЛ»** with a Up/Down/Enter menu (since Pass 7:
+> «ПОВТОРИТЬ ЦЕХ / ВЫЙТИ ИЗ ИГРЫ») and a red-to-green calm-down light transition.
 > The engineer is a readable top-down human worker: helmet with lamp + brim, head,
 > orange jacket with hi-vis stripes (torso larger than head), dark trousers with
 > alternating legs and boots, soft shadow, warm readability rim, helmet point light;
@@ -82,13 +90,14 @@ with or without the controller.
 | **Enter** (incl. numpad) | Activate the selected command          |
 | **Escape**   | Open the pause menu                                |
 
-Room restart is available through the pause menu («ПЕРЕЗАПУСТИТЬ ЦЕХ»).
+Room restart is available through the pause menu («ПОВТОРИТЬ ЦЕХ») and through
+the end-of-room menu after a defeat or the final victory.
 
 ### Pause menu
 
 | Key          | Action                                             |
 |--------------|----------------------------------------------------|
-| **Up / Down** | Select entry (ПРОДОЛЖИТЬ / НАСТРОЙКИ ЗВУКА / ПЕРЕЗАПУСТИТЬ ЦЕХ / ВЫЙТИ ИЗ ИГРЫ) |
+| **Up / Down** | Select entry (ПРОДОЛЖИТЬ / НАСТРОЙКИ ЗВУКА / ПОВТОРИТЬ ЦЕХ / ВЫЙТИ ИЗ ИГРЫ) |
 | **Enter**    | Confirm entry; in «НАСТРОЙКИ ЗВУКА» cycles the selected volume 0→25→50→75→100% |
 | **Escape**   | Back (sound settings → pause menu → resume game)   |
 
@@ -104,9 +113,9 @@ Room restart is available through the pause menu («ПЕРЕЗАПУСТИТЬ �
 
 | Key          | Action                                             |
 |--------------|----------------------------------------------------|
-| **Enter**    | Next room (after «ИНЖЕНЕР ОТСТУПИЛ»); retry the room (after «ЦЕХ СТАБИЛИЗИРОВАН») |
-| **Up / Down / Enter** | Navigate/confirm the final «ЗАВОД ПОБЕДИЛ» menu |
-| **Escape**   | On the final screen: jump straight to «ВЫЙТИ ИЗ ИГРЫ» |
+| **Enter**    | Next room (after «ИНЖЕНЕР ОТСТУПИЛ»)               |
+| **Up / Down / Enter** | Navigate/confirm the «ПОВТОРИТЬ ЦЕХ / ВЫЙТИ ИЗ ИГРЫ» menu (after «ЦЕХ СТАБИЛИЗИРОВАН» and on the final «ЗАВОД ПОБЕДИЛ» screen) |
+| **Escape**   | In that menu: jump straight to «ВЫЙТИ ИЗ ИГРЫ»     |
 
 ## УПРАВЛЕНИЕ
 
@@ -124,9 +133,24 @@ Arduino Nano:
 - Кнопка на джойстике — подтвердить / активировать
 - Отдельная кнопка — подтвердить / активировать
 
+### МЕНЮ ПОСЛЕ ЗАВЕРШЕНИЯ ЦЕХА
+
+После поражения («ЦЕХ СТАБИЛИЗИРОВАН») и на финальном экране («ЗАВОД ПОБЕДИЛ»)
+под текстом результата появляется меню из двух пунктов (стрелки/джойстик — выбор
+с закольцовкой, Enter/кнопка — подтвердить; по умолчанию выбран первый пункт):
+
+```
+> ПОВТОРИТЬ ЦЕХ
+  ВЫЙТИ ИЗ ИГРЫ
+```
+
+- «ПОВТОРИТЬ ЦЕХ» — начать текущий цех заново.
+- «ВЫЙТИ ИЗ ИГРЫ» — завершить работу игры.
+
+Тот же перезапуск и выход доступны в меню паузы (Escape во время игры).
+
 > Изменение схемы управления: **потенциометр, а также клавиши Q и R удалены из
-> схемы управления.** Перезапуск цеха выполняется через меню паузы
-> («ПЕРЕЗАПУСТИТЬ ЦЕХ»), а на экране поражения — клавишей Enter.
+> схемы управления.** **Клавиши Q и R не используются.**
 
 ## ПОДКЛЮЧЕНИЕ ARDUINO-КОНТРОЛЛЕРА
 
@@ -219,7 +243,8 @@ Escape        — пауза / назад
    - At 100 Pressure the room escalates (red overlay, machines fire on their own).
    - When Resolve hits 0 the exit unlocks and the engineer retreats; when he reaches
      the exit you get **ENGINEER RETREATED → ENTER — NEXT ROOM**.
-6. If the engineer completes all repairs, you lose the room: **ROOM STABILIZED** (Enter to retry).
+6. If the engineer completes all repairs, you lose the room: **ROOM STABILIZED**,
+   with the «ПОВТОРИТЬ ЦЕХ / ВЫЙТИ ИЗ ИГРЫ» menu below the result text.
 
 Each level scene can also be played directly (Play from any `Level_*` scene) —
 managers bootstrap themselves.

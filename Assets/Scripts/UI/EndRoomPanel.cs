@@ -9,12 +9,16 @@ namespace LastShift.UI
 {
     /// <summary>
     /// End-of-room / room-stabilized overlay, plus the final victory screen
-    /// «ЗАВОД ПОБЕДИЛ» with a keyboard menu (Up/Down/Enter/Esc). Emergency red
-    /// light fades into calm amber-green control light; scanlines keep the
-    /// terminal feel. Input routing lives in LevelManager; this is pure view.
+    /// «ЗАВОД ПОБЕДИЛ». The defeat and final screens share one reusable
+    /// two-option menu («ПОВТОРИТЬ ЦЕХ» / «ВЫЙТИ ИЗ ИГРЫ», Up/Down/Enter/Esc).
+    /// Emergency red light fades into calm amber-green control light; scanlines
+    /// keep the terminal feel. Input routing lives in LevelManager; this is pure view.
     /// </summary>
     public class EndRoomPanel : MonoBehaviour
     {
+        public const int OptionRepeatRoom = 0;
+        public const int OptionQuit = 1;
+
         GameObject panel;
         Text title;
         Text subtitle;
@@ -27,7 +31,7 @@ namespace LastShift.UI
         readonly List<Image> menuBgs = new List<Image>();
 
         public bool Visible => panel != null && panel.activeSelf;
-        /// <summary>Final menu: 0 = restart run, 1 = level 1, 2 = quit. -1 when no menu.</summary>
+        /// <summary>Menu: 0 = «ПОВТОРИТЬ ЦЕХ», 1 = «ВЫЙТИ ИЗ ИГРЫ». -1 when no menu.</summary>
         public int SelectedIndex { get; private set; } = -1;
         public bool HasMenu => menuTexts.Count > 0 && menuRoot != null && menuRoot.gameObject.activeSelf;
 
@@ -67,16 +71,16 @@ namespace LastShift.UI
             prompt = UIBuilder.Label(rt, "Prompt", "", 24, new Color(0.95f, 0.85f, 0.45f), TextAnchor.MiddleCenter);
             SetRect(prompt.rectTransform, new Vector2(0f, 0.2f), new Vector2(1f, 0.38f));
 
-            // Final keyboard menu.
-            menuRoot = UIBuilder.Panel(rt, "FinalMenu", new Vector2(0.3f, 0.14f), new Vector2(0.7f, 0.4f), new Color(0f, 0f, 0f, 0f));
-            string[] options = { Loc.MenuRestartRun, Loc.MenuReturnLevel1, Loc.MenuQuitGame };
+            // Reusable restart/quit menu (defeat screen + final victory).
+            menuRoot = UIBuilder.Panel(rt, "RestartQuitMenu", new Vector2(0.3f, 0.16f), new Vector2(0.7f, 0.36f), new Color(0f, 0f, 0f, 0f));
+            string[] options = { Loc.MenuRepeatRoom, Loc.MenuQuitGame };
             for (int i = 0; i < options.Length; i++)
             {
                 var row = new GameObject("Option" + i);
                 row.transform.SetParent(menuRoot, false);
                 var rowRt = row.AddComponent<RectTransform>();
-                rowRt.anchorMin = new Vector2(0f, 1f - (i + 1) / 3f);
-                rowRt.anchorMax = new Vector2(1f, 1f - i / 3f);
+                rowRt.anchorMin = new Vector2(0f, 1f - (i + 1f) / options.Length);
+                rowRt.anchorMax = new Vector2(1f, 1f - (float)i / options.Length);
                 rowRt.offsetMin = new Vector2(0f, 4f);
                 rowRt.offsetMax = new Vector2(0f, -4f);
                 var bg = row.AddComponent<Image>();
@@ -112,7 +116,8 @@ namespace LastShift.UI
         public void ShowRoomStabilized()
         {
             LastShift.Audio.AudioManager.OnRoomLost();
-            Show(Loc.RoomStabilized, Loc.RoomStabilizedSub, Loc.RetryPrompt);
+            Show(Loc.RoomStabilized, Loc.RoomStabilizedSub, "");
+            OpenMenu();
         }
 
         /// <summary>Final screen: «ЗАВОД ПОБЕДИЛ» — cold, controlled, slightly unsettling.</summary>
@@ -122,11 +127,17 @@ namespace LastShift.UI
             Show(Loc.FactoryWon, Loc.FactoryWonSub, "");
             smallLine.text = Loc.FactoryWonSmall;
             title.color = new Color(0.78f, 1f, 0.62f); // stable amber-green
-            menuRoot.gameObject.SetActive(true);
-            SelectedIndex = 0;
-            RefreshMenu();
+            OpenMenu();
             if (calmRoutine != null) StopCoroutine(calmRoutine);
             calmRoutine = StartCoroutine(CalmDown());
+        }
+
+        /// <summary>Shows the restart/quit menu with «ПОВТОРИТЬ ЦЕХ» pre-selected.</summary>
+        void OpenMenu()
+        {
+            menuRoot.gameObject.SetActive(true);
+            SelectedIndex = OptionRepeatRoom;
+            RefreshMenu();
         }
 
         IEnumerator CalmDown()
@@ -176,7 +187,7 @@ namespace LastShift.UI
         }
 
         static string OptionLabel(int i) =>
-            i == 0 ? Loc.MenuRestartRun : i == 1 ? Loc.MenuReturnLevel1 : Loc.MenuQuitGame;
+            i == OptionRepeatRoom ? Loc.MenuRepeatRoom : Loc.MenuQuitGame;
 
         void Show(string titleText, string subtitleText, string promptText)
         {

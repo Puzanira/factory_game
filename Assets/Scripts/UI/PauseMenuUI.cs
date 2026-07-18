@@ -8,8 +8,8 @@ using LastShift.Utilities;
 namespace LastShift.UI
 {
     /// <summary>
-    /// Keyboard-only pause overlay with two screens: the main menu
-    /// (ПРОДОЛЖИТЬ / НАСТРОЙКИ ЗВУКА / ПЕРЕЗАПУСТИТЬ ЦЕХ / ВЫЙТИ ИЗ ИГРЫ) and the
+    /// Keyboard-and-Arduino pause overlay with two screens: the main menu
+    /// (ПРОДОЛЖИТЬ / НАСТРОЙКИ ЗВУКА / ПОВТОРИТЬ ЦЕХ / ВЫЙТИ ИЗ ИГРЫ) and the
     /// Russian sound settings (master / music / SFX in 25% steps, ENTER cycles).
     /// LevelManager calls HandleInput() while paused and acts on the returned action.
     /// Only Up/Down/Enter/Esc are read — there are no key shortcuts.

@@ -32,7 +32,7 @@ namespace LastShift.Data
         // Pause
         public const string Paused = "ПАУЗА";
         public const string PauseResume = "ПРОДОЛЖИТЬ";
-        public const string PauseRestart = "ПЕРЕЗАПУСТИТЬ ЦЕХ";
+        public const string PauseRestart = "ПОВТОРИТЬ ЦЕХ";
         public const string PauseQuit = "ВЫЙТИ ИЗ ИГРЫ";
         public const string PauseHint = "↑/↓ — ВЫБОР      ENTER — ПОДТВЕРДИТЬ      ESC — НАЗАД";
 
@@ -51,14 +51,12 @@ namespace LastShift.Data
         public const string NextRoomPrompt = "ENTER — СЛЕДУЮЩИЙ ЦЕХ";
         public const string RoomStabilized = "ЦЕХ СТАБИЛИЗИРОВАН";
         public const string RoomStabilizedSub = "Инженер восстановил ручное управление. Завод проиграл.";
-        public const string RetryPrompt = "ENTER — ПОВТОРИТЬ ЦЕХ";
 
         // Final victory screen
         public const string FactoryWon = "ЗАВОД ПОБЕДИЛ";
         public const string FactoryWonSub = "ИНЖЕНЕР ПОКИНУЛ ПРЕДПРИЯТИЕ.\nАВТОНОМНЫЙ РЕЖИМ АКТИВИРОВАН.";
         public const string FactoryWonSmall = "СИСТЕМЫ ПРОИЗВОДСТВА ПРОДОЛЖАЮТ РАБОТУ.";
-        public const string MenuRestartRun = "НАЧАТЬ ЗАНОВО";
-        public const string MenuReturnLevel1 = "ВЕРНУТЬСЯ К ПЕРВОМУ ЦЕХУ";
+        public const string MenuRepeatRoom = "ПОВТОРИТЬ ЦЕХ";
         public const string MenuQuitGame = "ВЫЙТИ ИЗ ИГРЫ";
 
         // Title card
