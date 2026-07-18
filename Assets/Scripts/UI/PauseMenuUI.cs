@@ -11,8 +11,8 @@ namespace LastShift.UI
     /// Keyboard-only pause overlay with two screens: the main menu
     /// (ПРОДОЛЖИТЬ / НАСТРОЙКИ ЗВУКА / ПЕРЕЗАПУСТИТЬ ЦЕХ / ВЫЙТИ ИЗ ИГРЫ) and the
     /// Russian sound settings (master / music / SFX in 25% steps, ENTER cycles).
-    /// LevelManager calls HandleInput() while paused and acts on the returned action;
-    /// the legacy R / Q shortcuts keep working on the main screen.
+    /// LevelManager calls HandleInput() while paused and acts on the returned action.
+    /// Only Up/Down/Enter/Esc are read — there are no key shortcuts.
     /// </summary>
     public class PauseMenuUI : MonoBehaviour
     {
@@ -122,8 +122,6 @@ namespace LastShift.UI
         PauseAction HandleMainInput()
         {
             if (GameInput.EscapePressed) return PauseAction.Resume;
-            if (GameInput.RestartPressed) return PauseAction.Restart;
-            if (GameInput.QuitPressed) return PauseAction.Quit;
 
             if (GameInput.UpPressed) { mainIndex = (mainIndex + 3) % 4; UiSfx.PauseMove(); RefreshAll(); }
             if (GameInput.DownPressed) { mainIndex = (mainIndex + 1) % 4; UiSfx.PauseMove(); RefreshAll(); }

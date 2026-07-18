@@ -1,5 +1,21 @@
 # LAST SHIFT / ПОСЛЕДНЯЯ СМЕНА — Vertical Slice
 
+> **Pass 6 (2026-07-18): input simplified to three actions.** The whole game is now
+> driven by exactly NavigatePrevious / NavigateNext / Submit (keyboard Up / Down /
+> Enter; Arduino joystick + two buttons), plus Escape for pause/back.
+> **Потенциометр, а также клавиши Q и R удалены из схемы управления.**
+> The defeat screen retries with Enter; restart/quit live only in the pause and
+> end-screen menus. An outdated Arduino sketch still sending POT messages is safely
+> ignored (one console warning). See «УПРАВЛЕНИЕ» below.
+
+> **Pass 5 (2026-07-18): Arduino controller input.** The game now *additionally* accepts
+> a custom Arduino Nano controller (2-axis joystick + two buttons) over USB serial.
+> The keyboard keeps working everywhere and at all
+> times — the controller is optional and hot-pluggable. All sources merge into the same
+> logical actions in `Scripts/Utilities/GameInput.cs` via the new `Scripts/Input/` layer
+> (background-thread serial reader, CSV protocol parser, deadzones/hysteresis/repeat,
+> shared submit debounce). See «ПОДКЛЮЧЕНИЕ ARDUINO-КОНТРОЛЛЕРА» below.
+
 > **Pass 2 (2026-07-12):** full Russian localization (all player-facing text centralized
 > in `Scripts/Data/Loc.cs` and `LevelLayouts.cs`), easier balance (repair times +40%,
 > cooldowns −25%, slower engineer, diminishing returns, pressure combos «СБОЙ СИСТЕМ»,
@@ -34,7 +50,7 @@ When he evacuates the third room alive, the vertical slice is complete —
 > terminal/menu feedback (move tick, confirm, denied buzz, cooldown click, ready blip).
 > The pause menu is now a real Up/Down/Enter menu with Russian sound settings
 > («НАСТРОЙКИ ЗВУКА»: ОБЩАЯ ГРОМКОСТЬ / МУЗЫКА / ЗВУКОВЫЕ ЭФФЕКТЫ, 25% steps,
-> Enter cycles, Esc back); the old R/Q pause shortcuts still work.
+> Enter cycles, Esc back). (The old R/Q pause shortcuts were removed in Pass 6.)
 
 > **Pass 3 (2026-07-12):** Boot flow is now **Title Card «ПОСЛЕДНЯЯ СМЕНА» → 4-page
 > Russian intro briefing → Level 1** (Enter advances pages, Esc opens «ПРОПУСТИТЬ
@@ -49,10 +65,13 @@ When he evacuates the third room alive, the vertical slice is complete —
 > Engineer renders on the **Characters** sorting layer (fog/decals can never hide him);
 > state label on **WorldUI**. Sorting layers Floor…ScreenUI are created by ProjectBuilder.
 
-## Controls (keyboard only — no mouse needed)
+## Controls (keyboard + optional Arduino controller — no mouse needed)
 
-Every screen is driven by the same small set of keys; the mouse is never used.
-All key polling is centralized in `Scripts/Utilities/GameInput.cs`.
+Every screen is driven by the same small set of logical actions; the mouse is never
+used. All input polling is centralized in `Scripts/Utilities/GameInput.cs`, which
+merges the keyboard with the optional Arduino controller (see the Russian section
+«ПОДКЛЮЧЕНИЕ ARDUINO-КОНТРОЛЛЕРА» below). The keyboard is always fully functional,
+with or without the controller.
 
 ### Gameplay (factory terminal)
 
@@ -62,8 +81,8 @@ All key polling is centralized in `Scripts/Utilities/GameInput.cs`.
 | **Down Arrow** | Select next ready factory command                |
 | **Enter** (incl. numpad) | Activate the selected command          |
 | **Escape**   | Open the pause menu                                |
-| **R**        | Restart the current room                           |
-| **Space** (hold) | Dev-only 3× time speed-up (never required)     |
+
+Room restart is available through the pause menu («ПЕРЕЗАПУСТИТЬ ЦЕХ»).
 
 ### Pause menu
 
@@ -72,7 +91,6 @@ All key polling is centralized in `Scripts/Utilities/GameInput.cs`.
 | **Up / Down** | Select entry (ПРОДОЛЖИТЬ / НАСТРОЙКИ ЗВУКА / ПЕРЕЗАПУСТИТЬ ЦЕХ / ВЫЙТИ ИЗ ИГРЫ) |
 | **Enter**    | Confirm entry; in «НАСТРОЙКИ ЗВУКА» cycles the selected volume 0→25→50→75→100% |
 | **Escape**   | Back (sound settings → pause menu → resume game)   |
-| **R** / **Q** | Legacy shortcuts on the main pause screen: restart / quit |
 
 ### Title card & intro briefing (Boot)
 
@@ -86,11 +104,106 @@ All key polling is centralized in `Scripts/Utilities/GameInput.cs`.
 
 | Key          | Action                                             |
 |--------------|----------------------------------------------------|
-| **Enter**    | Next room (after «ИНЖЕНЕР ОТСТУПИЛ»)               |
-| **R**        | Retry the room (incl. after «ЦЕХ СТАБИЛИЗИРОВАН»)  |
-| **Q**        | Quit (after «ЦЕХ СТАБИЛИЗИРОВАН»)                  |
+| **Enter**    | Next room (after «ИНЖЕНЕР ОТСТУПИЛ»); retry the room (after «ЦЕХ СТАБИЛИЗИРОВАН») |
 | **Up / Down / Enter** | Navigate/confirm the final «ЗАВОД ПОБЕДИЛ» menu |
 | **Escape**   | On the final screen: jump straight to «ВЫЙТИ ИЗ ИГРЫ» |
+
+## УПРАВЛЕНИЕ
+
+Вся игра управляется тремя действиями: **предыдущий / следующий / подтвердить**
+(плюс Escape — пауза и «назад»).
+
+Клавиатура:
+- Стрелка вверх — предыдущая система / пункт меню
+- Стрелка вниз — следующая система / пункт меню
+- Enter — подтвердить / активировать
+
+Arduino Nano:
+- Джойстик вверх или влево — предыдущая система / пункт меню
+- Джойстик вниз или вправо — следующая система / пункт меню
+- Кнопка на джойстике — подтвердить / активировать
+- Отдельная кнопка — подтвердить / активировать
+
+> Изменение схемы управления: **потенциометр, а также клавиши Q и R удалены из
+> схемы управления.** Перезапуск цеха выполняется через меню паузы
+> («ПЕРЕЗАПУСТИТЬ ЦЕХ»), а на экране поражения — клавишей Enter.
+
+## ПОДКЛЮЧЕНИЕ ARDUINO-КОНТРОЛЛЕРА
+
+Игра поддерживает самодельный контроллер на **Arduino Nano** как *дополнительный*
+способ управления. Клавиатура работает всегда: без контроллера, при неверном COM-порте
+и даже если контроллер выдернули прямо во время игры.
+
+### Где что лежит
+
+- Скетч Arduino: `my_ardruino_sketch/sketch_game_jul15a.ino`
+- Референс подключения Unity ↔ Arduino: `for_claude_example_unity_grabber/`
+- Скрипты интеграции: `Assets/Scripts/Input/`
+- Настройки (порт, пороги, инверсия осей): `Assets/Resources/ArduinoSerialSettings.asset`
+  (создаётся автоматически; можно пересоздать через меню **LastShift ▸ Create Arduino Serial Settings**)
+
+### Железо и протокол (из скетча)
+
+- Плата: **Arduino Nano** (при проблемах с прошивкой: Tools ▸ Processor ▸ **ATmega328P (Old Bootloader)**)
+- Скорость: **115200 бод** (`Serial.begin(115200)`)
+- Пины: джойстик X — **A6**, джойстик Y — **A5**, кнопка джойстика — **D2**,
+  отдельная кнопка — **D6** (все кнопки на `INPUT_PULLUP`)
+- Протокол (CSV, строки только при изменении значений, ~33 Гц максимум):
+  `JOY,x,y` · `JOY,DOWN` / `JOY,UP,мс` · `BTN,DOWN` / `BTN,UP,мс` / `BTN,HELD,мс`
+- Дебаунс кнопок (25 мс) и пороги дребезга уже реализованы в скетче.
+- Если на плате осталась старая прошивка с сообщениями `POT,…`, игра их безопасно
+  игнорирует и один раз пишет предупреждение в консоль — перепрошейте плату актуальным
+  скетчем.
+
+### Как запустить
+
+1. **Прошивка**: открыть `my_ardruino_sketch/sketch_game_jul15a.ino` в Arduino IDE,
+   выбрать Tools ▸ Board ▸ **Arduino Nano**, нужный порт, нажать **Upload**.
+   (Библиотеки не нужны. На macOS для клона CH340 может понадобиться драйвер —
+   `for_claude_example_unity_grabber/CH341SER_MAC.ZIP`.)
+2. **Подключение**: воткнуть Nano в USB. Закрыть Serial Monitor в Arduino IDE —
+   порт может быть открыт только одной программой!
+3. **COM-порт**: по умолчанию игра ищет контроллер **автоматически** по всем
+   USB-serial портам. Чтобы задать порт вручную, впишите его в поле **Port Name**
+   ассета `Assets/Resources/ArduinoSerialSettings.asset`
+   (Windows: `COM5`; macOS: `/dev/cu.usbserial-110`). Пустое поле = автопоиск.
+4. **Запуск Unity**: открыть `Assets/Scenes/Boot.unity` → нажать **Play**.
+   В консоли появится `[Arduino] Controller connected on <порт> @ 115200 baud`.
+
+### Раскладка контроллера
+
+```
+ДЖОЙСТИК ВВЕРХ / ВЛЕВО — предыдущая система
+ДЖОЙСТИК ВНИЗ / ВПРАВО — следующая система
+КНОПКА НА ДЖОЙСТИКЕ ИЛИ ВНЕШНЯЯ КНОПКА — активировать
+
+Клавиша Up    — предыдущая система / пункт меню
+Клавиша Down  — следующая система / пункт меню
+Клавиша Enter — подтвердить / активировать
+Escape        — пауза / назад
+```
+
+Поведение: удержание джойстика повторяет шаг (задержка 0.40 с, далее каждые 0.15 с);
+диагональ даёт ровно одно действие (при равном отклонении приоритет у вертикали).
+Удержание кнопок не повторяет Enter; обе кнопки, нажатые одновременно, дают один Enter.
+Если направления джойстика перепутаны из-за монтажа — включите
+`Invert X / Invert Y` в настройках.
+
+### Если не работает
+
+- **Контроллер не найден**: проверьте кабель (нужен data-кабель, не «только зарядка»),
+  закройте Serial Monitor/Plotter, перезапустите Play. Игра продолжает искать порт
+  каждую секунду — можно втыкать контроллер прямо во время игры.
+- **Неверный COM-порт**: очистите поле Port Name (автопоиск) или впишите правильный.
+  Список портов: Arduino IDE ▸ Tools ▸ Port.
+- **Порт занят** («could not open», «busy»): порт держит другая программа
+  (Serial Monitor, второй Unity). Закройте её; игра сама переподключится.
+- **Клавиатура**: работает всегда, ничего включать не нужно. При отключении
+  контроллера меню не блокируются, исключений нет.
+- **Отладка**: нажмите **F9** в игре — оверлей покажет
+  «ARDUINO: ПОДКЛЮЧЕН» / «ARDUINO: НЕ НАЙДЕН — КЛАВИАТУРА АКТИВНА», порт, скорость,
+  последнее сообщение, направление джойстика и состояние кнопок.
+  (Или включите Debug Overlay в `ArduinoSerialSettings.asset`.)
 
 ## How to test
 
@@ -106,7 +219,7 @@ All key polling is centralized in `Scripts/Utilities/GameInput.cs`.
    - At 100 Pressure the room escalates (red overlay, machines fire on their own).
    - When Resolve hits 0 the exit unlocks and the engineer retreats; when he reaches
      the exit you get **ENGINEER RETREATED → ENTER — NEXT ROOM**.
-6. If the engineer completes all repairs, you lose the room: **ROOM STABILIZED** (R to retry).
+6. If the engineer completes all repairs, you lose the room: **ROOM STABILIZED** (Enter to retry).
 
 Each level scene can also be played directly (Play from any `Level_*` scene) —
 managers bootstrap themselves.
@@ -142,8 +255,11 @@ Assets/
                 PauseMenuUI, EndRoomPanel
     Data/       LayoutTypes, LevelLayouts, LevelData, MachineData, EngineerData,
                 EscalationData, PrefabLibrary
+    Input/      ArduinoControllerReader (serial, background thread), ArduinoInputParser,
+                ArduinoInputBridge, UnifiedGameInput, InputRepeatController,
+                SerialConnectionSettings, ArduinoDebugStatus
     Utilities/  GameInput, SpriteFactory, PlaceholderVisual, PathGrid, GridBlocker
-    Editor/     ProjectBuilder (project generator)
+    Editor/     ProjectBuilder (project generator), ArduinoSetup (settings asset)
 ```
 
 ## Architecture decisions
@@ -162,7 +278,12 @@ Assets/
   by `ProjectBuilder` and wired through the `PrefabLibrary` ScriptableObject. Every
   prefab entry has a code-factory fallback, so a missing reference degrades gracefully
   instead of breaking.
-- **Input**: new Input System (`Keyboard.current`), keyboard only.
+- **Input**: one shared logical-action flow (`GameInput`: NavigatePrevious/NavigateNext/
+  Submit/Back/Restart). Physical sources — keyboard (new Input System, `Keyboard.current`)
+  and the optional Arduino controller (`Scripts/Input/`, serial port read on a background
+  thread, lines parsed and published as frame-stamped actions before consumers poll).
+  At most one navigation action per frame and one Submit per shared debounce window;
+  keyboard is the permanent fallback and is never disabled.
 - **Events**: C# events throughout (machine `Activated`, stats `ResolveChanged`/
   `ResolveEmpty`, objective `CompletedEvent`, grid `GridChanged`).
 

@@ -27,11 +27,10 @@ namespace LastShift.Data
         public const string EnterExecute = "[ENTER] ";
         public const string EngineerLabel = "ИНЖЕНЕР: ";
         public const string ObjectiveReachExit = "ДОБРАТЬСЯ ДО ВЫХОДА";
-        public const string BottomHints = "R — ПЕРЕЗАПУСК · ESC — ПАУЗА";
+        public const string BottomHints = "ESC — ПАУЗА";
 
         // Pause
         public const string Paused = "ПАУЗА";
-        public const string PauseOptions = "ENTER — ПРОДОЛЖИТЬ\n\nR — ПЕРЕЗАПУСТИТЬ ЦЕХ\n\nQ — ВЫЙТИ ИЗ ИГРЫ";
         public const string PauseResume = "ПРОДОЛЖИТЬ";
         public const string PauseRestart = "ПЕРЕЗАПУСТИТЬ ЦЕХ";
         public const string PauseQuit = "ВЫЙТИ ИЗ ИГРЫ";
@@ -49,10 +48,10 @@ namespace LastShift.Data
         // Room results
         public const string EngineerRetreated = "ИНЖЕНЕР ОТСТУПИЛ";
         public const string RoomIsYours = "Цех под контролем завода.";
-        public const string NextRoomPrompt = "ENTER — СЛЕДУЮЩИЙ ЦЕХ      R — ПОВТОРИТЬ ЦЕХ";
+        public const string NextRoomPrompt = "ENTER — СЛЕДУЮЩИЙ ЦЕХ";
         public const string RoomStabilized = "ЦЕХ СТАБИЛИЗИРОВАН";
         public const string RoomStabilizedSub = "Инженер восстановил ручное управление. Завод проиграл.";
-        public const string RetryPrompt = "R — ПОВТОРИТЬ ЦЕХ      Q — ВЫЙТИ ИЗ ИГРЫ";
+        public const string RetryPrompt = "ENTER — ПОВТОРИТЬ ЦЕХ";
 
         // Final victory screen
         public const string FactoryWon = "ЗАВОД ПОБЕДИЛ";

@@ -34,7 +34,28 @@
       "Bash(awk '{print $2, $10, $11}')",
       "Bash(kill 59214)",
       "Bash(kill -9 59214)",
-      "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -projectPath /Users/reb/factory_game -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -smokeScene Level_02_PackagingLine -logFile /private/tmp/claude-501/-Users-reb-factory-game/5d135aa4-2732-4dfb-b1d2-311671ea29d1/scratchpad/smoke_l2b.log)"
+      "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -projectPath /Users/reb/factory_game -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -smokeScene Level_02_PackagingLine -logFile /private/tmp/claude-501/-Users-reb-factory-game/5d135aa4-2732-4dfb-b1d2-311671ea29d1/scratchpad/smoke_l2b.log)",
+      "Bash(grep -v -E '\\\\.\\(meta|png|jpg|asset\\)$')",
+      "Bash(grep -v -E '\\\\.meta$')",
+      "Read(//Applications/**)",
+      "Bash(grep -rn \"UnityEngine.Input\\\\b\\\\|[^a-zA-Z.]Input\\\\.\" Assets --include=\"*.cs\" | grep -v _Recovery | grep -v \"InputSystem\\\\|GameInput\\\\|InputLocked\" | head; echo ---; pgrep -fl Unity | head -5; echo ---; ls /dev/cu.* 2>/dev/null)",
+      "Read(//dev/**)",
+      "Bash(python3 -)",
+      "Bash(dotnet build *)",
+      "Bash(ps -p 16714 -o etime=,stat=)",
+      "Bash(mkdir -p /private/tmp/claude-501/-Users-reb-Documents-GitHub-factory-game/ea8c9481-8acb-43cf-9f65-970bf3cf274e/scratchpad/logictest)",
+      "Bash(cat)",
+      "Bash(dotnet run *)",
+      "Read(//Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/Managed/UnityEngine/**)",
+      "Read(//Applications/Unity/Hub/Editor/6000.3.19f1/**)",
+      "Bash(sed -i '' 's|net8.0|net10.0|; s|/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/Managed/UnityEngine/UnityEngine.CoreModule.dll|/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/Resources/Scripting/Managed/UnityEngine/UnityEngine.CoreModule.dll|' logictest.csproj)",
+      "Bash(ls Assets/Resources/; git status --short Assets/Documentation/; echo ---; grep -E \"CS[0-9]{4}|error|Compilation|\\\\[Arduino\\\\]\" ~/Library/Logs/Unity/Editor.log 2>/dev/null | tail -15)",
+      "Bash(git check-ignore *)",
+      "Bash('/Applications/Arduino IDE.app/Contents/Resources/app/lib/backend/resources/arduino-cli' compile --fqbn arduino:avr:nano /private/tmp/claude-501/-Users-reb-Documents-GitHub-factory-game/ea8c9481-8acb-43cf-9f65-970bf3cf274e/scratchpad/sketch_game_jul15a)",
+      "Bash('/Applications/Arduino IDE.app/Contents/Resources/app/lib/backend/resources/arduino-cli' upload -p /dev/cu.usbserial-110 --fqbn arduino:avr:nano /private/tmp/claude-501/-Users-reb-Documents-GitHub-factory-game/ea8c9481-8acb-43cf-9f65-970bf3cf274e/scratchpad/sketch_game_jul15a)",
+      "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -projectPath /Users/reb/Documents/GitHub/factory_game -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -logFile /private/tmp/claude-501/-Users-reb-Documents-GitHub-factory-game/ea8c9481-8acb-43cf-9f65-970bf3cf274e/scratchpad/smoke.log)",
+      "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -projectPath /Users/reb/Documents/GitHub/factory_game -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -smokeScene Level_03_ColdStorage -smokeFinal -logFile /private/tmp/claude-501/-Users-reb-Documents-GitHub-factory-game/ea8c9481-8acb-43cf-9f65-970bf3cf274e/scratchpad/smoke_final.log)",
+      "Bash(/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity -batchmode -projectPath /Users/reb/Documents/GitHub/factory_game -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -logFile /private/tmp/claude-501/-Users-reb-Documents-GitHub-factory-game/ea8c9481-8acb-43cf-9f65-970bf3cf274e/scratchpad/smoke2.log)"
     ]
   }
 }

@@ -262,15 +262,15 @@ namespace LastShift.Core
                 else
                 {
                     if (GameInput.ConfirmPressed) { UiSfx.Confirm(); SceneLoader.Load(levelData.nextSceneName); }
-                    if (GameInput.RestartPressed) SceneLoader.Reload();
                 }
                 return;
             }
 
             if (roomFailed)
             {
-                if (GameInput.RestartPressed) SceneLoader.Reload();
-                if (GameInput.QuitPressed) SceneLoader.Quit();
+                // Defeat screen: Enter retries the room (quit stays available
+                // through the pause menu after the restart).
+                if (GameInput.ConfirmPressed) { UiSfx.Confirm(); SceneLoader.Reload(); }
                 return;
             }
 
@@ -288,7 +288,6 @@ namespace LastShift.Core
             }
 
             if (GameInput.EscapePressed) { SetPaused(true); return; }
-            if (GameInput.RestartPressed) { SceneLoader.Reload(); return; }
 
             // Passive pressure while the engineer is significantly delayed:
             // stunned, panicking, dodging hazards or hunting for a route.
@@ -304,7 +303,7 @@ namespace LastShift.Core
                 }
             }
 
-            // Dev-only fast-forward; never required for normal play.
+            // Editor-only fast-forward; does nothing in released builds.
             Time.timeScale = GameInput.SpeedHeld ? 3f : 1f;
         }
 
