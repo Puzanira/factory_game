@@ -242,12 +242,14 @@ namespace LastShift.Data
         public const string TutorialWrongMachine = "ЭТА СИСТЕМА НЕ НУЖНА НА ЭТОМ ШАГЕ";
         public const string TutorialStepLabel = "ШАГ {0} / 4";
 
-        // Tutorial pointer plaques (disappear once the required action is done)
+        // Tutorial pointer plaques — comic speech bubbles with a tail toward the
+        // explained object; each disappears once the required action is done.
         public const string TutPlaquePanel = "ЭТО РЕМОНТНЫЙ ПУЛЬТ\nИнженер пытается его починить.\nПочинит все пульты — победа инженера.";
-        public const string TutPlaqueTerminal = "<< ЭТО СПИСОК ОБОРУДОВАНИЯ\nВыбор — стрелки ↑/↓, активация — ENTER.\nНа этом шаге можно включить любую систему.";
+        public const string TutPlaqueTerminal = "ЭТО СПИСОК ОБОРУДОВАНИЯ\nВыбор — стрелки ↑/↓, активация — ENTER.\nНа этом шаге можно включить любую систему.";
         public const string TutPlaqueArm = "ЭТО МАНИПУЛЯТОР\nОглушает инженера в радиусе действия.";
-        public const string TutPlaqueResolve = "^ РЕШИМОСТЬ ИНЖЕНЕРА УМЕНЬШИЛАСЬ";
+        public const string TutPlaqueResolve = "РЕШИМОСТЬ ИНЖЕНЕРА УМЕНЬШИЛАСЬ";
         public const string TutPlaqueDoor = "УСПЕЙТЕ ЗАКРЫТЬ ВОРОТА,\nпока инженер не прошёл";
         public const string TutPlaqueConveyor = "ТЕПЕРЬ СМЕНИТЕ\nНАПРАВЛЕНИЕ КОНВЕЙЕРА";
+        public const string TutPlaqueResource = "ЭТО РЕСУРС УПРАВЛЕНИЯ\nКаждая активация тратит заряд.\nЗаряды восстанавливаются со временем.";
     }
 }

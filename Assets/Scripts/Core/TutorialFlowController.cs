@@ -165,7 +165,11 @@ namespace LastShift.Core
             plaques.Clear();
         }
 
-        /// <summary>Terminal-style callout floating in the room, with an arrow toward the target.</summary>
+        static readonly Color BubbleFill = new Color(0.97f, 0.96f, 0.89f, 0.97f);
+        static readonly Color BubbleLine = new Color(0.14f, 0.3f, 0.2f, 0.95f);
+        static readonly Color BubbleText = new Color(0.1f, 0.24f, 0.16f);
+
+        /// <summary>Comic speech bubble floating in the room, tail of shrinking puffs toward the target.</summary>
         void ShowWorldPlaque(string id, Vector2 target, Vector2 offset, string text)
         {
             HidePlaque(id);
@@ -173,46 +177,114 @@ namespace LastShift.Core
             Vector2 center = target + offset;
             root.transform.position = new Vector3(center.x, center.y, 0f);
 
+            Vector2 size = new Vector2(5.2f, 1.9f);
+
+            // Main ellipse: dark outline behind, cream fill on top.
+            MakePuff(root.transform, Vector2.zero, size, 43, 44);
+
+            // Puffs along the perimeter make the cloud silhouette.
+            const int puffCount = 8;
+            for (int i = 0; i < puffCount; i++)
+            {
+                float a = (i + 0.5f) / puffCount * Mathf.PI * 2f;
+                Vector2 p = new Vector2(Mathf.Cos(a) * size.x * 0.46f, Mathf.Sin(a) * size.y * 0.46f);
+                float w = 1.15f + 0.35f * Mathf.PingPong(i, 2f);
+                MakePuff(root.transform, p, new Vector2(w, w * 0.75f), 43, 44);
+            }
+
+            // Thought-bubble tail: shrinking circles toward the explained object.
+            Vector2 dir = (-offset).normalized;
+            float edge = Mathf.Lerp(size.y, size.x, Mathf.Abs(dir.x)) * 0.5f;
+            float[] tailSizes = { 0.52f, 0.36f, 0.22f };
+            for (int i = 0; i < tailSizes.Length; i++)
+            {
+                Vector2 p = dir * (edge + 0.35f + i * 0.5f);
+                MakePuff(root.transform, p, Vector2.one * tailSizes[i], 43, 44);
+            }
+
+            // Text on top of the cloud.
             var canvasGO = new GameObject("Canvas");
             canvasGO.transform.SetParent(root.transform, false);
             canvasGO.transform.localScale = Vector3.one * 0.015f;
             var canvas = canvasGO.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
-            canvas.sortingOrder = 45;
+            canvas.sortingOrder = 46;
             if (Viz.HasSortingLayer("WorldUI")) canvas.sortingLayerName = "WorldUI";
             var crt = (RectTransform)canvasGO.transform;
-            crt.sizeDelta = new Vector2(330f, 100f);
-
-            var bg = UIBuilder.Panel(canvasGO.transform, "Bg", Vector2.zero, Vector2.one,
-                new Color(0.02f, 0.08f, 0.05f, 0.93f));
-            var outline = bg.gameObject.AddComponent<Outline>();
-            outline.effectColor = new Color(0.95f, 0.85f, 0.45f, 0.8f);
-            outline.effectDistance = new Vector2(1.5f, 1.5f);
-            UIBuilder.Label(bg, "Text", text, 19, new Color(0.75f, 1f, 0.8f), TextAnchor.MiddleCenter);
-
-            // Arrow from the plaque toward the explained object.
-            Vector2 toTarget = -offset;
-            float ang = Mathf.Atan2(toTarget.y, toTarget.x) * Mathf.Rad2Deg;
-            var arrow = Viz.Make("Arrow", root.transform, PlaceholderShape.Arrow,
-                new Color(0.95f, 0.85f, 0.45f, 0.95f),
-                toTarget.normalized * (toTarget.magnitude * 0.55f), new Vector2(0.55f, 0.4f), 12, unlit: true);
-            arrow.transform.localRotation = Quaternion.Euler(0f, 0f, ang);
-            if (Viz.HasSortingLayer("WorldUI")) Viz.SetLayer(arrow, "WorldUI");
+            crt.sizeDelta = new Vector2(330f, 110f);
+            UIBuilder.Label(canvasGO.transform, "Text", text, 19, BubbleText, TextAnchor.MiddleCenter);
 
             plaques[id] = root;
         }
 
-        /// <summary>Callout on the screen UI (terminal list, resolve bar).</summary>
-        void ShowScreenPlaque(string id, Vector2 aMin, Vector2 aMax, string text)
+        /// <summary>One cloud puff: outline circle behind + fill circle in front (world sprites).</summary>
+        void MakePuff(Transform root, Vector2 pos, Vector2 size, int lineOrder, int fillOrder)
+        {
+            var line = Viz.Make("PuffLine", root, PlaceholderShape.Circle, BubbleLine,
+                pos, size + new Vector2(0.16f, 0.16f), lineOrder, unlit: true);
+            var fill = Viz.Make("PuffFill", root, PlaceholderShape.Circle, BubbleFill,
+                pos, size, fillOrder, unlit: true);
+            if (Viz.HasSortingLayer("WorldUI"))
+            {
+                Viz.SetLayer(line, "WorldUI");
+                Viz.SetLayer(fill, "WorldUI");
+            }
+        }
+
+        /// <summary>Comic bubble on the screen UI (terminal list, resolve bar, resource cells).</summary>
+        void ShowScreenPlaque(string id, Vector2 aMin, Vector2 aMax, string text, Vector2 tailDir)
         {
             HidePlaque(id);
             RectTransform rt = UIBuilder.Panel(tutorialCanvas.transform, "Plaque_" + id,
-                aMin, aMax, new Color(0.02f, 0.08f, 0.05f, 0.93f));
-            var outline = rt.gameObject.AddComponent<Outline>();
-            outline.effectColor = new Color(0.95f, 0.85f, 0.45f, 0.8f);
-            outline.effectDistance = new Vector2(1.5f, 1.5f);
-            UIBuilder.Label(rt, "Text", text, 17, new Color(0.75f, 1f, 0.8f), TextAnchor.MiddleCenter);
+                aMin, aMax, new Color(0f, 0f, 0f, 0f));
+
+            // Two passes so every dark outline sits behind every cream fill
+            // (uGUI draws siblings in order).
+            Vector2 edgeAnchor = new Vector2(0.5f + 0.5f * tailDir.x, 0.5f + 0.5f * tailDir.y);
+            float[] tailPx = { 34f, 24f, 16f };
+            for (int layer = 0; layer < 2; layer++)
+            {
+                ScreenPuff(rt, layer, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, stretch: true);
+                ScreenPuff(rt, layer, new Vector2(0.16f, 0.94f), Vector2.zero, new Vector2(56f, 42f));
+                ScreenPuff(rt, layer, new Vector2(0.84f, 0.94f), Vector2.zero, new Vector2(64f, 44f));
+                ScreenPuff(rt, layer, new Vector2(0.16f, 0.06f), Vector2.zero, new Vector2(60f, 42f));
+                ScreenPuff(rt, layer, new Vector2(0.84f, 0.06f), Vector2.zero, new Vector2(56f, 40f));
+                for (int i = 0; i < tailPx.Length; i++)
+                    ScreenPuff(rt, layer, edgeAnchor, tailDir * (14f + i * 26f), new Vector2(tailPx[i], tailPx[i]));
+            }
+
+            var label = UIBuilder.Label(rt, "Text", text, 17, BubbleText, TextAnchor.MiddleCenter);
+            SetRect(label.rectTransform, new Vector2(0.05f, 0.08f), new Vector2(0.95f, 0.92f));
+
             plaques[id] = rt.gameObject;
+        }
+
+        /// <summary>UI cloud puff, one layer at a time: 0 = dark outline, 1 = cream fill.</summary>
+        void ScreenPuff(RectTransform parent, int layer, Vector2 anchor, Vector2 offsetPx, Vector2 sizePx, bool stretch = false)
+        {
+            var go = new GameObject(layer == 0 ? "PuffLine" : "PuffFill");
+            go.transform.SetParent(parent, false);
+            var rt = go.AddComponent<RectTransform>();
+            if (stretch)
+            {
+                rt.anchorMin = Vector2.zero;
+                rt.anchorMax = Vector2.one;
+                float grow = layer == 0 ? 5f : 0f;
+                rt.offsetMin = new Vector2(-grow, -grow);
+                rt.offsetMax = new Vector2(grow, grow);
+            }
+            else
+            {
+                rt.anchorMin = anchor;
+                rt.anchorMax = anchor;
+                rt.anchoredPosition = offsetPx;
+                float grow = layer == 0 ? 8f : 0f;
+                rt.sizeDelta = sizePx + new Vector2(grow, grow);
+            }
+            var img = go.AddComponent<Image>();
+            img.sprite = TextureFactory.SoftCircle();
+            img.color = layer == 0 ? BubbleLine : BubbleFill;
+            img.raycastTarget = false;
         }
 
         // ================= step flow =================
@@ -243,7 +315,8 @@ namespace LastShift.Core
                     Highlight(null);
                     if (refs.objectives.Count > 0)
                         ShowWorldPlaque("panel", refs.objectives[0].Pos, new Vector2(2.2f, 0.8f), Loc.TutPlaquePanel);
-                    ShowScreenPlaque("terminal", new Vector2(0.29f, 0.40f), new Vector2(0.63f, 0.56f), Loc.TutPlaqueTerminal);
+                    ShowScreenPlaque("terminal", new Vector2(0.30f, 0.40f), new Vector2(0.63f, 0.56f),
+                        Loc.TutPlaqueTerminal, new Vector2(-1f, 0f));
                     break;
 
                 case 2:
@@ -269,6 +342,9 @@ namespace LastShift.Core
                     SetCard(Loc.TutorialStep4Header, Loc.TutorialStep4Body);
                     SetGate(null);
                     Highlight(null);
+                    // Points at the three power cells in the terminal header.
+                    ShowScreenPlaque("resource", new Vector2(0.30f, 0.80f), new Vector2(0.62f, 0.95f),
+                        Loc.TutPlaqueResource, new Vector2(-1f, 0f));
                     break;
             }
         }
@@ -361,7 +437,11 @@ namespace LastShift.Core
                     break;
 
                 case 4:
-                    if (effective) Advance(Loc.ResourceRestored);
+                    if (effective)
+                    {
+                        HidePlaque("resource");
+                        Advance(Loc.ResourceRestored);
+                    }
                     break;
             }
         }
@@ -375,7 +455,8 @@ namespace LastShift.Core
                 HidePlaque("arm");
                 // Point at the resolve gauge: the stun just visibly drained it.
                 // Cleared when step 3 begins (~3 s on screen).
-                ShowScreenPlaque("resolve", new Vector2(0.55f, 0.80f), new Vector2(0.97f, 0.875f), Loc.TutPlaqueResolve);
+                ShowScreenPlaque("resolve", new Vector2(0.55f, 0.78f), new Vector2(0.97f, 0.885f),
+                    Loc.TutPlaqueResolve, new Vector2(0f, 1f));
                 Advance(null, 3.2f);
             }
         }

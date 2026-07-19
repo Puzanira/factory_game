@@ -132,7 +132,11 @@ namespace LastShift.Machines
                 ? Viz.RectAt(spec.pos, spec.size)
                 : Viz.RectAt(spec.pos, new Vector2(radius * 2f, radius * 2f));
             var grid = PathGrid.Instance;
-            if (grid != null) grid.AddDanger(dangerArea, 2f);
+            // 1.2: below the engineer's avoid threshold (1.5) — pathing still
+            // routes around the strike zone, but a repairing/walking engineer no
+            // longer breaks off the instant the wind-up starts (arms could never
+            // actually land a stun on someone standing at a panel).
+            if (grid != null) grid.AddDanger(dangerArea, 1.2f);
 
             // Telegraph.
             var warn = Viz.Make("Warning", transform,
@@ -179,7 +183,7 @@ namespace LastShift.Machines
             if (pressPlate != null) pressPlate.localScale = new Vector3(spec.size.x * 0.35f, spec.size.y * 0.35f, 1f);
             if (armPivot != null) armPivot.localRotation = Quaternion.identity;
             Destroy(warn.gameObject);
-            if (grid != null) grid.AddDanger(dangerArea, -2f);
+            if (grid != null) grid.AddDanger(dangerArea, -1.2f);
         }
     }
 }

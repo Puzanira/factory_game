@@ -252,9 +252,10 @@ namespace LastShift.Data
             {
                 kind = MachineKind.Alarm, displayName = "Сканирующие ворота", commandVerb = "сканировать",
                 description = "Просветить центральный проход. Помечает инженера и давит на нервы.",
-                // The scan band runs all the way up to the central packing terminal,
-                // so repairing it is never out of the factory's reach.
-                pos = new Vector2(0f, 0f), useGateRect = true, gateRect = R(0f, 0.8f, 1.4f, 5.0f),
+                // The scan band covers every tile the engineer can repair the
+                // central packing terminal from: scanning him there stresses him
+                // into panic and off the panel.
+                pos = new Vector2(0f, 0f), useGateRect = true, gateRect = R(0f, 1.1f, 2.6f, 6.8f),
                 alarmDuration = 5f, cooldown = 8f,
             });
             l.machines.Add(new MachineSpec
