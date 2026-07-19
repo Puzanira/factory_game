@@ -38,6 +38,9 @@ namespace LastShift.Core
         // Step 3 sequencing.
         float doorClosedAt = -999f;
         float conveyorActivatedAt = -999f;
+        // Soft restart: he slipped past the door — let him visibly repair ~2 s
+        // before the trap phase resets (no abrupt teleport).
+        float step3RepairTimer;
 
         // Instruction card UI.
         Text cardHeader;
@@ -177,29 +180,29 @@ namespace LastShift.Core
             Vector2 center = target + offset;
             root.transform.position = new Vector3(center.x, center.y, 0f);
 
-            Vector2 size = new Vector2(5.2f, 1.9f);
+            Vector2 size = new Vector2(5.4f, 2.0f);
 
-            // Main ellipse: dark outline behind, cream fill on top.
+            // Plain oval: dark outline behind, cream fill on top.
             MakePuff(root.transform, Vector2.zero, size, 43, 44);
 
-            // Puffs along the perimeter make the cloud silhouette.
-            const int puffCount = 8;
-            for (int i = 0; i < puffCount; i++)
-            {
-                float a = (i + 0.5f) / puffCount * Mathf.PI * 2f;
-                Vector2 p = new Vector2(Mathf.Cos(a) * size.x * 0.46f, Mathf.Sin(a) * size.y * 0.46f);
-                float w = 1.15f + 0.35f * Mathf.PingPong(i, 2f);
-                MakePuff(root.transform, p, new Vector2(w, w * 0.75f), 43, 44);
-            }
-
-            // Thought-bubble tail: shrinking circles toward the explained object.
-            Vector2 dir = (-offset).normalized;
+            // Speech-bubble tail: a solid wedge whose tip points exactly at the
+            // explained object (its base merges into the oval fill).
+            Vector2 toTarget = target - center;
+            Vector2 dir = toTarget.normalized;
             float edge = Mathf.Lerp(size.y, size.x, Mathf.Abs(dir.x)) * 0.5f;
-            float[] tailSizes = { 0.52f, 0.36f, 0.22f };
-            for (int i = 0; i < tailSizes.Length; i++)
+            float tipLen = Mathf.Clamp(toTarget.magnitude - edge - 0.2f, 0.5f, 2.4f);
+            float ang = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+            Vector2 wedgePos = dir * (edge - 0.2f + tipLen * 0.5f);
+            var wedgeLine = Viz.Make("TailLine", root.transform, PlaceholderShape.Arrow, BubbleLine,
+                wedgePos, new Vector2(tipLen + 0.22f, 0.95f), 43, unlit: true);
+            wedgeLine.transform.localRotation = Quaternion.Euler(0f, 0f, ang);
+            var wedgeFill = Viz.Make("TailFill", root.transform, PlaceholderShape.Arrow, BubbleFill,
+                wedgePos, new Vector2(tipLen, 0.78f), 44, unlit: true);
+            wedgeFill.transform.localRotation = Quaternion.Euler(0f, 0f, ang);
+            if (Viz.HasSortingLayer("WorldUI"))
             {
-                Vector2 p = dir * (edge + 0.35f + i * 0.5f);
-                MakePuff(root.transform, p, Vector2.one * tailSizes[i], 43, 44);
+                Viz.SetLayer(wedgeLine, "WorldUI");
+                Viz.SetLayer(wedgeFill, "WorldUI");
             }
 
             // Text on top of the cloud.
@@ -211,8 +214,8 @@ namespace LastShift.Core
             canvas.sortingOrder = 46;
             if (Viz.HasSortingLayer("WorldUI")) canvas.sortingLayerName = "WorldUI";
             var crt = (RectTransform)canvasGO.transform;
-            crt.sizeDelta = new Vector2(330f, 110f);
-            UIBuilder.Label(canvasGO.transform, "Text", text, 19, BubbleText, TextAnchor.MiddleCenter);
+            crt.sizeDelta = new Vector2(310f, 105f);
+            UIBuilder.Label(canvasGO.transform, "Text", text, 18, BubbleText, TextAnchor.MiddleCenter);
 
             plaques[id] = root;
         }
@@ -231,32 +234,62 @@ namespace LastShift.Core
             }
         }
 
-        /// <summary>Comic bubble on the screen UI (terminal list, resolve bar, resource cells).</summary>
-        void ShowScreenPlaque(string id, Vector2 aMin, Vector2 aMax, string text, Vector2 tailDir)
+        /// <summary>
+        /// Comic speech bubble on the screen UI. targetAnchor is the screen-anchor
+        /// point of the explained element — the wedge tail aims exactly at it.
+        /// </summary>
+        void ShowScreenPlaque(string id, Vector2 aMin, Vector2 aMax, string text, Vector2 targetAnchor)
         {
             HidePlaque(id);
             RectTransform rt = UIBuilder.Panel(tutorialCanvas.transform, "Plaque_" + id,
                 aMin, aMax, new Color(0f, 0f, 0f, 0f));
 
-            // Two passes so every dark outline sits behind every cream fill
-            // (uGUI draws siblings in order).
-            Vector2 edgeAnchor = new Vector2(0.5f + 0.5f * tailDir.x, 0.5f + 0.5f * tailDir.y);
-            float[] tailPx = { 34f, 24f, 16f };
+            // Geometry in reference pixels (CanvasScaler 1920x1080).
+            Vector2 centerA = (aMin + aMax) * 0.5f;
+            Vector2 toTargetPx = new Vector2((targetAnchor.x - centerA.x) * 1920f,
+                                             (targetAnchor.y - centerA.y) * 1080f);
+            Vector2 dir = toTargetPx.sqrMagnitude > 1f ? toTargetPx.normalized : Vector2.left;
+            float halfW = (aMax.x - aMin.x) * 1920f * 0.5f;
+            float halfH = (aMax.y - aMin.y) * 1080f * 0.5f;
+            float edge = Mathf.Min(
+                Mathf.Abs(dir.x) > 0.001f ? halfW / Mathf.Abs(dir.x) : float.MaxValue,
+                Mathf.Abs(dir.y) > 0.001f ? halfH / Mathf.Abs(dir.y) : float.MaxValue);
+            float tipLen = Mathf.Clamp(toTargetPx.magnitude - edge - 8f, 44f, 96f);
+            float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+            Vector2 wedgePos = dir * (edge - 8f + tipLen * 0.5f);
+
+            // Plain opaque oval (UI hints must not let the game show through).
+            // Two passes so the dark outlines sit behind the cream fills.
             for (int layer = 0; layer < 2; layer++)
             {
                 ScreenPuff(rt, layer, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero, stretch: true);
-                ScreenPuff(rt, layer, new Vector2(0.16f, 0.94f), Vector2.zero, new Vector2(56f, 42f));
-                ScreenPuff(rt, layer, new Vector2(0.84f, 0.94f), Vector2.zero, new Vector2(64f, 44f));
-                ScreenPuff(rt, layer, new Vector2(0.16f, 0.06f), Vector2.zero, new Vector2(60f, 42f));
-                ScreenPuff(rt, layer, new Vector2(0.84f, 0.06f), Vector2.zero, new Vector2(56f, 40f));
-                for (int i = 0; i < tailPx.Length; i++)
-                    ScreenPuff(rt, layer, edgeAnchor, tailDir * (14f + i * 26f), new Vector2(tailPx[i], tailPx[i]));
+                ScreenWedge(rt, layer, wedgePos, tipLen, angle);
             }
 
             var label = UIBuilder.Label(rt, "Text", text, 17, BubbleText, TextAnchor.MiddleCenter);
             SetRect(label.rectTransform, new Vector2(0.05f, 0.08f), new Vector2(0.95f, 0.92f));
 
             plaques[id] = rt.gameObject;
+        }
+
+        /// <summary>Speech tail wedge for a screen bubble (arrow sprite aimed at the target).</summary>
+        void ScreenWedge(RectTransform parent, int layer, Vector2 posPx, float tipLen, float angle)
+        {
+            var go = new GameObject(layer == 0 ? "TailLine" : "TailFill");
+            go.transform.SetParent(parent, false);
+            var rt = go.AddComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = posPx;
+            rt.sizeDelta = layer == 0
+                ? new Vector2(tipLen + 12f, tipLen * 0.62f + 12f)
+                : new Vector2(tipLen, tipLen * 0.62f);
+            rt.localRotation = Quaternion.Euler(0f, 0f, angle);
+            var img = go.AddComponent<Image>();
+            img.sprite = SpriteFactory.Get(PlaceholderShape.Arrow);
+            Color c = layer == 0 ? BubbleLine : BubbleFill;
+            img.color = new Color(c.r, c.g, c.b, 1f);
+            img.raycastTarget = false;
         }
 
         /// <summary>UI cloud puff, one layer at a time: 0 = dark outline, 1 = cream fill.</summary>
@@ -282,8 +315,11 @@ namespace LastShift.Core
                 rt.sizeDelta = sizePx + new Vector2(grow, grow);
             }
             var img = go.AddComponent<Image>();
-            img.sprite = TextureFactory.SoftCircle();
-            img.color = layer == 0 ? BubbleLine : BubbleFill;
+            // Crisp circle sprite (not the soft glow): the oval must be solid.
+            img.sprite = SpriteFactory.Get(PlaceholderShape.Circle);
+            // Fully opaque on screen: interface hints must cover what is behind them.
+            Color c = layer == 0 ? BubbleLine : BubbleFill;
+            img.color = new Color(c.r, c.g, c.b, 1f);
             img.raycastTarget = false;
         }
 
@@ -314,9 +350,10 @@ namespace LastShift.Core
                     SetGate(null);
                     Highlight(null);
                     if (refs.objectives.Count > 0)
-                        ShowWorldPlaque("panel", refs.objectives[0].Pos, new Vector2(2.2f, 0.8f), Loc.TutPlaquePanel);
-                    ShowScreenPlaque("terminal", new Vector2(0.30f, 0.40f), new Vector2(0.63f, 0.56f),
-                        Loc.TutPlaqueTerminal, new Vector2(-1f, 0f));
+                        ShowWorldPlaque("panel", refs.objectives[0].Pos, new Vector2(3.4f, 0.3f), Loc.TutPlaquePanel);
+                    // Hugs the terminal edge; tail aims at the command list rows.
+                    ShowScreenPlaque("terminal", new Vector2(0.285f, 0.44f), new Vector2(0.55f, 0.61f),
+                        Loc.TutPlaqueTerminal, new Vector2(0.14f, 0.52f));
                     break;
 
                 case 2:
@@ -326,7 +363,7 @@ namespace LastShift.Core
                     SetGate(m => m == arm);
                     Highlight(arm);
                     if (arm != null)
-                        ShowWorldPlaque("arm", arm.transform.position, new Vector2(2.6f, 1.0f), Loc.TutPlaqueArm);
+                        ShowWorldPlaque("arm", arm.transform.position, new Vector2(3.4f, 0.6f), Loc.TutPlaqueArm);
                     break;
 
                 case 3:
@@ -335,16 +372,16 @@ namespace LastShift.Core
                     SetGate(m => m == door || m == conveyor);
                     Highlight(door);
                     if (door != null)
-                        ShowWorldPlaque("door", door.transform.position, new Vector2(2.6f, -1.3f), Loc.TutPlaqueDoor);
+                        ShowWorldPlaque("door", door.transform.position, new Vector2(3.4f, -1.6f), Loc.TutPlaqueDoor);
                     break;
 
                 case 4:
                     SetCard(Loc.TutorialStep4Header, Loc.TutorialStep4Body);
                     SetGate(null);
                     Highlight(null);
-                    // Points at the three power cells in the terminal header.
-                    ShowScreenPlaque("resource", new Vector2(0.30f, 0.80f), new Vector2(0.62f, 0.95f),
-                        Loc.TutPlaqueResource, new Vector2(-1f, 0f));
+                    // Hugs the terminal edge; tail aims at the three power cells.
+                    ShowScreenPlaque("resource", new Vector2(0.285f, 0.79f), new Vector2(0.53f, 0.92f),
+                        Loc.TutPlaqueResource, new Vector2(0.23f, 0.87f));
                     break;
             }
         }
@@ -420,7 +457,7 @@ namespace LastShift.Core
                         HidePlaque("door");
                         if (conveyor != null)
                             ShowWorldPlaque("conveyor", conveyor.transform.position,
-                                new Vector2(0f, -1.7f), Loc.TutPlaqueConveyor);
+                                new Vector2(0f, -2.0f), Loc.TutPlaqueConveyor);
                     }
                     if (machine == conveyor)
                     {
@@ -455,8 +492,9 @@ namespace LastShift.Core
                 HidePlaque("arm");
                 // Point at the resolve gauge: the stun just visibly drained it.
                 // Cleared when step 3 begins (~3 s on screen).
-                ShowScreenPlaque("resolve", new Vector2(0.55f, 0.78f), new Vector2(0.97f, 0.885f),
-                    Loc.TutPlaqueResolve, new Vector2(0f, 1f));
+                // Right under the top HUD; tail aims at the resolve bar itself.
+                ShowScreenPlaque("resolve", new Vector2(0.60f, 0.775f), new Vector2(0.94f, 0.88f),
+                    Loc.TutPlaqueResolve, new Vector2(0.76f, 0.945f));
                 Advance(null, 3.2f);
             }
         }
@@ -475,12 +513,26 @@ namespace LastShift.Core
         void ResetStep3()
         {
             lm.ShowToast(Loc.TutorialStep3Reset, 2.8f, warning: true);
+            RestartTrapPhase();
+        }
+
+        /// <summary>He repaired for a couple of seconds after slipping past the door.</summary>
+        void SoftResetStep3()
+        {
+            lm.ShowToast(Loc.TutorialRetry, 2.6f, warning: true);
+            RestartTrapPhase();
+        }
+
+        /// <summary>Step 3 back to phase one: door open, pointer on the door, fresh approach.</summary>
+        void RestartTrapPhase()
+        {
             doorClosedAt = -999f;
             conveyorActivatedAt = -999f;
-            // Back to phase one: point at the door again.
+            step3RepairTimer = 0f;
+            if (door != null && door.IsClosed) door.ForceActivate(); // retry needs an open route
             HidePlaque("conveyor");
             if (door != null)
-                ShowWorldPlaque("door", door.transform.position, new Vector2(2.6f, -1.3f), Loc.TutPlaqueDoor);
+                ShowWorldPlaque("door", door.transform.position, new Vector2(3.4f, -1.6f), Loc.TutPlaqueDoor);
             RetrySituation(null);
         }
 
@@ -535,10 +587,31 @@ namespace LastShift.Core
                 else if (armCycleSeen) RetrySituation(Loc.TutorialRetry);
             }
 
-            // Watchdog for every step: no completion for a while (engineer wandered
-            // off, stood aside, got the situation into a dead end) — repeat it.
+            // Step 3 soft restart: he got past the door. He is allowed to reach the
+            // panel and repair for ~2 seconds (the player sees the missed moment),
+            // then the trap phase starts over.
+            if (step == 3 && !stepAdvancing)
+            {
+                var e3 = lm.Engineer;
+                bool repairing = e3 != null && e3.Fsm != null &&
+                    e3.Fsm.CurrentId == LastShift.Engineer.EngineerStateId.RepairObjective;
+                if (repairing)
+                {
+                    step3RepairTimer += Time.deltaTime;
+                    if (step3RepairTimer >= 2f)
+                    {
+                        step3RepairTimer = 0f;
+                        SoftResetStep3();
+                    }
+                }
+                else step3RepairTimer = 0f;
+            }
+
+            // Watchdog for the other steps: no completion for a while (engineer
+            // wandered off, got the situation into a dead end) — repeat it.
+            // Step 3 uses the soft repair-based restart above instead.
             // Never teleport mid-strike: a landing hit must be allowed to connect.
-            if (step >= 1 && step <= 4 && !stepAdvancing &&
+            if (step >= 1 && step <= 4 && step != 3 && !stepAdvancing &&
                 !(arm != null && arm.State == MachineState.Active) &&
                 Time.time - situationResetAt > StepRetrySeconds)
             {
