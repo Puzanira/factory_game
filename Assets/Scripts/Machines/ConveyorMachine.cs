@@ -35,6 +35,22 @@ namespace LastShift.Machines
         public override string ActivationMessage =>
             displayName.ToUpper() + ": НАПРАВЛЕНИЕ ИЗМЕНЕНО";
 
+        public override string PurposeLine => Loc.PurposeConveyor;
+        public override string PurposeHint => Loc.PurposeConveyorHint;
+
+        /// <summary>The belt only matters while the engineer is standing on (or beside) it.</summary>
+        public override bool EngineerInEffectiveZone
+        {
+            get
+            {
+                var e = Engineer;
+                if (e == null || e.IsEscaped) return false;
+                Rect r = area;
+                r.xMin -= 0.5f; r.xMax += 0.5f; r.yMin -= 0.5f; r.yMax += 0.5f;
+                return r.Contains(e.Pos);
+            }
+        }
+
         public static Vector2 TotalPushAt(Vector2 p)
         {
             Vector2 total = Vector2.zero;
@@ -134,6 +150,10 @@ namespace LastShift.Machines
 
         protected override void BuildPreview(Transform root)
         {
+            // Affected-tiles band: the whole belt surface reads as the effect zone.
+            Viz.Make("EffectBand", root, PlaceholderShape.Square,
+                new Color(0.4f, 1f, 0.7f, 0.16f), Vector2.zero,
+                spec.size + new Vector2(0.4f, 0.4f), 11, unlit: true);
             Viz.Make("FlowArrow", root, PlaceholderShape.Arrow,
                 new Color(0.4f, 1f, 0.7f, 0.9f), Vector2.zero, new Vector2(1.8f, 1.2f), 12, unlit: true);
             UpdateArrowFacing();

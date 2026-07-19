@@ -41,6 +41,8 @@ namespace LastShift.Data
         [Header("Pathing")]
         [Tooltip("How strongly hazard danger repels path planning (0 = ignores danger).")]
         public float dangerWeight = 3f;
+        [Tooltip("Local grid danger at which he breaks off to AvoidHazard (raise to make him ignore telegraphs, e.g. in the tutorial).")]
+        public float avoidDangerThreshold = 1.5f;
         [Tooltip("Seconds without a valid path before losing Resolve (repeats).")]
         public float noPathGraceSeconds = 4f;
 

@@ -28,6 +28,25 @@ namespace LastShift.Machines
             ? displayName.ToUpper() + ": ЦИКЛ ЗАПУЩЕН"
             : displayName.ToUpper() + ": ЗАХВАТ АКТИВИРОВАН";
 
+        public override string PurposeLine => Loc.PurposeArm;
+        public override string PurposeHint => Loc.PurposeArmHint;
+
+        /// <summary>Slightly wider than the strike zone: he can still walk in during wind-up.</summary>
+        public override bool EngineerInEffectiveZone
+        {
+            get
+            {
+                var e = Engineer;
+                if (e == null || e.IsEscaped) return false;
+                if (pressMode)
+                {
+                    Rect r = Viz.RectAt(spec.pos, spec.size + new Vector2(1.2f, 1.2f));
+                    return r.Contains(e.Pos);
+                }
+                return Vector2.Distance(transform.position, e.Pos) <= radius + 0.6f;
+            }
+        }
+
         protected override string SelectionSfxName => "servo_soft";
         protected override string ActivateSfxName => "arm_windup"; // hydraulic charge telegraph
         protected override float ActivateSfxVolume => 0.55f;
@@ -152,6 +171,7 @@ namespace LastShift.Machines
                     hit = true;
                     AudioManager.PlayAt("arm_hit", Engineer.Pos, SfxBus.Machines, 0.65f);
                     Engineer.StunHit(stunDuration, displayName);
+                    ReportEffective(); // he walked in after all — upgrade a wasted verdict
                 }
                 yield return null;
             }

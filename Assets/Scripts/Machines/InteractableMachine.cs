@@ -30,7 +30,8 @@ namespace LastShift.Machines
 
         public MachineState State { get; protected set; } = MachineState.Ready;
         public float CooldownRemaining { get; private set; }
-        public float CooldownDuration => cooldown;
+        public float CooldownDuration => currentCooldownDuration > 0f ? currentCooldownDuration : cooldown;
+        float currentCooldownDuration;
         public bool IsReady => State == MachineState.Ready;
 
         /// <summary>
@@ -44,6 +45,33 @@ namespace LastShift.Machines
 
         /// <summary>Raised on every successful activation.</summary>
         public event System.Action<InteractableMachine> Activated;
+
+        /// <summary>
+        /// Player-activation verdict: true = the engineer was inside the effective
+        /// zone (or walked into the effect while it ran), false = wasted activation.
+        /// Not raised for escalation auto-fire.
+        /// </summary>
+        public event System.Action<InteractableMachine, bool> Judged;
+
+        // ---------------- tactical info ----------------
+
+        /// <summary>Main Russian purpose line shown for the selected command.</summary>
+        public virtual string PurposeLine => "";
+        /// <summary>Optional second tactical hint line.</summary>
+        public virtual string PurposeHint => "";
+
+        /// <summary>True while the engineer is where this machine can meaningfully affect him.</summary>
+        public virtual bool EngineerInEffectiveZone => true;
+
+        /// <summary>Recovery-style activations (e.g. re-opening a door) are never judged wasted.</summary>
+        public virtual bool ActivationAlwaysEffective => false;
+
+        /// <summary>Control charges one player activation costs.</summary>
+        public virtual int ResourceCost => 1;
+
+        float pendingCooldownMult = 1f;
+        bool judgedThisRun;
+        bool lastJudgedEffective;
 
         protected MachineSpec spec;
         protected GameObject highlight;
@@ -120,7 +148,7 @@ namespace LastShift.Machines
         public bool TryActivate()
         {
             if (!IsReady) return false;
-            Run();
+            Run(judge: true);
             return true;
         }
 
@@ -129,11 +157,46 @@ namespace LastShift.Machines
         {
             if (State == MachineState.Active) return;
             if (cooldownRoutine != null) { StopCoroutine(cooldownRoutine); cooldownRoutine = null; }
-            Run();
+            Run(judge: false);
         }
 
-        void Run()
+        /// <summary>
+        /// Called by subclasses when the running effect actually connected with the
+        /// engineer (arm hit, vehicle ram). Upgrades a wasted verdict to effective.
+        /// </summary>
+        protected void ReportEffective()
         {
+            if (!judgedThisRun || lastJudgedEffective) return;
+            lastJudgedEffective = true;
+            pendingCooldownMult = Data.TacticsData.Get().effectiveCooldownMultiplier;
+            Judged?.Invoke(this, true);
+            Core.FactoryControlResource.NotifyEffectiveAction();
+        }
+
+        void Run(bool judge)
+        {
+            var tactics = Data.TacticsData.Get();
+            judgedThisRun = judge;
+            if (judge)
+            {
+                lastJudgedEffective = ActivationAlwaysEffective || EngineerInEffectiveZone;
+                pendingCooldownMult = lastJudgedEffective
+                    ? tactics.effectiveCooldownMultiplier
+                    : tactics.wastedCooldownMultiplier;
+                Judged?.Invoke(this, lastJudgedEffective);
+                // Timing bonus only for machines that actually have a zone to hit —
+                // support systems (drone, room alarm, door re-open) earn nothing
+                // for merely being pressed, keeping "Pressure only from real effects".
+                if (lastJudgedEffective && !ActivationAlwaysEffective)
+                {
+                    AddPressure(tactics.effectivePressureBonus, displayName);
+                    Core.FactoryControlResource.NotifyEffectiveAction();
+                }
+            }
+            else
+            {
+                pendingCooldownMult = 1f;
+            }
             State = MachineState.Active;
             if (activateClip != null)
             {
@@ -162,7 +225,10 @@ namespace LastShift.Machines
         IEnumerator CooldownRoutine()
         {
             State = MachineState.Cooldown;
-            CooldownRemaining = cooldown;
+            // Wasted activations cool down longer; effective ones slightly faster.
+            currentCooldownDuration = cooldown * Mathf.Max(0.1f, pendingCooldownMult);
+            pendingCooldownMult = 1f;
+            CooldownRemaining = currentCooldownDuration;
             UiSfx.CommandCooldown();
             while (CooldownRemaining > 0f)
             {

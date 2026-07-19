@@ -51,7 +51,9 @@ namespace LastShift.Objectives
             cable2.SetPosition(2, new Vector3(0.75f, -0.85f, 0f));
 
             // Panel body: casing, inner face, screen, vents, status LED.
-            body = MakeBody(new Color(0.72f, 0.56f, 0.22f), new Vector2(0.95f, 0.95f));
+            // Red while broken (reads as "нужен ремонт" against the yellow machinery),
+            // turns green when the engineer finishes the repair.
+            body = MakeBody(new Color(0.78f, 0.26f, 0.2f), new Vector2(0.95f, 0.95f));
             Viz.Make("Face", transform, PlaceholderShape.Square, new Color(0.24f, 0.23f, 0.2f),
                 Vector2.zero, new Vector2(0.78f, 0.78f), 5);
             screen = Viz.Make("Screen", transform, PlaceholderShape.Square, new Color(0.12f, 0.2f, 0.1f),
@@ -60,10 +62,10 @@ namespace LastShift.Objectives
                 new Vector2(-0.15f, -0.18f), new Vector2(0.32f, 0.05f), 6);
             Viz.Make("VentB", transform, PlaceholderShape.Square, new Color(0.14f, 0.14f, 0.13f),
                 new Vector2(-0.15f, -0.28f), new Vector2(0.32f, 0.05f), 6);
-            statusLed = Viz.Make("StatusLed", transform, PlaceholderShape.Circle, new Color(0.9f, 0.5f, 0.2f),
+            statusLed = Viz.Make("StatusLed", transform, PlaceholderShape.Circle, new Color(0.95f, 0.3f, 0.2f),
                 new Vector2(0.26f, -0.23f), new Vector2(0.1f, 0.1f), 7);
 
-            glow = FxFactory.Glow(transform, new Color(1f, 0.75f, 0.3f, 0.18f), new Vector2(2.2f, 2.2f), 2);
+            glow = FxFactory.Glow(transform, new Color(1f, 0.45f, 0.3f, 0.18f), new Vector2(2.2f, 2.2f), 2);
             FxFactory.PointLight(transform, Vector2.zero, new Color(1f, 0.8f, 0.45f), 2.6f, 0.7f);
 
             // Progress bar under the panel.
@@ -105,6 +107,14 @@ namespace LastShift.Objectives
             }
         }
 
+        /// <summary>Tutorial helper: silently wipe accumulated progress (no resolve/pressure side effects).</summary>
+        public void ResetProgress()
+        {
+            if (Completed) return;
+            Progress01 = 0f;
+            UpdateBar();
+        }
+
         /// <summary>Factory sabotage: destroy part of the progress. Costs the engineer Resolve.</summary>
         public void Damage(float fraction, string reason)
         {
@@ -144,9 +154,9 @@ namespace LastShift.Objectives
                     ? new Color(0.25f + 0.2f * pulse, 0.45f + 0.2f * pulse, 0.2f)
                     : new Color(0.12f + 0.06f * pulse, 0.2f + 0.08f * pulse, 0.1f);
             if (statusLed != null)
-                statusLed.color = new Color(0.9f, 0.5f, 0.2f, 0.5f + 0.5f * pulse);
+                statusLed.color = new Color(0.95f, 0.3f, 0.2f, 0.5f + 0.5f * pulse);
             if (glow != null && isCurrent)
-                glow.color = new Color(1f, 0.75f, 0.3f, 0.14f + 0.1f * pulse);
+                glow.color = new Color(1f, 0.45f, 0.3f, 0.14f + 0.1f * pulse);
 
             if (sparks != null)
             {

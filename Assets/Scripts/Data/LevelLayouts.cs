@@ -30,6 +30,58 @@ namespace LastShift.Data
         }
 
         // ==================================================================
+        // TUTORIAL — УЧЕБНЫЙ ЦЕХ (interactive lesson: door, conveyor, arm)
+        // ==================================================================
+        public static RoomLayout Tutorial()
+        {
+            var l = new RoomLayout
+            {
+                roomName = "УЧЕБНЫЙ ЦЕХ",
+                goalText = "Вводный урок управления заводом",
+                roomSize = new Vector2(13f, 8.5f),
+                engineerSpawn = new Vector2(0f, -3.2f),
+                exitPos = new Vector2(0f, 4f),
+                floorTint = new Color(0.95f, 0.9f, 0.65f, 0.04f), // calm training-hall light
+            };
+
+            // One wall band splits the room; two ways up: the door gap (west) and
+            // the conveyor crossing (east). The arm guards the door-gap approach.
+            l.obstacles.Add(new RectSpec(new Vector2(-5.25f, 0.6f), new Vector2(2.5f, 0.7f), DarkSteel, true));
+            l.obstacles.Add(new RectSpec(new Vector2(-0.5f, 0.6f), new Vector2(3.0f, 0.7f), DarkSteel, true));
+
+            // Safety line toward the belt crossing; exit marking.
+            l.decor.Add(new RectSpec(new Vector2(0f, -1.4f), new Vector2(10f, 0.07f), SafetyYellow, false, 1));
+            l.decor.Add(new RectSpec(new Vector2(0f, 3.55f), new Vector2(2.4f, 0.09f), ExitGreen, false, 1));
+
+            l.machines.Add(new MachineSpec
+            {
+                kind = MachineKind.Door, displayName = "Учебные ворота", commandVerb = "закрыть",
+                description = "Перекрыть или открыть западный проход.",
+                pos = new Vector2(-3.0f, 0.6f), size = new Vector2(2.0f, 0.7f), cooldown = 3.5f,
+            });
+            l.machines.Add(new MachineSpec
+            {
+                kind = MachineKind.Conveyor, displayName = "Учебный конвейер", commandVerb = "сменить направление",
+                description = "Лента восточного перехода. Сдвигает всех, кто на ней стоит.",
+                pos = new Vector2(3.75f, 0.6f), size = new Vector2(5.5f, 1.1f),
+                conveyorDir = Vector2.right, conveyorSpeed = 2.4f, cooldown = 3.5f,
+            });
+            l.machines.Add(new MachineSpec
+            {
+                kind = MachineKind.RoboticArm, displayName = "Учебный манипулятор", commandVerb = "захватить",
+                description = "Замах и захват. Оглушает инженера в радиусе действия.",
+                pos = new Vector2(-3.0f, 2.1f), radius = 2.2f, windup = 0.5f, stunDuration = 1.8f, cooldown = 3f,
+            });
+
+            // Small wet patch at the east end of the belt — the "danger zone" the
+            // conveyor carries the engineer into during step 3.
+            l.hazards.Add(new HazardSpec { kind = HazardKind.Slippery, rect = R(5.6f, 0.6f, 1.6f, 1.4f), startsActive = true });
+
+            l.objectives.Add(new ObjectiveSpec("Учебный пульт", new Vector2(-4.8f, 2.8f), 240f));
+            return l;
+        }
+
+        // ==================================================================
         // LEVEL 1 — ПРИЁМКА СЫРЬЯ (tutorial: gates, conveyors, arm, forklift)
         // ==================================================================
         static RoomLayout Level1()

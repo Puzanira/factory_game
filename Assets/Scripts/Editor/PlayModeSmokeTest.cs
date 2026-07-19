@@ -24,6 +24,7 @@ namespace LastShift.EditorTools
 
         const string FinalKey = "LastShift.SmokeFinal";
         const string DefeatKey = "LastShift.SmokeDefeat";
+        const string TutorialKey = "LastShift.SmokeTutorial";
         const string PhaseKey = "LastShift.SmokePhase";
         const string FailKey = "LastShift.SmokeFails";
 
@@ -36,15 +37,18 @@ namespace LastShift.EditorTools
             string scene = "Boot";
             bool final = false;
             bool defeat = false;
+            bool tutorial = false;
             string[] args = System.Environment.GetCommandLineArgs();
             for (int i = 0; i < args.Length; i++)
             {
                 if (args[i] == "-smokeScene" && i + 1 < args.Length) scene = args[i + 1];
                 if (args[i] == "-smokeFinal") final = true;
                 if (args[i] == "-smokeDefeat") defeat = true;
+                if (args[i] == "-smokeTutorial") tutorial = true;
             }
             SessionState.SetBool(FinalKey, final);
             SessionState.SetBool(DefeatKey, defeat);
+            SessionState.SetBool(TutorialKey, tutorial);
             SessionState.SetString(PhaseKey, "boot");
             SessionState.SetInt(FailKey, 0);
 
@@ -115,12 +119,21 @@ namespace LastShift.EditorTools
 
             double elapsed = EditorApplication.timeSinceStartup - startTime;
 
-            // Drive the keyboard-only intro flow (title menu + 4 briefing pages)
-            // exactly like Enter presses, until Level 1 loads.
+            // Drive the keyboard-only intro flow (title menu, tutorial choice,
+            // 4 briefing pages) exactly like key presses, until gameplay loads.
+            // Default: pick «СРАЗУ К СМЕНЕ» so Level 1 keeps its coverage;
+            // -smokeTutorial keeps the default «ПРОЙТИ УРОК» and tests the lesson.
             var intro = LastShift.UI.IntroFlowUI.Instance;
             if (intro != null && elapsed > 2.0 && elapsed - lastActivation > 1.2)
             {
                 lastActivation = elapsed;
+                if (intro.DevAtTutorialChoice && !SessionState.GetBool(TutorialKey, false) &&
+                    intro.DevTutorialChoiceIndex == 0)
+                {
+                    intro.DevNavigateNext();
+                    Debug.Log("SMOKE_CHOICE_SKIP_TUTORIAL t=" + elapsed.ToString("0.0"));
+                    return;
+                }
                 intro.DevAdvance();
                 Debug.Log("SMOKE_INTRO_ADVANCE t=" + elapsed.ToString("0.0"));
                 return;
@@ -186,7 +199,14 @@ namespace LastShift.EditorTools
                 (level != null && level.Terminal != null ? " commands=" + level.Terminal.Items.Count : ""));
             Debug.Log("SMOKE_RUSSIAN_OK=" + russianOk +
                 (level != null ? " room=" + level.RoomName : ""));
-            bool pass = errorCount == 0 && sceneOk && russianOk;
+            bool tutorialOk = true;
+            if (SessionState.GetBool(TutorialKey, false))
+            {
+                tutorialOk = level != null && level.TutorialMode &&
+                             level.RoomName == LastShift.Data.Loc.TutorialRoomName;
+                Debug.Log("SMOKE_TUTORIAL_OK=" + tutorialOk);
+            }
+            bool pass = errorCount == 0 && sceneOk && russianOk && tutorialOk;
             Debug.Log(pass ? "SMOKE_RESULT: PASS" : "SMOKE_RESULT: FAIL errors=" + errorCount);
             EditorApplication.Exit(pass ? 0 : 1);
         }

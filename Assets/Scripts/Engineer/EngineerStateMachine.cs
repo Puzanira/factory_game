@@ -25,6 +25,7 @@ namespace LastShift.Engineer
             Register(new PanicState(engineer));
             Register(new RetreatToExitState(engineer));
             Register(new EscapeState(engineer));
+            Register(new BackOffState(engineer));
         }
 
         void Register(EngineerState state) => states[state.Id] = state;

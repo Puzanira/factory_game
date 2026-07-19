@@ -24,6 +24,8 @@ UNITY="/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity
 "$UNITY" -batchmode -projectPath <path> -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -logFile smoke.log
 # Variants: -smokeScene Level_02_PackagingLine | -smokeFinal (final victory screen)
 #           -smokeDefeat (drives the restart/quit menu end-to-end via UnifiedGameInput)
+#           -smokeTutorial (takes «ПРОЙТИ УРОК» at the choice screen and validates the
+#           interactive tutorial room; the default Boot run picks «СРАЗУ К СМЕНЕ»)
 # Grep the log for SMOKE_RESULT / SMOKE_ERR.
 ```
 

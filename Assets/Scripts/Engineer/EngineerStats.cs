@@ -16,6 +16,8 @@ namespace LastShift.Engineer
         public event System.Action<float> ResolveChanged;
         public event System.Action<float> StressChanged;
         public event System.Action ResolveEmpty;
+        /// <summary>A discrete Resolve hit landed (final amount after multipliers).</summary>
+        public event System.Action<float, string> ResolveLost;
 
         public bool IsResolveEmpty => Resolve <= 0f;
 
@@ -60,6 +62,7 @@ namespace LastShift.Engineer
 
             Resolve = Mathf.Max(0f, Resolve - amount * mult);
             ResolveChanged?.Invoke(Resolve);
+            if (amount * mult >= 2f) ResolveLost?.Invoke(amount * mult, reason);
             if (Resolve <= 0f) ResolveEmpty?.Invoke();
         }
 
@@ -67,6 +70,13 @@ namespace LastShift.Engineer
         {
             if (amount <= 0f || data == null) return;
             Stress = Mathf.Min(data.stressMax, Stress + amount);
+            StressChanged?.Invoke(Stress);
+        }
+
+        /// <summary>Tutorial helper: drop accumulated stress so panic can't derail a lesson step.</summary>
+        public void CalmStress()
+        {
+            Stress = 0f;
             StressChanged?.Invoke(Stress);
         }
     }

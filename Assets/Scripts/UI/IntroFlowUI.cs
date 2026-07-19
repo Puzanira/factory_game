@@ -19,15 +19,19 @@ namespace LastShift.UI
     {
         public static IntroFlowUI Instance { get; private set; }
 
-        enum Screen { Title, Briefing, ConfirmQuit, ConfirmSkip }
+        enum Screen { Title, TutorialChoice, Briefing, ConfirmQuit, ConfirmSkip }
 
         Screen current = Screen.Title;
         int menuIndex;
         int pageIndex;
         int modalIndex;
+        int choiceIndex;
         bool loading;
 
         GameObject titleRoot;
+        GameObject choiceRoot;
+        readonly List<Text> choiceMenu = new List<Text>();
+        readonly List<Image> choiceMenuBgs = new List<Image>();
         GameObject briefingRoot;
         GameObject modalRoot;
         Text modalQuestion;
@@ -53,9 +57,21 @@ namespace LastShift.UI
             var canvas = UIBuilder.CreateCanvas("IntroCanvas", 20);
             BuildBackdrop(canvas.transform);
             BuildTitle(canvas.transform);
+            BuildTutorialChoice(canvas.transform);
             BuildBriefing(canvas.transform);
             BuildModal(canvas.transform);
-            ShowScreen(Screen.Title);
+
+            // Returning from the finished tutorial: skip the title, go straight to
+            // the normal intro briefing so story text is never duplicated.
+            if (Core.GameManager.ResumeAtBriefing)
+            {
+                Core.GameManager.ResumeAtBriefing = false;
+                StartBriefing();
+            }
+            else
+            {
+                ShowScreen(Screen.Title);
+            }
 
             // Title mood: quiet terminal drone with distant machinery, faded in.
             AudioManager.Ensure();
@@ -165,6 +181,40 @@ namespace LastShift.UI
             SetRect(hint.rectTransform, new Vector2(0f, 0.08f), new Vector2(1f, 0.12f));
         }
 
+        void BuildTutorialChoice(Transform root)
+        {
+            RectTransform rt = UIBuilder.Panel(root, "TutorialChoice", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0f));
+            choiceRoot = rt.gameObject;
+
+            RectTransform card = UIBuilder.Panel(rt, "Card", new Vector2(0.28f, 0.2f), new Vector2(0.72f, 0.8f),
+                new Color(0.02f, 0.05f, 0.035f, 0.97f));
+            var outline = card.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0.35f, 0.7f, 0.45f, 0.6f);
+            outline.effectDistance = new Vector2(2f, 2f);
+
+            var header = UIBuilder.Label(card, "Header", Loc.TutorialChoiceHeader, 40, Amber, TextAnchor.MiddleCenter);
+            SetRect(header.rectTransform, new Vector2(0f, 0.8f), new Vector2(1f, 0.95f));
+            UIBuilder.Panel(card, "HeaderLine", new Vector2(0.08f, 0.79f), new Vector2(0.92f, 0.793f),
+                new Color(0.35f, 0.7f, 0.45f, 0.5f));
+
+            var body = UIBuilder.Label(card, "Body", Loc.TutorialChoiceBody, 26, Phosphor, TextAnchor.MiddleCenter);
+            SetRect(body.rectTransform, new Vector2(0.05f, 0.6f), new Vector2(0.95f, 0.78f));
+
+            string[] options = { Loc.TutorialChoiceYes, Loc.TutorialChoiceNo };
+            for (int i = 0; i < options.Length; i++)
+            {
+                RectTransform row = UIBuilder.Panel(card, "Option" + i,
+                    new Vector2(0.2f, 0.42f - i * 0.14f), new Vector2(0.8f, 0.53f - i * 0.14f),
+                    new Color(0f, 0f, 0f, 0f));
+                choiceMenuBgs.Add(row.GetComponent<Image>());
+                choiceMenu.Add(UIBuilder.Label(row, "Label", options[i], 27, PhosphorDim, TextAnchor.MiddleCenter));
+            }
+
+            var footer = UIBuilder.Label(card, "Footer", Loc.TutorialChoiceFooter, 16,
+                new Color(0.4f, 0.55f, 0.45f), TextAnchor.MiddleCenter);
+            SetRect(footer.rectTransform, new Vector2(0f, 0.04f), new Vector2(1f, 0.16f));
+        }
+
         void BuildBriefing(Transform root)
         {
             RectTransform rt = UIBuilder.Panel(root, "Briefing", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0f));
@@ -230,9 +280,15 @@ namespace LastShift.UI
         {
             current = screen;
             titleRoot.SetActive(screen == Screen.Title);
+            choiceRoot.SetActive(screen == Screen.TutorialChoice);
             briefingRoot.SetActive(screen == Screen.Briefing);
             modalRoot.SetActive(screen == Screen.ConfirmQuit || screen == Screen.ConfirmSkip);
             if (screen == Screen.Title) { menuIndex = 0; RefreshTitleMenu(); }
+            if (screen == Screen.TutorialChoice)
+            {
+                choiceIndex = 0; // default: «ПРОЙТИ УРОК»
+                RefreshChoiceMenu();
+            }
             if (screen == Screen.ConfirmQuit || screen == Screen.ConfirmSkip)
             {
                 modalQuestion.text = screen == Screen.ConfirmQuit ? Loc.ConfirmQuit : Loc.ConfirmSkip;
@@ -303,6 +359,17 @@ namespace LastShift.UI
                     if (GameInput.EscapePressed) { UiSfx.PauseMove(); ShowScreen(Screen.ConfirmQuit); }
                     break;
 
+                case Screen.TutorialChoice:
+                    if (GameInput.UpPressed || GameInput.DownPressed)
+                    {
+                        choiceIndex = 1 - choiceIndex;
+                        UiSfx.TerminalMove();
+                        RefreshChoiceMenu();
+                    }
+                    if (GameInput.ConfirmPressed) Confirm();
+                    if (GameInput.EscapePressed) { UiSfx.PauseMove(); ShowScreen(Screen.Title); }
+                    break;
+
                 case Screen.Briefing:
                     if (GameInput.ConfirmPressed) Confirm();
                     if (GameInput.EscapePressed) { UiSfx.PauseMove(); ShowScreen(Screen.ConfirmSkip); }
@@ -324,7 +391,29 @@ namespace LastShift.UI
                 case Screen.Title:
                     UiSfx.Confirm();
                     if (menuIndex == 2) ShowScreen(Screen.ConfirmQuit);
-                    else StartBriefing(); // «НАЧАТЬ СМЕНУ» and «ИНСТРУКТАЖ» both open the briefing
+                    // «НАЧАТЬ СМЕНУ» and «ИНСТРУКТАЖ» both pass through the
+                    // first-launch tutorial choice before the normal briefing.
+                    else ShowScreen(Screen.TutorialChoice);
+                    break;
+
+                case Screen.TutorialChoice:
+                    UiSfx.Confirm();
+                    if (choiceIndex == 0)
+                    {
+                        // «ПРОЙТИ УРОК» — load Level 1 in interactive-tutorial mode.
+                        if (!loading)
+                        {
+                            loading = true;
+                            Core.GameManager.TutorialRequested = true;
+                            SceneLoader.Load(GameManager.Level1Scene);
+                        }
+                    }
+                    else
+                    {
+                        // «СРАЗУ К СМЕНЕ» — straight into the normal intro flow.
+                        Core.GameManager.TutorialRequested = false;
+                        StartBriefing();
+                    }
                     break;
 
                 case Screen.Briefing:
@@ -353,6 +442,34 @@ namespace LastShift.UI
 
         /// <summary>Headless smoke-test hook: behaves exactly like pressing Enter.</summary>
         public void DevAdvance() => Confirm();
+
+        /// <summary>Smoke-test introspection: is the tutorial choice on screen?</summary>
+        public bool DevAtTutorialChoice => current == Screen.TutorialChoice;
+        /// <summary>Currently selected tutorial-choice row (0 = «ПРОЙТИ УРОК»).</summary>
+        public int DevTutorialChoiceIndex => choiceIndex;
+
+        /// <summary>Smoke-test hook: behaves exactly like pressing Down.</summary>
+        public void DevNavigateNext()
+        {
+            if (current == Screen.TutorialChoice)
+            {
+                choiceIndex = 1 - choiceIndex;
+                RefreshChoiceMenu();
+            }
+        }
+
+        void RefreshChoiceMenu()
+        {
+            for (int i = 0; i < choiceMenu.Count; i++)
+            {
+                bool sel = i == choiceIndex;
+                string baseLabel = i == 0 ? Loc.TutorialChoiceYes : Loc.TutorialChoiceNo;
+                choiceMenu[i].text = (sel ? "> " : "") + baseLabel + (sel ? " <" : "");
+                choiceMenu[i].color = sel ? new Color(0.95f, 1f, 0.7f) : PhosphorDim;
+                choiceMenu[i].fontStyle = sel ? FontStyle.Bold : FontStyle.Normal;
+                choiceMenuBgs[i].color = sel ? new Color(0.2f, 0.45f, 0.25f, 0.35f) : new Color(0f, 0f, 0f, 0f);
+            }
+        }
 
         void RefreshTitleMenu()
         {

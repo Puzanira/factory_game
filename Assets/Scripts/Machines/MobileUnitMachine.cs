@@ -26,6 +26,28 @@ namespace LastShift.Machines
                 ? displayName.ToUpper() + ": ПЕРЕСТАНОВКА ПАЛЕТ"
                 : displayName.ToUpper() + ": МАРШРУТ ЗАПУЩЕН";
 
+        public override string PurposeLine => Loc.PurposeMobileUnit;
+        public override string PurposeHint => Loc.PurposeMobileUnitHint;
+
+        /// <summary>Effective when the engineer is near the drive corridor.</summary>
+        public override bool EngineerInEffectiveZone
+        {
+            get
+            {
+                var e = Engineer;
+                if (e == null || e.IsEscaped || route == null) return false;
+                for (int i = 0; i < route.Length - 1; i++)
+                {
+                    Vector2 a = route[i], b = route[i + 1];
+                    Vector2 ab = b - a;
+                    float t = Mathf.Clamp01(Vector2.Dot(e.Pos - a, ab) / Mathf.Max(0.01f, ab.sqrMagnitude));
+                    if (Vector2.Distance(e.Pos, a + ab * t) <= 2.0f) return true;
+                }
+                // Pallet shifts change the room topology — that is useful on its own.
+                return pallets.Count > 0;
+            }
+        }
+
         protected override string ActivateSfxName => "forklift_start";
         string LoopId => "forklift_" + GetInstanceID();
         float nextWarnBeepAt;
@@ -203,6 +225,7 @@ namespace LastShift.Machines
                         setRammed(true);
                         AudioManager.PlayAt("forklift_bump", pos, SfxBus.Machines, 0.6f);
                         e.StunHit(stunDuration, displayName);
+                        ReportEffective();
                     }
                     yield return null;
                 }

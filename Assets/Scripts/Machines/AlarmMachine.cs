@@ -26,6 +26,25 @@ namespace LastShift.Machines
             ? displayName.ToUpper() + ": СКАНИРОВАНИЕ ПРОХОДА"
             : displayName.ToUpper() + ": ТРЕВОГА ВКЛЮЧЕНА";
 
+        public override string PurposeLine => useGate ? Loc.PurposeScanner : Loc.PurposeAlarm;
+        public override string PurposeHint => useGate ? Loc.PurposeScannerHint : Loc.PurposeAlarmHint;
+
+        /// <summary>Room-wide alarm always lands; a scanner gate needs the engineer near the band.</summary>
+        public override bool EngineerInEffectiveZone
+        {
+            get
+            {
+                if (!useGate) return true;
+                var e = Engineer;
+                if (e == null || e.IsEscaped) return false;
+                Rect r = gateRect;
+                r.xMin -= 1.2f; r.xMax += 1.2f; r.yMin -= 1.2f; r.yMax += 1.2f;
+                return r.Contains(e.Pos);
+            }
+        }
+
+        public override bool ActivationAlwaysEffective => !useGate;
+
         protected override void OnConfigure(MachineSpec s)
         {
             duration = s.alarmDuration > 0f ? s.alarmDuration : 6f;

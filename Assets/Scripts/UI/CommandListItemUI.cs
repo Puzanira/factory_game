@@ -49,15 +49,15 @@ namespace LastShift.UI
             SetRect(label.rectTransform, new Vector2(0.08f, 0.32f), new Vector2(0.98f, 1f));
 
             var barBack = UIBuilder.PanelPx(transform, "CdBack",
-                new Vector2(0.08f, 0.12f), new Vector2(0.80f, 0.30f),
+                new Vector2(0.08f, 0.12f), new Vector2(0.58f, 0.30f),
                 Vector2.zero, Vector2.zero, new Color(0.06f, 0.1f, 0.07f));
             cooldownFill = UIBuilder.Panel(barBack, "CdFill", Vector2.zero, Vector2.one,
                 new Color(0.35f, 0.6f, 0.4f));
             cooldownFill.offsetMin = new Vector2(1f, 1f);
             cooldownFill.offsetMax = new Vector2(-1f, -1f);
 
-            cooldownText = UIBuilder.Label(transform, "CdText", "", 15, CooldownTextColor, TextAnchor.MiddleRight);
-            SetRect(cooldownText.rectTransform, new Vector2(0.80f, 0.05f), new Vector2(0.98f, 0.35f));
+            cooldownText = UIBuilder.Label(transform, "CdText", "", 13, CooldownTextColor, TextAnchor.MiddleRight);
+            SetRect(cooldownText.rectTransform, new Vector2(0.59f, 0.05f), new Vector2(0.98f, 0.35f));
         }
 
         static void SetRect(RectTransform rt, Vector2 aMin, Vector2 aMax)
@@ -79,8 +79,23 @@ namespace LastShift.UI
 
             if (ready)
             {
-                cooldownText.text = Loc.Ready;
-                cooldownText.color = new Color(0.5f, 0.85f, 0.55f);
+                // Three readable states: plain ready, setup opportunity, low value.
+                var m = item.machine;
+                if (m != null && !m.ActivationAlwaysEffective && m.EngineerInEffectiveZone)
+                {
+                    cooldownText.text = Loc.StateGoodMoment;
+                    cooldownText.color = new Color(0.98f, 0.82f, 0.35f);
+                }
+                else if (m != null && !m.ActivationAlwaysEffective)
+                {
+                    cooldownText.text = Loc.StateLowValue;
+                    cooldownText.color = new Color(0.42f, 0.52f, 0.46f);
+                }
+                else
+                {
+                    cooldownText.text = Loc.Ready;
+                    cooldownText.color = new Color(0.5f, 0.85f, 0.55f);
+                }
                 UIBuilder.SetBar(cooldownFill, 1f);
                 cooldownFill.GetComponent<Image>().color = new Color(0.3f, 0.7f, 0.4f);
             }

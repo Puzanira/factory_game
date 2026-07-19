@@ -27,6 +27,17 @@ namespace LastShift.Engineer
 
         public event System.Action Escaped;
         public event System.Action RepairInterrupted;
+        /// <summary>A machine stun connected (source = machine display name).</summary>
+        public event System.Action<string> StunnedBy;
+        /// <summary>The engineer was displaced a meaningful distance by conveyors.</summary>
+        public event System.Action ConveyorCarried;
+        /// <summary>Fresh contact with an active hazard zone (zone name).</summary>
+        public event System.Action<string> HazardContact;
+
+        /// <summary>True while the drone mark is on him (hazards/stuns hit harder).</summary>
+        public bool IsMarked { get; private set; }
+        /// <summary>Drone mark applied/removed.</summary>
+        public event System.Action<bool> MarkedChanged;
 
         readonly List<SlowEffect> slows = new List<SlowEffect>();
         readonly HashSet<HazardZone> insideZones = new HashSet<HazardZone>();
@@ -55,7 +66,8 @@ namespace LastShift.Engineer
             get
             {
                 var grid = PathGrid.Instance;
-                return grid != null && grid.DangerAt(Pos) >= 1.5f;
+                float threshold = Data != null ? Data.avoidDangerThreshold : 1.5f;
+                return grid != null && grid.DangerAt(Pos) >= threshold;
             }
         }
 
@@ -326,18 +338,35 @@ namespace LastShift.Engineer
             }
         }
 
-        public void SetObjective(RepairObjective objective)
+        public void SetObjective(RepairObjective objective) => SetObjective(objective, autoReassess: true);
+
+        public void SetObjective(RepairObjective objective, bool autoReassess)
         {
             if (CurrentObjective != null) CurrentObjective.SetIsCurrent(false);
             CurrentObjective = objective;
             if (CurrentObjective != null)
             {
                 CurrentObjective.SetIsCurrent(true);
-                if (initialized && !IsRetreating &&
+                if (autoReassess && initialized && !IsRetreating &&
                     Fsm.CurrentId != EngineerStateId.Stunned &&
                     Fsm.CurrentId != EngineerStateId.EnterRoom)
                     Fsm.ChangeState(EngineerStateId.AssessSituation);
             }
+        }
+
+        /// <summary>
+        /// After a stun or on entering panic: if another unfinished repair point
+        /// exists, he switches to it (no stubborn walk back into the same trap).
+        /// Returns true when the target changed. State transitions stay with the caller.
+        /// </summary>
+        public bool TrySwitchObjectiveAfterShock()
+        {
+            if (!initialized || IsRetreating || CurrentObjective == null) return false;
+            var lm = Core.LevelManager.Instance;
+            var alt = lm != null ? lm.AlternativeObjectiveFor(CurrentObjective) : null;
+            if (alt == null) return false;
+            SetObjective(alt, autoReassess: false);
+            return true;
         }
 
         public void AbandonObjective()
@@ -386,12 +415,21 @@ namespace LastShift.Engineer
         public void StunHit(float stunDuration, string source)
         {
             if (IsEscaped) return;
+            var tactics = TacticsData.Get();
             PendingStunDuration = stunDuration > 0f ? stunDuration : (Data != null ? Data.defaultStunDuration : 1.6f);
-            Stats.LoseResolve(Data != null ? Data.lossArmGrab : 5f, source);
+            float loss = Data != null ? Data.lossArmGrab : 5f;
+            if (IsMarked)
+            {
+                // Drone mark synergy: a marked engineer is easier to catch cleanly.
+                loss *= tactics.markedVulnerabilityMultiplier;
+                PendingStunDuration += tactics.markedStunBonusSeconds;
+            }
+            Stats.LoseResolve(loss, source);
             Stats.AddStress(18f);
             AddPressure(8f, source);
             if (Fsm.CurrentId == EngineerStateId.RepairObjective) NotifyRepairInterrupted();
             Fsm.ChangeState(EngineerStateId.Stunned);
+            StunnedBy?.Invoke(source);
         }
 
         public void ApplySlow(float factor, float duration)
@@ -407,7 +445,24 @@ namespace LastShift.Engineer
 
         public void SetMarked(bool marked)
         {
+            bool changed = IsMarked != marked;
+            IsMarked = marked;
             if (markRing != null) markRing.gameObject.SetActive(marked);
+            if (changed) MarkedChanged?.Invoke(marked);
+        }
+
+        /// <summary>
+        /// Tutorial helper: put the engineer back at a spot and let him re-plan.
+        /// Never used outside the tutorial room.
+        /// </summary>
+        public void TutorialReset(Vector2 pos)
+        {
+            var grid = PathGrid.Instance;
+            if (grid != null) pos = grid.NearestFree(pos);
+            transform.position = new Vector3(pos.x, pos.y, 0f);
+            Nav.ClearPath();
+            Stats.CalmStress(); // no panic in the lesson — he approaches calmly again
+            if (Fsm != null && !IsEscaped) Fsm.ChangeState(EngineerStateId.AssessSituation);
         }
 
         public void NotifyRepairInterrupted()
@@ -444,10 +499,13 @@ namespace LastShift.Engineer
                 {
                     // Fresh contact with a hazard: this is where Resolve is really lost.
                     LastShift.Audio.EngineerAudio.PlayHazardContact(zone.kind, Pos);
-                    Stats.LoseResolve(zone.ResolveOnEnter, zone.name);
+                    float loss = zone.ResolveOnEnter;
+                    if (IsMarked) loss *= TacticsData.Get().markedVulnerabilityMultiplier;
+                    Stats.LoseResolve(loss, zone.name);
                     Stats.AddStress(12f);
                     AddPressure(6f, zone.name);
                     if (Fsm.CurrentId == EngineerStateId.RepairObjective) NotifyRepairInterrupted();
+                    HazardContact?.Invoke(zone.name);
                 }
                 Stats.AddStress(zone.StressPerSec * dt);
             }
@@ -473,6 +531,7 @@ namespace LastShift.Engineer
                     conveyorDisplacement = 0f;
                     Stats.AddStress(9f);
                     AddPressure(4f, "conveyor");
+                    ConveyorCarried?.Invoke();
                 }
             }
         }

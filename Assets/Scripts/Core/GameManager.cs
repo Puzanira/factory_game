@@ -18,6 +18,18 @@ namespace LastShift.Core
         /// <summary>Index of the room currently being played (0-based).</summary>
         public int CurrentLevelIndex { get; set; }
 
+        /// <summary>
+        /// «ПРОЙТИ УРОК» was chosen: the next Level 1 load runs the interactive
+        /// tutorial room instead of the normal layout. Session-only (no PlayerPrefs).
+        /// </summary>
+        public static bool TutorialRequested { get; set; }
+
+        /// <summary>
+        /// Tutorial finished: the next Boot load skips the title card and goes
+        /// straight to the normal intro briefing (so story text is never duplicated).
+        /// </summary>
+        public static bool ResumeAtBriefing { get; set; }
+
         void Awake()
         {
             if (Instance != null && Instance != this)

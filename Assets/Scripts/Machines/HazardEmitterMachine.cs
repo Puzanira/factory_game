@@ -30,6 +30,45 @@ namespace LastShift.Machines
             }
         }
 
+        public override string PurposeLine
+        {
+            get
+            {
+                switch (emitKind)
+                {
+                    case HazardKind.Cold: return Loc.PurposeCold;
+                    case HazardKind.Steam: return Loc.PurposeSteam;
+                    default: return Loc.PurposeSlippery;
+                }
+            }
+        }
+
+        public override string PurposeHint
+        {
+            get
+            {
+                switch (emitKind)
+                {
+                    case HazardKind.Cold: return Loc.PurposeColdHint;
+                    case HazardKind.Steam: return Loc.PurposeSteamHint;
+                    default: return Loc.PurposeSlipperyHint;
+                }
+            }
+        }
+
+        /// <summary>Effective when the engineer is in or right next to the affected zone.</summary>
+        public override bool EngineerInEffectiveZone
+        {
+            get
+            {
+                var e = LastShift.Engineer.EngineerController.Instance;
+                if (e == null || e.IsEscaped) return false;
+                Rect r = emitRect;
+                r.xMin -= 1.2f; r.xMax += 1.2f; r.yMin -= 1.2f; r.yMax += 1.2f;
+                return r.Contains(e.Pos);
+            }
+        }
+
         protected override void OnConfigure(MachineSpec s)
         {
             emitDuration = s.emitDuration > 0f ? s.emitDuration : 9f;

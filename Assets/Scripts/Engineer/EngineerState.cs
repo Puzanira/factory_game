@@ -6,7 +6,7 @@ namespace LastShift.Engineer
     public enum EngineerStateId
     {
         EnterRoom, AssessSituation, MoveToObjective, RepairObjective,
-        AvoidHazard, Repath, Stunned, Panic, RetreatToExit, Escape,
+        AvoidHazard, Repath, Stunned, Panic, RetreatToExit, Escape, BackOff,
     }
 
     /// <summary>Base class for engineer FSM states.</summary>
@@ -234,9 +234,65 @@ namespace LastShift.Engineer
         {
             timer -= dt;
             if (timer > 0f) return;
-            engineer.Fsm.ChangeState(engineer.Stats.IsResolveEmpty
-                ? EngineerStateId.RetreatToExit
-                : EngineerStateId.Repath);
+            if (engineer.Stats.IsResolveEmpty)
+            {
+                engineer.Fsm.ChangeState(EngineerStateId.RetreatToExit);
+                return;
+            }
+            // Shaken: prefer a different unfinished repair point; when this is the
+            // only one left, back off briefly and come back instead of standing in
+            // the same trap.
+            if (engineer.TrySwitchObjectiveAfterShock())
+                engineer.Fsm.ChangeState(EngineerStateId.AssessSituation);
+            else if (engineer.CurrentObjective != null)
+                engineer.Fsm.ChangeState(EngineerStateId.BackOff);
+            else
+                engineer.Fsm.ChangeState(EngineerStateId.Repath);
+        }
+    }
+
+    /// <summary>
+    /// Short recovery walk after a shock: he steps a few units away from the
+    /// repair point, catches his breath and returns to work — creating another
+    /// interception window for the factory.
+    /// </summary>
+    public class BackOffState : EngineerState
+    {
+        float moveTimer;
+        float waitTimer;
+        bool waiting;
+
+        public BackOffState(EngineerController e) : base(e) { }
+        public override EngineerStateId Id => EngineerStateId.BackOff;
+        public override string DisplayName => Loc.StateBackingOff;
+
+        public override void Enter()
+        {
+            moveTimer = 0f;
+            waitTimer = 0f;
+            waiting = false;
+            Vector2 from = engineer.CurrentObjective != null ? engineer.CurrentObjective.Pos : engineer.ExitPos;
+            Vector2 dir = (Vector2)engineer.transform.position - from;
+            dir = dir.sqrMagnitude > 0.01f ? dir.normalized : Vector2.down;
+            Vector2 target = (Vector2)engineer.transform.position + dir * 2.5f;
+            var grid = Utilities.PathGrid.Instance;
+            if (grid != null) target = grid.NearestFree(target);
+            engineer.Nav.SetDestination(target, 0.5f);
+        }
+
+        public override void Tick(float dt)
+        {
+            if (!waiting)
+            {
+                moveTimer += dt;
+                bool arrived = engineer.Nav.Tick(engineer.CurrentSpeed, dt);
+                if (arrived || moveTimer > 3f) { waiting = true; engineer.Nav.ClearPath(); }
+            }
+            else
+            {
+                waitTimer += dt;
+                if (waitTimer > 1.5f) engineer.Fsm.ChangeState(EngineerStateId.AssessSituation);
+            }
         }
     }
 
@@ -251,6 +307,8 @@ namespace LastShift.Engineer
         public override void Enter()
         {
             replanTimer = 0f;
+            // Panic can push him to a different unfinished repair point.
+            engineer.TrySwitchObjectiveAfterShock();
             Replan();
         }
 

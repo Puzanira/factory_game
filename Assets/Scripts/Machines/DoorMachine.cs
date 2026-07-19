@@ -32,6 +32,28 @@ namespace LastShift.Machines
         public override string ActivationMessage =>
             displayName.ToUpper() + (closed ? ": ЗАКРЫТО" : ": ОТКРЫТО");
 
+        /// <summary>Current slab state (activation toggles it).</summary>
+        public bool IsClosed => closed;
+
+        public override string PurposeLine => closed ? Loc.PurposeDoorOpen : Loc.PurposeDoorClose;
+        public override string PurposeHint => closed ? Loc.PurposeDoorOpenHint : Loc.PurposeDoorCloseHint;
+
+        /// <summary>Re-opening a door is a recovery move: free and never judged wasted.</summary>
+        public override bool ActivationAlwaysEffective => closed;
+        public override int ResourceCost => closed ? 0 : 1;
+
+        /// <summary>Closing matters when the engineer is near enough for the block to change his plan.</summary>
+        public override bool EngineerInEffectiveZone
+        {
+            get
+            {
+                if (closed) return true; // opening is always "fine"
+                var e = Engineer;
+                return e != null && !e.IsEscaped &&
+                       Vector2.Distance(transform.position, e.Pos) <= 4.5f;
+            }
+        }
+
         protected override void OnConfigure(MachineSpec s)
         {
             closed = s.startsClosed;

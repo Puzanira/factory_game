@@ -24,6 +24,12 @@ namespace LastShift.Machines
 
         public override string ActivationMessage => displayName.ToUpper() + ": ДРОН ВЫЛЕТЕЛ";
 
+        public override string PurposeLine => Loc.PurposeDrone;
+        public override string PurposeHint => Loc.PurposeDroneHint;
+
+        /// <summary>The drone chases the engineer itself — launching it is never wasted.</summary>
+        public override bool ActivationAlwaysEffective => true;
+
         string LoopId => "drone_" + GetInstanceID();
 
         protected override void OnConfigure(MachineSpec s)

@@ -17,6 +17,13 @@ namespace LastShift.Machines
         public IReadOnlyList<FactoryCommandItem> Items => items;
         public int SelectedIndex { get; private set; } = -1;
 
+        /// <summary>
+        /// Tutorial-only activation filter: returns false for machines the current
+        /// step does not need. Null outside the tutorial. Selection stays free —
+        /// the player keeps agency; only activation is redirected.
+        /// </summary>
+        public System.Func<InteractableMachine, bool> TutorialGate;
+
         public InteractableMachine Selected =>
             SelectedIndex >= 0 && SelectedIndex < items.Count ? items[SelectedIndex].machine : null;
 
@@ -85,12 +92,35 @@ namespace LastShift.Machines
         void ActivateSelected()
         {
             var machine = Selected;
-            if (machine == null || !machine.TryActivate())
+            if (machine == null || !machine.IsReady)
             {
                 // No system selected, or the command is busy/cooling down: soft error buzz.
                 UiSfx.Denied();
                 return;
             }
+
+            if (TutorialGate != null && !TutorialGate(machine))
+            {
+                UiSfx.Denied();
+                var lm = Core.LevelManager.Instance;
+                if (lm != null) lm.ShowToast(Data.Loc.TutorialWrongMachine, 2.2f, warning: true);
+                return;
+            }
+
+            // Control resource: a major activation costs a charge. Recovery moves
+            // (like re-opening a door) are free; recharge never stops, so this is
+            // a pacing tool, not a hard lock.
+            var res = Core.FactoryControlResource.Instance;
+            int cost = machine.ResourceCost;
+            if (res != null && !res.CanSpend(cost))
+            {
+                UiSfx.Denied();
+                res.NotifyInsufficient();
+                return;
+            }
+
+            if (!machine.TryActivate()) { UiSfx.Denied(); return; }
+            if (res != null) res.Spend(cost);
             UiSfx.Confirm();
             // Command entered its active/cooldown phase: move to the next ready one.
             if (!machine.IsReady) SelectNextReady(keepIfNone: true);

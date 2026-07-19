@@ -21,8 +21,12 @@ namespace LastShift.UI
         Text header;
         Text statusLine;
         Text descriptionText;
+        Text zoneStatusText;
         Text enterHint;
         Image powerLed;
+        Text resourceLabel;
+        readonly List<Image> resourceCells = new List<Image>();
+        float resourceFlashUntil;
         readonly List<CommandListItemUI> rows = new List<CommandListItemUI>();
 
         static readonly Color ScreenGreen = new Color(0.02f, 0.07f, 0.04f, 1f);
@@ -79,11 +83,37 @@ namespace LastShift.UI
                 new Color(0.95f, 0.75f, 0.35f), TextAnchor.MiddleCenter);
             SetRect(statusLine.rectTransform, new Vector2(0f, 0.895f), new Vector2(1f, 0.93f));
 
+            // «РЕСУРС УПРАВЛЕНИЯ» — three industrial power cells.
+            var resRow = UIBuilder.Panel(screen, "ResourceRow",
+                new Vector2(0.03f, 0.852f), new Vector2(0.97f, 0.893f), new Color(0.01f, 0.05f, 0.03f, 0.85f));
+            resourceLabel = UIBuilder.Label(resRow, "ResourceLabel", Loc.ControlResource, 14,
+                new Color(0.6f, 0.9f, 0.68f), TextAnchor.MiddleLeft);
+            SetRect(resourceLabel.rectTransform, new Vector2(0.03f, 0f), new Vector2(0.62f, 1f));
+            int maxCells = Data.TacticsData.Get().resourceMax;
+            for (int i = 0; i < maxCells; i++)
+            {
+                var cellGO = new GameObject("Cell" + i);
+                cellGO.transform.SetParent(resRow, false);
+                var cellRt = cellGO.AddComponent<RectTransform>();
+                float x0 = 0.66f + i * 0.11f;
+                cellRt.anchorMin = new Vector2(x0, 0.22f);
+                cellRt.anchorMax = new Vector2(x0 + 0.085f, 0.78f);
+                cellRt.offsetMin = Vector2.zero;
+                cellRt.offsetMax = Vector2.zero;
+                var img = cellGO.AddComponent<Image>();
+                img.color = new Color(0.4f, 1f, 0.55f, 0.9f);
+                img.raycastTarget = false;
+                var outline = cellGO.AddComponent<Outline>();
+                outline.effectColor = new Color(0.35f, 0.7f, 0.45f, 0.7f);
+                outline.effectDistance = new Vector2(1f, 1f);
+                resourceCells.Add(img);
+            }
+
             // Rows container fills the middle of the panel.
             var rowsGO = new GameObject("Rows");
             rowsGO.transform.SetParent(screen, false);
             var rowsRt = rowsGO.AddComponent<RectTransform>();
-            SetRect(rowsRt, new Vector2(0.02f, 0.24f), new Vector2(0.98f, 0.89f));
+            SetRect(rowsRt, new Vector2(0.02f, 0.24f), new Vector2(0.98f, 0.848f));
 
             var items = terminal.Items;
             float rowHeight = Mathf.Min(72f, 700f / Mathf.Max(1, items.Count));
@@ -99,10 +129,13 @@ namespace LastShift.UI
             descOutline.effectDistance = new Vector2(1.5f, 1.5f);
             enterHint = UIBuilder.Label(descBox, "EnterHint", Loc.EnterExecute, 17,
                 new Color(0.95f, 0.85f, 0.45f), TextAnchor.UpperLeft);
-            SetRect(enterHint.rectTransform, new Vector2(0.04f, 0.66f), new Vector2(0.96f, 0.98f));
-            descriptionText = UIBuilder.Label(descBox, "Description", "", 16,
+            SetRect(enterHint.rectTransform, new Vector2(0.04f, 0.7f), new Vector2(0.96f, 0.98f));
+            descriptionText = UIBuilder.Label(descBox, "Description", "", 15,
                 new Color(0.7f, 0.9f, 0.75f), TextAnchor.UpperLeft);
-            SetRect(descriptionText.rectTransform, new Vector2(0.04f, 0.05f), new Vector2(0.96f, 0.66f));
+            SetRect(descriptionText.rectTransform, new Vector2(0.04f, 0.3f), new Vector2(0.96f, 0.7f));
+            zoneStatusText = UIBuilder.Label(descBox, "ZoneStatus", "", 14,
+                new Color(0.5f, 0.95f, 0.6f), TextAnchor.UpperLeft);
+            SetRect(zoneStatusText.rectTransform, new Vector2(0.04f, 0.03f), new Vector2(0.96f, 0.3f));
         }
 
         void AddBolt(RectTransform frame, Vector2 anchor)
@@ -161,13 +194,61 @@ namespace LastShift.UI
                 enterHint.text = selected.IsReady
                     ? Loc.EnterExecute + selected.CommandLabel.ToUpper()
                     : Loc.SystemBusy + " — " + selected.displayName.ToUpper();
-                descriptionText.text = selected.Description;
+
+                // Purpose: one main line + one tactical hint.
+                string purpose = selected.PurposeLine;
+                if (!string.IsNullOrEmpty(selected.PurposeHint))
+                    purpose += "\n" + selected.PurposeHint;
+                descriptionText.text = string.IsNullOrEmpty(purpose) ? selected.Description : purpose;
+
+                // Zone status: teaches that timing matters (recovery moves stay neutral).
+                if (selected.ActivationAlwaysEffective)
+                {
+                    zoneStatusText.text = "";
+                }
+                else if (selected.EngineerInEffectiveZone)
+                {
+                    zoneStatusText.text = selected is DoorMachine ? Loc.InsightDoorBlock : Loc.TargetInZone;
+                    zoneStatusText.color = new Color(0.5f, 0.95f, 0.6f);
+                }
+                else
+                {
+                    zoneStatusText.text = Loc.TargetOutOfZone;
+                    zoneStatusText.color = new Color(0.85f, 0.7f, 0.4f);
+                }
             }
             else
             {
                 enterHint.text = Loc.NoSystemsOnline;
                 descriptionText.text = "";
+                zoneStatusText.text = "";
+            }
+
+            RefreshResourceCells();
+        }
+
+        void RefreshResourceCells()
+        {
+            var res = Core.FactoryControlResource.Instance;
+            if (res == null || resourceCells.Count == 0) return;
+            bool flashing = Time.unscaledTime < resourceFlashUntil;
+            for (int i = 0; i < resourceCells.Count; i++)
+            {
+                float fill = Mathf.Clamp01(res.Charges - i);
+                Color c;
+                if (fill >= 1f) c = new Color(0.4f, 1f, 0.55f, 0.95f);          // full cell
+                else if (fill > 0f) c = new Color(0.4f, 0.85f, 0.5f, 0.2f + 0.5f * fill); // charging
+                else c = new Color(0.15f, 0.3f, 0.2f, 0.55f);                    // empty
+                if (flashing && fill < 1f)
+                {
+                    float blink = Mathf.PingPong(Time.unscaledTime * 8f, 1f);
+                    c = Color.Lerp(c, new Color(1f, 0.35f, 0.25f, 0.9f), blink);
+                }
+                resourceCells[i].color = c;
             }
         }
+
+        /// <summary>Insufficient-resource feedback: brief red blink on the empty cells.</summary>
+        public void FlashResource() => resourceFlashUntil = Time.unscaledTime + 1.2f;
     }
 }

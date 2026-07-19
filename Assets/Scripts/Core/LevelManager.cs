@@ -30,7 +30,6 @@ namespace LastShift.Core
 
         RoomLayout layout;
         RoomRefs refs;
-        int objectiveIndex;
         bool paused;
         bool roomComplete;
         bool roomFailed;
@@ -42,16 +41,49 @@ namespace LastShift.Core
         public string RoomName => layout != null ? layout.roomName : "";
         public bool Escalated => Escalation != null && Escalation.Escalated;
         public bool RoomEnded => roomComplete || roomFailed;
-        public bool InputLocked => paused || roomComplete || roomFailed;
+        public bool InputLocked => paused || roomComplete || roomFailed || TutorialOverlayLock;
+
+        /// <summary>True while this scene runs the interactive tutorial room.</summary>
+        public bool TutorialMode { get; private set; }
+        /// <summary>Pause state (read-only for helpers like the tutorial controller).</summary>
+        public bool IsPaused => paused;
+        /// <summary>Set by the tutorial while its completion panel owns the input.</summary>
+        public bool TutorialOverlayLock { get; set; }
 
         public RepairObjective CurrentObjectiveForHud
         {
             get
             {
                 if (Engineer != null && Engineer.CurrentObjective != null) return Engineer.CurrentObjective;
-                if (refs != null && objectiveIndex < refs.objectives.Count) return refs.objectives[objectiveIndex];
-                return null;
+                return FirstUncompletedObjective();
             }
+        }
+
+        RepairObjective FirstUncompletedObjective()
+        {
+            if (refs == null) return null;
+            foreach (var o in refs.objectives)
+                if (o != null && !o.Completed) return o;
+            return null;
+        }
+
+        /// <summary>
+        /// Nearest unfinished repair point other than the given one — used by the
+        /// engineer to switch targets after a stun or panic instead of stubbornly
+        /// walking back into the same trap.
+        /// </summary>
+        public RepairObjective AlternativeObjectiveFor(RepairObjective current)
+        {
+            if (refs == null) return null;
+            RepairObjective best = null;
+            float bestDist = float.MaxValue;
+            foreach (var o in refs.objectives)
+            {
+                if (o == null || o.Completed || o == current) continue;
+                float d = Engineer != null ? Vector2.Distance(Engineer.Pos, o.Pos) : 0f;
+                if (d < bestDist) { bestDist = d; best = o; }
+            }
+            return best;
         }
 
         void Awake()
@@ -89,7 +121,24 @@ namespace LastShift.Core
 
         void Start()
         {
-            layout = LevelLayouts.Get(levelData.levelIndex);
+            TutorialMode = GameManager.TutorialRequested && levelData.levelIndex == 0;
+            if (TutorialMode)
+            {
+                // Work on copies so shared assets never absorb tutorial tuning.
+                levelData = Instantiate(levelData);
+                levelData.engineerData = levelData.engineerData != null
+                    ? Instantiate(levelData.engineerData)
+                    : ScriptableObject.CreateInstance<EngineerData>();
+                levelData.engineerData.resolveMax = 400f;   // failure impossible in the lesson
+                levelData.engineerData.lossArmGrab = 10f;   // step 2 shows «РЕШИМОСТЬ −10»
+                // The lesson target does not dodge telegraphs: otherwise step 2
+                // («дождитесь цель в зоне») is nearly impossible to land.
+                levelData.engineerData.avoidDangerThreshold = 999f;
+                levelData.maxPressure = 9999f;              // no escalation during the lesson
+                levelData.finalLevel = false;
+            }
+
+            layout = TutorialMode ? LevelLayouts.Tutorial() : LevelLayouts.Get(levelData.levelIndex);
             levelData.roomName = layout.roomName;
 
             PathGrid.Create(Vector2.zero, layout.roomSize + new Vector2(1.5f, 1.5f), 0.5f);
@@ -104,17 +153,46 @@ namespace LastShift.Core
             Escalation = gameObject.AddComponent<RoomEscalationController>();
             Escalation.Init(this, levelData.escalationData, refs.machines, refs.hazards);
 
+            gameObject.AddComponent<FactoryControlResource>();
+
             SpawnEngineer();
             BuildUI();
             SetupCamera();
             gameObject.AddComponent<RoomAudioDirector>().Init(this, levelData.levelIndex);
 
-            objectiveIndex = 0;
             if (refs.objectives.Count > 0) Engineer.SetObjective(refs.objectives[0]);
 
+            var combos = gameObject.AddComponent<MachineCombinationTracker>();
+            combos.Init(this, refs);
+            combos.ComboTriggered += OnComboTriggered;
+
             WireToasts();
-            if (levelData.levelIndex == 0) StartCoroutine(TutorialHints());
+
+            if (TutorialMode)
+            {
+                gameObject.AddComponent<TutorialFlowController>().Init(this, refs, hud);
+            }
+            else if (levelData.levelIndex == 0)
+            {
+                StartCoroutine(TutorialHints());
+            }
         }
+
+        void OnComboTriggered(string title, float bonus)
+        {
+            if (hud == null) return;
+            hud.ShowToast(title, 3.2f);
+            hud.ShowToast(string.Format(Data.Loc.ComboBonusToast, Mathf.RoundToInt(bonus)), 2.6f);
+        }
+
+        /// <summary>Shared toast entry point for the tactical systems.</summary>
+        public void ShowToast(string message, float duration = 2.6f, bool warning = false)
+        {
+            if (hud != null) hud.ShowToast(message, duration, warning);
+        }
+
+        float lastResolveToastAt = -99f;
+        float lastOutcomeToastAt = -99f;
 
         void WireToasts()
         {
@@ -124,12 +202,54 @@ namespace LastShift.Core
                 if (m == null) continue;
                 var machine = m;
                 machine.Activated += _ => hud.ShowToast(machine.ActivationMessage);
+                machine.Judged += OnMachineJudged;
             }
             Pressure.ComboBonus += amount =>
                 hud.ShowToast(string.Format(Data.Loc.ComboToast, Mathf.RoundToInt(amount)));
             Pressure.WarningReached += () => hud.ShowToast(Data.Loc.PressureWarning, 3.5f, warning: true);
             Pressure.MaxReached += () => hud.ShowToast(Data.Loc.EscalationToast, 3.5f, warning: true);
             Engineer.Stats.ResolveEmpty += () => hud.ShowToast(Data.Loc.ExitUnlockedToast, 3.5f);
+            Engineer.Stats.ResolveLost += OnResolveLost;
+
+            var res = FactoryControlResource.Instance;
+            var terminalUi = GetTerminalUi();
+            if (res != null && terminalUi != null)
+                res.InsufficientFlash += terminalUi.FlashResource;
+        }
+
+        CommandTerminalUI GetTerminalUi() =>
+            Terminal != null ? Terminal.GetComponent<CommandTerminalUI>() : null;
+
+        /// <summary>
+        /// Timing feedback: effective activations get a positive line and a soft
+        /// blip, wasted ones a muted note and a longer cooldown (already applied by
+        /// the machine). Recovery/always-effective machines stay silent.
+        /// </summary>
+        void OnMachineJudged(Machines.InteractableMachine machine, bool effective)
+        {
+            if (hud == null || RoomEnded) return;
+            if (effective && machine.ActivationAlwaysEffective) return;
+            if (Time.unscaledTime - lastOutcomeToastAt < 0.4f) return;
+            lastOutcomeToastAt = Time.unscaledTime;
+            if (effective)
+            {
+                hud.ShowToast(Data.Loc.EffectiveActivation, 2.2f);
+                AudioManager.Play("terminal_ready", SfxBus.UI, 0.5f);
+            }
+            else
+            {
+                hud.ShowToast(Data.Loc.WastedActivation, 2.4f, warning: true);
+                AudioManager.Play("terminal_denied", SfxBus.UI, 0.35f);
+            }
+        }
+
+        /// <summary>Rate-limited «РЕШИМОСТЬ −N» so the player links actions to outcomes.</summary>
+        void OnResolveLost(float amount, string reason)
+        {
+            if (hud == null || RoomEnded) return;
+            if (Time.unscaledTime - lastResolveToastAt < 3f) return;
+            lastResolveToastAt = Time.unscaledTime;
+            hud.ShowToast(string.Format(Data.Loc.ResolveLossToast, Mathf.RoundToInt(amount)), 2.2f);
         }
 
         System.Collections.IEnumerator TutorialHints()
@@ -214,10 +334,19 @@ namespace LastShift.Core
         void OnObjectiveCompleted(ObjectiveNode node)
         {
             if (RoomEnded) return;
-            objectiveIndex++;
-            if (objectiveIndex < refs.objectives.Count)
+            if (TutorialMode)
             {
-                Engineer.SetObjective(refs.objectives[objectiveIndex]);
+                // The lesson has no defeat: the tutorial controller restarts the step.
+                var tf = GetComponent<TutorialFlowController>();
+                if (tf != null) tf.OnObjectiveRepaired();
+                return;
+            }
+            // Objectives can now be repaired out of order (the engineer may switch
+            // targets after a stun/panic), so always pick the next unfinished one.
+            var next = FirstUncompletedObjective();
+            if (next != null)
+            {
+                Engineer.SetObjective(next);
             }
             else
             {
@@ -231,6 +360,7 @@ namespace LastShift.Core
         public void OnEngineerEscaped()
         {
             if (roomComplete) return;
+            if (TutorialMode) return; // cannot happen in the lesson; never end the room
             roomComplete = true;
             if (levelData.finalLevel) endPanel.ShowSliceComplete();
             else endPanel.ShowRoomComplete();
@@ -276,7 +406,8 @@ namespace LastShift.Core
                 if (id == LastShift.Engineer.EngineerStateId.Stunned ||
                     id == LastShift.Engineer.EngineerStateId.Panic ||
                     id == LastShift.Engineer.EngineerStateId.AvoidHazard ||
-                    id == LastShift.Engineer.EngineerStateId.Repath)
+                    id == LastShift.Engineer.EngineerStateId.Repath ||
+                    id == LastShift.Engineer.EngineerStateId.BackOff)
                 {
                     Pressure.AddPassive(0.5f * Time.deltaTime);
                 }

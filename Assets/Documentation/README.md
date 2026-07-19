@@ -1,5 +1,16 @@
 # LAST SHIFT / ПОСЛЕДНЯЯ СМЕНА — Vertical Slice
 
+> **Pass 8 (2026-07-19): tactical gameplay + interactive tutorial.** Machines now
+> have visible purposes and effective zones; activating at the wrong moment is a
+> «СИСТЕМА СРАБОТАЛА ВПУСТУЮ» with a longer cooldown, at the right moment an
+> «ЭФФЕКТИВНОЕ ВОЗДЕЙСТВИЕ» with bonuses. New «РЕСУРС УПРАВЛЕНИЯ» (3 charges,
+> slow recharge, faster after effective actions) prevents blind machine spam.
+> Setup→payoff combinations («ПЕРЕНАПРАВЛЕНИЕ», «ЗАХВАТ ЛИНИИ», «ЦЕЛЬ ПОД
+> КОНТРОЛЕМ», «ВЫТЕСНЕНИЕ») reward planned sequences. Boot flow gained a
+> «ПЕРВЫЙ ЗАПУСК» tutorial choice and a 4-step interactive lesson in the
+> «УЧЕБНЫЙ ЦЕХ» room (see «ТАКТИЧЕСКИЙ ГЕЙМПЛЕЙ» and «ВВОДНЫЙ УРОК» below).
+> Tuning lives in `TacticsData` (optional asset `Resources/TacticsData`).
+
 > **Pass 7 (2026-07-18): unified restart/quit menu.** The defeat screen
 > «ЦЕХ СТАБИЛИЗИРОВАН» and the final «ЗАВОД ПОБЕДИЛ» screen now show the same
 > two-option terminal menu — **«ПОВТОРИТЬ ЦЕХ» / «ВЫЙТИ ИЗ ИГРЫ»** — below the
@@ -105,9 +116,9 @@ the end-of-room menu after a defeat or the final victory.
 
 | Key          | Action                                             |
 |--------------|----------------------------------------------------|
-| **Up / Down** | Move selection in the title menu and ДА/НЕТ modals |
+| **Up / Down** | Move selection in the title menu, the «ПЕРВЫЙ ЗАПУСК» tutorial choice and ДА/НЕТ modals |
 | **Enter**    | Confirm / next briefing page / start the shift     |
-| **Escape**   | «ВЫЙТИ ИЗ ИГРЫ?» on the title, «ПРОПУСТИТЬ ИНСТРУКТАЖ?» in the briefing |
+| **Escape**   | «ВЫЙТИ ИЗ ИГРЫ?» on the title, back to the title from the tutorial choice, «ПРОПУСТИТЬ ИНСТРУКТАЖ?» in the briefing |
 
 ### End-of-room screens
 
@@ -151,6 +162,67 @@ Arduino Nano:
 
 > Изменение схемы управления: **потенциометр, а также клавиши Q и R удалены из
 > схемы управления.** **Клавиши Q и R не используются.**
+
+## ТАКТИЧЕСКИЙ ГЕЙМПЛЕЙ
+
+Завод побеждает не количеством нажатий, а точным моментом. Наблюдайте за
+инженером, готовьте ситуацию и включайте нужную систему вовремя.
+
+- **Зоны воздействия.** У каждой системы есть зона, в которой она реально
+  влияет на инженера. Зона показывается на карте при выборе команды, а под
+  командой отображается статус: «ЦЕЛЬ В ЗОНЕ ВОЗДЕЙСТВИЯ» или «ЦЕЛЬ ВНЕ ЗОНЫ —
+  ЭФФЕКТ БУДЕТ СЛАБЫМ». В списке команд готовые системы помечаются как
+  «ГОТОВО», «ПОДХОДЯЩИЙ МОМЕНТ» или «СЕЙЧАС НЕЭФФЕКТИВНО».
+- **Точный момент сильнее.** Срабатывание по цели в зоне — «ЭФФЕКТИВНОЕ
+  ВОЗДЕЙСТВИЕ»: полный эффект, ускоренная перезарядка, восстановление ресурса.
+  Холостое срабатывание — «СИСТЕМА СРАБОТАЛА ВПУСТУЮ»: эффекта почти нет,
+  перезарядка дольше. Никакого мгновенного наказания — только цена времени.
+- **Комбинации систем.** Одна система создаёт ситуацию, другая её использует
+  (окно ~5 секунд, подсказки появляются только когда комбинация действительно
+  возможна):
+  - **Ворота → Конвейер** («ПЕРЕНАПРАВЛЕНИЕ»): перекройте маршрут — инженер
+    пойдёт в обход через ленту; включите конвейер, и он унесёт его от цели.
+  - **Конвейер → Манипулятор** («ЗАХВАТ ЛИНИИ»): лента подвозит инженера в
+    радиус манипулятора — захват оглушает и срывает ремонт.
+  - **Дрон → Манипулятор / Опасная зона** («ЦЕЛЬ ПОД КОНТРОЛЕМ»): отмеченный
+    дроном инженер получает усиленные оглушения и потери решимости.
+  - **Опасная зона → Ворота / Погрузчик** («ВЫТЕСНЕНИЕ»): пар или холод
+    выгоняет инженера, а закрытый маршрут не даёт вернуться.
+- **РЕСУРС УПРАВЛЕНИЯ.** У завода 3 заряда управления (ячейки под заголовком
+  терминала). Каждая крупная активация тратит 1 заряд; повторное открытие
+  ворот бесплатно. Заряды медленно восстанавливаются сами, заметно быстрее —
+  после эффективных действий и комбинаций. Если ресурса не хватает —
+  «НЕДОСТАТОЧНО РЕСУРСА УПРАВЛЕНИЯ», и нужно дождаться восстановления:
+  включить всё подряд просто не получится.
+- **Обратная связь.** Эффективные действия показывают «ДАВЛЕНИЕ +N» и
+  «РЕШИМОСТЬ −N», комбинации — «КОМБИНАЦИЯ +N» с отдельным звуком.
+
+Все параметры (заряды, скорость восстановления, окна комбинаций, бонусы)
+настраиваются в `TacticsData` (Assets ▸ Create ▸ Last Shift ▸ Tactics Data,
+положить в `Resources/TacticsData`; без ассета действуют значения по умолчанию).
+
+## ВВОДНЫЙ УРОК
+
+После титульного экрана и перед обычным инструктажем появляется выбор
+«ПЕРВЫЙ ЗАПУСК» — «Нужен вводный урок по управлению заводом?»:
+
+- **«ПРОЙТИ УРОК»** (выбран по умолчанию) — интерактивный урок в отдельном
+  спокойном «УЧЕБНОМ ЦЕХЕ»: один инженер, одна цель ремонта, ворота, конвейер
+  и манипулятор. Четыре шага (2–4 минуты): 1. ВЫБОР СИСТЕМЫ, 2. НЕ ТРАТЬТЕ
+  СИСТЕМЫ ВПУСТУЮ (дождаться цель в зоне), 3. ПОДГОТОВЬТЕ ЛОВУШКУ (ворота →
+  конвейер), 4. РЕСУРС УПРАВЛЕНИЯ. Ошибки не наказываются: пока целевое
+  действие шага не выполнено, ситуация повторяется — после промаха (например,
+  манипулятор сработал, а инженер увернулся) и по таймауту бездействия инженер
+  возвращается на исходную позицию и снова идёт к цели («СИТУАЦИЯ ПОВТОРЯЕТСЯ —
+  ПОПРОБУЙТЕ ЕЩЁ РАЗ»). В конце — экран
+  «УПРАВЛЕНИЕ ОСВОЕНО» с меню «НАЧАТЬ СМЕНУ» / «ПОВТОРИТЬ УРОК»; «НАЧАТЬ
+  СМЕНУ» ведёт в обычный инструктаж и первый цех.
+- **«СРАЗУ К СМЕНЕ»** — пропустить урок и перейти к обычному инструктажу и
+  первому цеху.
+
+Урок использует те же органы управления, что и игра: стрелки вверх/вниз и
+Enter на клавиатуре, джойстик и кнопки Arduino. Выбор не сохраняется — экран
+показывается при каждом новом запуске.
 
 ## ПОДКЛЮЧЕНИЕ ARDUINO-КОНТРОЛЛЕРА
 
@@ -231,7 +303,11 @@ Escape        — пауза / назад
 
 ## How to test
 
-0. Flow: **Boot → Title Card → Intro Briefing (4 pages, Enter/Esc) → Level 1**.
+0. Flow: **Boot → Title Card → Tutorial Choice «ПЕРВЫЙ ЗАПУСК» («ПРОЙТИ УРОК» /
+   «СРАЗУ К СМЕНЕ») → [Interactive Tutorial «УЧЕБНЫЙ ЦЕХ» →] Intro Briefing
+   (4 pages, Enter/Esc) → Level 1**. The tutorial runs inside the Level 1 scene
+   (flag on GameManager), so no extra scene assets exist.
+   Smoke variants: default drives «СРАЗУ К СМЕНЕ»; `-smokeTutorial` takes the lesson.
 1. Open the project in Unity **6000.3.19f1**.
 2. If scenes/prefabs are missing (first checkout), run **Tools ▸ Last Shift ▸ Build All** —
    it regenerates all scenes, prefabs, ScriptableObjects and Build Settings.
@@ -323,7 +399,12 @@ Assets/
   machines auto-fire until the room ends.
 - **Engineer FSM**: EnterRoom → Assess → MoveToObjective → Repair, with AvoidHazard,
   Repath (shows "Blocked" when stuck), Stunned, Panic (fast but sloppy pathing),
-  RetreatToExit, Escape. He is stubborn: he keeps repairing until Resolve breaks.
+  BackOff («Отходит»: short step-away-and-return after a shock), RetreatToExit,
+  Escape. He is stubborn: he keeps repairing until Resolve breaks — but after a
+  stun or panic he prefers the nearest *other* unfinished repair point (objectives
+  complete in any order), and when only one is left he briefly backs off and
+  returns, giving the factory another interception window. Repair panels are red
+  until repaired, green after.
 
 ## Known limitations
 
