@@ -18,7 +18,9 @@ namespace LastShift.Hazards
             slowFactor = 0.65f;
             stressPerSec = 2f;
             resolveOnEnter = 5f;
-            dangerCost = 1.2f;
+            // Above the engineer's avoid threshold (1.5): an active wet floor is a
+            // real hazard — he breaks off repairs inside it and routes around it.
+            dangerCost = 1.6f;
         }
 
         protected override void BuildExtraVisuals()

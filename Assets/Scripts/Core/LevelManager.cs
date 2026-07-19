@@ -134,7 +134,6 @@ namespace LastShift.Core
                 // The lesson target does not dodge telegraphs: otherwise step 2
                 // («дождитесь цель в зоне») is nearly impossible to land.
                 levelData.engineerData.avoidDangerThreshold = 999f;
-                levelData.maxPressure = 9999f;              // no escalation during the lesson
                 levelData.finalLevel = false;
             }
 
@@ -148,11 +147,9 @@ namespace LastShift.Core
             foreach (var obj in refs.objectives)
                 obj.CompletedEvent += OnObjectiveCompleted;
 
-            Pressure = gameObject.AddComponent<RoomPressureController>();
-            Pressure.Init(levelData.maxPressure);
-            Escalation = gameObject.AddComponent<RoomEscalationController>();
-            Escalation.Init(this, levelData.escalationData, refs.machines, refs.hazards);
-
+            // Room Pressure and its escalation were removed by design: the room is
+            // decided purely by Resolve vs repairs, and machinery never fires on
+            // its own. Pressure/Escalation stay null; every consumer null-checks.
             gameObject.AddComponent<FactoryControlResource>();
 
             SpawnEngineer();
@@ -178,11 +175,16 @@ namespace LastShift.Core
             }
         }
 
-        void OnComboTriggered(string title, float bonus)
+        void OnComboTriggered(string title, float resolveBonus)
         {
             if (hud == null) return;
             hud.ShowToast(title, 3.2f);
-            hud.ShowToast(string.Format(Data.Loc.ComboBonusToast, Mathf.RoundToInt(bonus)), 2.6f);
+            if (resolveBonus > 0f)
+            {
+                // Own resolve toast; suppress the generic one for this hit.
+                lastResolveToastAt = Time.unscaledTime;
+                hud.ShowToast(string.Format(Data.Loc.ResolveLossToast, Mathf.RoundToInt(resolveBonus)), 2.6f);
+            }
         }
 
         /// <summary>Shared toast entry point for the tactical systems.</summary>
@@ -204,10 +206,6 @@ namespace LastShift.Core
                 machine.Activated += _ => hud.ShowToast(machine.ActivationMessage);
                 machine.Judged += OnMachineJudged;
             }
-            Pressure.ComboBonus += amount =>
-                hud.ShowToast(string.Format(Data.Loc.ComboToast, Mathf.RoundToInt(amount)));
-            Pressure.WarningReached += () => hud.ShowToast(Data.Loc.PressureWarning, 3.5f, warning: true);
-            Pressure.MaxReached += () => hud.ShowToast(Data.Loc.EscalationToast, 3.5f, warning: true);
             Engineer.Stats.ResolveEmpty += () => hud.ShowToast(Data.Loc.ExitUnlockedToast, 3.5f);
             Engineer.Stats.ResolveLost += OnResolveLost;
 
@@ -397,21 +395,6 @@ namespace LastShift.Core
             }
 
             if (GameInput.EscapePressed) { SetPaused(true); return; }
-
-            // Passive pressure while the engineer is significantly delayed:
-            // stunned, panicking, dodging hazards or hunting for a route.
-            if (Engineer != null && Engineer.Fsm != null && Pressure != null)
-            {
-                var id = Engineer.Fsm.CurrentId;
-                if (id == LastShift.Engineer.EngineerStateId.Stunned ||
-                    id == LastShift.Engineer.EngineerStateId.Panic ||
-                    id == LastShift.Engineer.EngineerStateId.AvoidHazard ||
-                    id == LastShift.Engineer.EngineerStateId.Repath ||
-                    id == LastShift.Engineer.EngineerStateId.BackOff)
-                {
-                    Pressure.AddPassive(0.5f * Time.deltaTime);
-                }
-            }
 
             // Editor-only fast-forward; does nothing in released builds.
             Time.timeScale = GameInput.SpeedHeld ? 3f : 1f;

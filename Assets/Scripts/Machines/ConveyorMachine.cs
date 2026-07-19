@@ -67,12 +67,28 @@ namespace LastShift.Machines
         static int runningLoopCount;
         bool loopCounted;
 
+        // Running belts are poor footing: a light path-grid danger makes the AI
+        // prefer routes around them (below his avoid threshold, so he still
+        // crosses when there is no other way — he just stops walking ALONG them).
+        const float BeltPathDanger = 0.8f;
+        bool beltDangerOn;
+
+        void SetBeltDanger(bool on)
+        {
+            if (on == beltDangerOn) return;
+            var grid = PathGrid.Instance;
+            if (grid == null) return;
+            grid.AddDanger(area, on ? BeltPathDanger : -BeltPathDanger);
+            beltDangerOn = on;
+        }
+
         void OnEnable() { if (!All.Contains(this)) All.Add(this); }
 
         void OnDisable()
         {
             All.Remove(this);
             ReportLoop(false);
+            SetBeltDanger(false);
         }
 
         void ReportLoop(bool audible)
@@ -186,6 +202,7 @@ namespace LastShift.Machines
         {
             if (spec == null) return;
             ReportLoop(running);
+            SetBeltDanger(running);
             if (runLamp != null)
             {
                 float pulse = running ? 0.35f + 0.25f * Mathf.PingPong(Time.time * 2f, 1f) : 0.05f;

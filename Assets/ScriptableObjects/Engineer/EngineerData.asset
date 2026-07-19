@@ -20,7 +20,7 @@ MonoBehaviour:
   panicEnterThreshold: 70
   panicExitThreshold: 30
   resolveMax: 100
-  resolveLossMultiplier: 1
+  resolveLossMultiplier: 0.9
   lossArmGrab: 7
   lossHazardEnter: 10
   lossNoPath: 7

@@ -101,7 +101,6 @@ namespace LastShift.Data
             "создавать опасности и срывать ремонт.",
 
             "Снижайте РЕШИМОСТЬ ИНЖЕНЕРА.\n" +
-            "Повышайте ДАВЛЕНИЕ В ЦЕХЕ.\n" +
             "Не дайте ему завершить ремонт.\n\n" +
             "Когда инженер потеряет решимость,\n" +
             "он отступит к выходу.\n" +
@@ -132,6 +131,7 @@ namespace LastShift.Data
         public const string ComboToast = "СБОЙ СИСТЕМ: +{0} К ДАВЛЕНИЮ";
         public const string PressureWarning = "ВНИМАНИЕ: ЦЕХ БЛИЗОК К АВАРИЙНОМУ РЕЖИМУ";
         public const string EscalationToast = "АВАРИЙНЫЙ РЕЖИМ АКТИВИРОВАН";
+        public const string EscalationAutoToast = "СИСТЕМЫ ЦЕХА ДЕЙСТВУЮТ САМОСТОЯТЕЛЬНО";
         public const string ExitUnlockedToast = "РЕШИМОСТЬ СЛОМЛЕНА — ИНЖЕНЕР ОТСТУПАЕТ";
 
         // Level 1 tutorial hints
@@ -162,7 +162,7 @@ namespace LastShift.Data
         public const string PurposeSlippery = "ЗАМЕДЛЯЕТ ИНЖЕНЕРА";
         public const string PurposeSlipperyHint = "МОКРЫЙ ПОЛ СНИЖАЕТ СКОРОСТЬ";
         public const string PurposeAlarm = "ДАВИТ НА НЕРВЫ ВО ВСЁМ ЦЕХЕ";
-        public const string PurposeAlarmHint = "УСКОРЯЕТ ПАНИКУ ИНЖЕНЕРА";
+        public const string PurposeAlarmHint = "МЕШАЕТ РЕМОНТУ И ПРИБЛИЖАЕТ ПАНИКУ";
         public const string PurposeScanner = "ПОМЕЧАЕТ ЦЕЛЬ В ЗОНЕ СКАНИРОВАНИЯ";
         public const string PurposeScannerHint = "ЭФФЕКТИВЕН, КОГДА ЦЕЛЬ В ПРОХОДЕ";
 
@@ -241,5 +241,13 @@ namespace LastShift.Data
         public const string TutorialRepeat = "ПОВТОРИТЬ УРОК";
         public const string TutorialWrongMachine = "ЭТА СИСТЕМА НЕ НУЖНА НА ЭТОМ ШАГЕ";
         public const string TutorialStepLabel = "ШАГ {0} / 4";
+
+        // Tutorial pointer plaques (disappear once the required action is done)
+        public const string TutPlaquePanel = "ЭТО РЕМОНТНЫЙ ПУЛЬТ\nИнженер пытается его починить.\nПочинит все пульты — победа инженера.";
+        public const string TutPlaqueTerminal = "<< ЭТО СПИСОК ОБОРУДОВАНИЯ\nВыбор — стрелки ↑/↓, активация — ENTER.\nНа этом шаге можно включить любую систему.";
+        public const string TutPlaqueArm = "ЭТО МАНИПУЛЯТОР\nОглушает инженера в радиусе действия.";
+        public const string TutPlaqueResolve = "^ РЕШИМОСТЬ ИНЖЕНЕРА УМЕНЬШИЛАСЬ";
+        public const string TutPlaqueDoor = "УСПЕЙТЕ ЗАКРЫТЬ ВОРОТА,\nпока инженер не прошёл";
+        public const string TutPlaqueConveyor = "ТЕПЕРЬ СМЕНИТЕ\nНАПРАВЛЕНИЕ КОНВЕЙЕРА";
     }
 }

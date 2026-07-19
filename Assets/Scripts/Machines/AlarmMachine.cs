@@ -139,13 +139,24 @@ namespace LastShift.Machines
                                 e.ApplySlow(0.7f, 2f);
                                 AddPressure(5f, "scanned");
                             }
-                            e.AddStress(6f * Time.deltaTime);
+                            // Scanning a repairing engineer is the gate's anti-repair
+                            // role — same focus-breaking multiplier as the siren.
+                            float gateStress = 6f;
+                            if (e.Fsm != null && e.Fsm.CurrentId == LastShift.Engineer.EngineerStateId.RepairObjective)
+                                gateStress *= TacticsData.Get().alarmRepairStressMultiplier;
+                            e.AddStress(gateStress * Time.deltaTime);
                             e.DrainResolve(alarmPerSec, Time.deltaTime, displayName);
                         }
                     }
                     else
                     {
-                        e.AddStress(4f * Time.deltaTime);
+                        // The siren is the room-wide anti-repair tool: while he is
+                        // focused on a panel, the noise stresses him far faster,
+                        // driving him toward panic (which makes him leave the panel).
+                        float stressRate = 4f;
+                        if (e.Fsm != null && e.Fsm.CurrentId == LastShift.Engineer.EngineerStateId.RepairObjective)
+                            stressRate *= TacticsData.Get().alarmRepairStressMultiplier;
+                        e.AddStress(stressRate * Time.deltaTime);
                         e.DrainResolve(alarmPerSec, Time.deltaTime, displayName);
                     }
                 }

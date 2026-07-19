@@ -52,6 +52,11 @@ namespace LastShift.Core
 
         GameObject targetRing;
         Vector2 spawn;
+        Canvas tutorialCanvas;
+
+        // Pointer plaques («указательные плашки»): callouts anchored to the thing
+        // they explain, removed the moment the required action is performed.
+        readonly Dictionary<string, GameObject> plaques = new Dictionary<string, GameObject>();
 
         public void Init(LevelManager levelManager, RoomRefs roomRefs, HUDController hudController)
         {
@@ -81,6 +86,7 @@ namespace LastShift.Core
         void BuildUI()
         {
             Canvas canvas = UIBuilder.CreateCanvas("TutorialCanvas", 12);
+            tutorialCanvas = canvas;
 
             // Instruction card along the bottom of the play area.
             RectTransform card = UIBuilder.Panel(canvas.transform, "TutorialCard",
@@ -141,6 +147,74 @@ namespace LastShift.Core
             rt.offsetMax = Vector2.zero;
         }
 
+        // ================= pointer plaques =================
+
+        void HidePlaque(string id)
+        {
+            if (plaques.TryGetValue(id, out var go))
+            {
+                if (go != null) Destroy(go);
+                plaques.Remove(id);
+            }
+        }
+
+        void ClearPlaques()
+        {
+            foreach (var kv in plaques)
+                if (kv.Value != null) Destroy(kv.Value);
+            plaques.Clear();
+        }
+
+        /// <summary>Terminal-style callout floating in the room, with an arrow toward the target.</summary>
+        void ShowWorldPlaque(string id, Vector2 target, Vector2 offset, string text)
+        {
+            HidePlaque(id);
+            var root = new GameObject("Plaque_" + id);
+            Vector2 center = target + offset;
+            root.transform.position = new Vector3(center.x, center.y, 0f);
+
+            var canvasGO = new GameObject("Canvas");
+            canvasGO.transform.SetParent(root.transform, false);
+            canvasGO.transform.localScale = Vector3.one * 0.015f;
+            var canvas = canvasGO.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.WorldSpace;
+            canvas.sortingOrder = 45;
+            if (Viz.HasSortingLayer("WorldUI")) canvas.sortingLayerName = "WorldUI";
+            var crt = (RectTransform)canvasGO.transform;
+            crt.sizeDelta = new Vector2(330f, 100f);
+
+            var bg = UIBuilder.Panel(canvasGO.transform, "Bg", Vector2.zero, Vector2.one,
+                new Color(0.02f, 0.08f, 0.05f, 0.93f));
+            var outline = bg.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0.95f, 0.85f, 0.45f, 0.8f);
+            outline.effectDistance = new Vector2(1.5f, 1.5f);
+            UIBuilder.Label(bg, "Text", text, 19, new Color(0.75f, 1f, 0.8f), TextAnchor.MiddleCenter);
+
+            // Arrow from the plaque toward the explained object.
+            Vector2 toTarget = -offset;
+            float ang = Mathf.Atan2(toTarget.y, toTarget.x) * Mathf.Rad2Deg;
+            var arrow = Viz.Make("Arrow", root.transform, PlaceholderShape.Arrow,
+                new Color(0.95f, 0.85f, 0.45f, 0.95f),
+                toTarget.normalized * (toTarget.magnitude * 0.55f), new Vector2(0.55f, 0.4f), 12, unlit: true);
+            arrow.transform.localRotation = Quaternion.Euler(0f, 0f, ang);
+            if (Viz.HasSortingLayer("WorldUI")) Viz.SetLayer(arrow, "WorldUI");
+
+            plaques[id] = root;
+        }
+
+        /// <summary>Callout on the screen UI (terminal list, resolve bar).</summary>
+        void ShowScreenPlaque(string id, Vector2 aMin, Vector2 aMax, string text)
+        {
+            HidePlaque(id);
+            RectTransform rt = UIBuilder.Panel(tutorialCanvas.transform, "Plaque_" + id,
+                aMin, aMax, new Color(0.02f, 0.08f, 0.05f, 0.93f));
+            var outline = rt.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0.95f, 0.85f, 0.45f, 0.8f);
+            outline.effectDistance = new Vector2(1.5f, 1.5f);
+            UIBuilder.Label(rt, "Text", text, 17, new Color(0.75f, 1f, 0.8f), TextAnchor.MiddleCenter);
+            plaques[id] = rt.gameObject;
+        }
+
         // ================= step flow =================
 
         void StartStep(int index)
@@ -157,14 +231,19 @@ namespace LastShift.Core
             var e = lm.Engineer;
             if (e != null && !e.IsEscaped) e.TutorialReset(spawn);
 
+            ClearPlaques();
+
             switch (step)
             {
                 case 1:
-                    // Door must start open so closing it is the activation to learn.
+                    // Any equipment counts on this step — the plaques do the guiding.
                     if (door != null && door.IsClosed) door.ForceActivate();
                     SetCard(Loc.TutorialStep1Header, Loc.TutorialStep1Body);
-                    SetGate(m => m == door);
-                    Highlight(door);
+                    SetGate(null);
+                    Highlight(null);
+                    if (refs.objectives.Count > 0)
+                        ShowWorldPlaque("panel", refs.objectives[0].Pos, new Vector2(2.2f, 0.8f), Loc.TutPlaquePanel);
+                    ShowScreenPlaque("terminal", new Vector2(0.29f, 0.40f), new Vector2(0.63f, 0.56f), Loc.TutPlaqueTerminal);
                     break;
 
                 case 2:
@@ -173,6 +252,8 @@ namespace LastShift.Core
                     SetCard(Loc.TutorialStep2Header, Loc.TutorialStep2Body);
                     SetGate(m => m == arm);
                     Highlight(arm);
+                    if (arm != null)
+                        ShowWorldPlaque("arm", arm.transform.position, new Vector2(2.6f, 1.0f), Loc.TutPlaqueArm);
                     break;
 
                 case 3:
@@ -180,6 +261,8 @@ namespace LastShift.Core
                     SetCard(Loc.TutorialStep3Header, Loc.TutorialStep3Body + "\n" + Loc.TutorialStep3Hint);
                     SetGate(m => m == door || m == conveyor);
                     Highlight(door);
+                    if (door != null)
+                        ShowWorldPlaque("door", door.transform.position, new Vector2(2.6f, -1.3f), Loc.TutPlaqueDoor);
                     break;
 
                 case 4:
@@ -239,7 +322,10 @@ namespace LastShift.Core
             switch (step)
             {
                 case 1:
-                    if (machine == door) Advance(Loc.TutorialStep1Done);
+                    // Any activated system completes the intro step; its plaques
+                    // vanish the moment the action is performed.
+                    ClearPlaques();
+                    Advance(Loc.TutorialStep1Done);
                     break;
 
                 case 2:
@@ -252,12 +338,20 @@ namespace LastShift.Core
                     // Judged fires before the slab toggles: an open door means this
                     // activation is the closing move the step asks for.
                     if (machine == door && !door.IsClosed)
+                    {
                         doorClosedAt = Time.time;
+                        // Door done — the pointer moves on to the conveyor.
+                        HidePlaque("door");
+                        if (conveyor != null)
+                            ShowWorldPlaque("conveyor", conveyor.transform.position,
+                                new Vector2(0f, -1.7f), Loc.TutPlaqueConveyor);
+                    }
                     if (machine == conveyor)
                     {
                         if (doorClosedAt > 0f)
                         {
                             conveyorActivatedAt = Time.time;
+                            HidePlaque("conveyor");
                             // Reversing the belt while the engineer is ON it is the
                             // whole lesson — count it immediately, no second flip.
                             if (effective) Advance(Loc.ComboRedirect, 2.2f);
@@ -276,7 +370,14 @@ namespace LastShift.Core
         {
             // Step 2 completes on a real arm hit («ЭФФЕКТИВНОЕ ВОЗДЕЙСТВИЕ» and
             // «РЕШИМОСТЬ −10» arrive through the shared feedback path).
-            if (step == 2 && !stepAdvancing) Advance(null);
+            if (step == 2 && !stepAdvancing)
+            {
+                HidePlaque("arm");
+                // Point at the resolve gauge: the stun just visibly drained it.
+                // Cleared when step 3 begins (~3 s on screen).
+                ShowScreenPlaque("resolve", new Vector2(0.55f, 0.80f), new Vector2(0.97f, 0.875f), Loc.TutPlaqueResolve);
+                Advance(null, 3.2f);
+            }
         }
 
         void OnConveyorCarried()
@@ -295,6 +396,10 @@ namespace LastShift.Core
             lm.ShowToast(Loc.TutorialStep3Reset, 2.8f, warning: true);
             doorClosedAt = -999f;
             conveyorActivatedAt = -999f;
+            // Back to phase one: point at the door again.
+            HidePlaque("conveyor");
+            if (door != null)
+                ShowWorldPlaque("door", door.transform.position, new Vector2(2.6f, -1.3f), Loc.TutPlaqueDoor);
             RetrySituation(null);
         }
 
@@ -363,6 +468,7 @@ namespace LastShift.Core
         void ShowDonePanel()
         {
             lm.TutorialOverlayLock = true;
+            ClearPlaques();
             if (targetRing != null) Destroy(targetRing);
             SetGate(m => false);
             doneIndex = 0;

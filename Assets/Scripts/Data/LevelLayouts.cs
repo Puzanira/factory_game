@@ -149,15 +149,27 @@ namespace LastShift.Data
             l.machines.Add(new MachineSpec
             {
                 kind = MachineKind.HazardEmitter, displayName = "Система мойки", commandVerb = "намочить пол",
-                description = "Залить восточный проход водой. Мокрый пол замедляет инженера.",
+                description = "Залить восточный проход и юго-восточный угол водой. Мокрый пол замедляет инженера.",
                 pos = new Vector2(3.2f, 4.4f), emitKind = HazardKind.Slippery,
-                emitRect = R(1.8f, 0f, 5.4f, 1.7f), emitDuration = 11f, cooldown = 9f, escalationAuto = true,
+                // Floods the whole south-east quadrant up to the walls: while the
+                // water is down, there is no dry tile to repair «Электрощит Б» from —
+                // the wet floor denies the panel, not just slows him.
+                emitRect = R(4.4f, -2.4f, 8.2f, 5.8f), emitDuration = 11f, cooldown = 9f, escalationAuto = true,
             });
             l.machines.Add(new MachineSpec
             {
                 kind = MachineKind.Alarm, displayName = "Аварийная сигнализация", commandVerb = "включить",
                 description = "Аварийный свет и сирены. Повышает стресс во всём цехе.",
                 pos = new Vector2(-7.6f, 4.5f), alarmDuration = 6f, cooldown = 10f, escalationAuto = true,
+            });
+            l.machines.Add(new MachineSpec
+            {
+                // Covers the central control console: with the steam down there is
+                // no safe tile to repair it from — no dead zone at the room's top.
+                kind = MachineKind.HazardEmitter, displayName = "Паровая продувка", commandVerb = "выпустить пар",
+                description = "Продуть паром площадку у центрального пульта. Пар вынуждает инженера отступить.",
+                pos = new Vector2(-1.9f, 4.6f), emitKind = HazardKind.Steam,
+                emitRect = R(0f, 3.4f, 4.6f, 2.4f), emitDuration = 7f, cooldown = 10f, escalationAuto = true,
             });
 
             l.hazards.Add(new HazardSpec { kind = HazardKind.Slippery, rect = R(2.4f, -3.2f, 2.4f, 1.2f), startsActive = true, escalationExpand = true });
@@ -222,23 +234,27 @@ namespace LastShift.Data
                 pos = new Vector2(1.6f, 0f), size = new Vector2(1.9f, 1.9f),
                 pressMode = true, windup = 1.3f, stunDuration = 2.0f, cooldown = 8f, escalationAuto = true,
             });
+            // The arms guard the side repair panels themselves (playtest: parked at
+            // the far conveyor ends they never reached a repairing engineer).
             l.machines.Add(new MachineSpec
             {
                 kind = MachineKind.RoboticArm, displayName = "Укладочный манипулятор А", commandVerb = "перекрыть путь",
-                description = "Развернуть западный манипулятор через северный переход.",
-                pos = new Vector2(-5.6f, 2.2f), radius = 1.9f, windup = 0.8f, stunDuration = 1.6f, cooldown = 6.5f,
+                description = "Захват рядом с боковым пультом А. Оглушает инженера в радиусе действия.",
+                pos = new Vector2(-5.8f, -2.6f), radius = 1.9f, windup = 0.8f, stunDuration = 1.6f, cooldown = 6.5f,
             });
             l.machines.Add(new MachineSpec
             {
                 kind = MachineKind.RoboticArm, displayName = "Укладочный манипулятор Б", commandVerb = "задержать инженера",
-                description = "Развернуть восточный манипулятор через южный переход.",
-                pos = new Vector2(5.6f, -2.2f), radius = 1.9f, windup = 0.8f, stunDuration = 1.6f, cooldown = 6.5f,
+                description = "Захват рядом с боковым пультом Б. Оглушает инженера в радиусе действия.",
+                pos = new Vector2(5.8f, 2.6f), radius = 1.9f, windup = 0.8f, stunDuration = 1.6f, cooldown = 6.5f,
             });
             l.machines.Add(new MachineSpec
             {
                 kind = MachineKind.Alarm, displayName = "Сканирующие ворота", commandVerb = "сканировать",
                 description = "Просветить центральный проход. Помечает инженера и давит на нервы.",
-                pos = new Vector2(0f, 0f), useGateRect = true, gateRect = R(0f, 0f, 1.4f, 3.4f),
+                // The scan band runs all the way up to the central packing terminal,
+                // so repairing it is never out of the factory's reach.
+                pos = new Vector2(0f, 0f), useGateRect = true, gateRect = R(0f, 0.8f, 1.4f, 5.0f),
                 alarmDuration = 5f, cooldown = 8f,
             });
             l.machines.Add(new MachineSpec
@@ -294,23 +310,27 @@ namespace LastShift.Data
             l.machines.Add(new MachineSpec
             {
                 kind = MachineKind.HazardEmitter, displayName = "Холодильный вентилятор А", commandVerb = "выпустить холодный туман",
-                description = "Заполнить западный проход морозным туманом. Замедляет и изматывает.",
+                description = "Заполнить западное крыло и шлюз А морозным туманом. Замедляет и изматывает.",
                 pos = new Vector2(-3.6f, 4.5f), emitKind = HazardKind.Cold,
-                emitRect = R(-3.6f, 0.2f, 2.2f, 7f), emitDuration = 10f, cooldown = 8f, escalationAuto = true,
+                // Reaches the NW corner: «Шлюз морозильника А» is inside the fog,
+                // so the top-corner panels are no longer drone/alarm-only.
+                emitRect = R(-5.5f, 1.5f, 6f, 7.5f), emitDuration = 10f, cooldown = 8f, escalationAuto = true,
             });
             l.machines.Add(new MachineSpec
             {
                 kind = MachineKind.HazardEmitter, displayName = "Холодильный вентилятор Б", commandVerb = "выпустить холодный туман",
-                description = "Заполнить восточный проход морозным туманом. Замедляет и изматывает.",
+                description = "Заполнить восточное крыло и шлюз Б морозным туманом. Замедляет и изматывает.",
                 pos = new Vector2(3.6f, 4.5f), emitKind = HazardKind.Cold,
-                emitRect = R(3.6f, 0.2f, 2.2f, 7f), emitDuration = 10f, cooldown = 8f, escalationAuto = true,
+                emitRect = R(5.5f, 1.5f, 6f, 7.5f), emitDuration = 10f, cooldown = 8f, escalationAuto = true,
             });
             l.machines.Add(new MachineSpec
             {
                 kind = MachineKind.MobileUnit, displayName = "Автономный штабелёр", commandVerb = "переставить палеты",
                 description = "Переставить палеты: меняет план цеха и закрывает короткие пути.",
                 pos = new Vector2(-0.8f, -2.4f), size = new Vector2(1.0f, 1.3f),
-                route = new[] { new Vector2(-0.8f, -2.4f), new Vector2(-0.8f, 2.4f) },
+                // Route runs all the way to the final security terminal, so a repair
+                // there can be interrupted by the stacker, not only by the drone.
+                route = new[] { new Vector2(-0.8f, -2.4f), new Vector2(-0.8f, 3.6f) },
                 moveSpeed = 2.2f, stunDuration = 1.6f, cooldown = 10f, escalationAuto = true,
                 palletShifts = new[]
                 {
@@ -350,7 +370,8 @@ namespace LastShift.Data
                 pos = new Vector2(-7.6f, 4.6f), alarmDuration = 6f, cooldown = 10f, escalationAuto = true,
             });
 
-            l.hazards.Add(new HazardSpec { kind = HazardKind.Cold, rect = R(-7.3f, 0f, 2.0f, 3.6f), startsActive = true, escalationExpand = true });
+            // Dormant cold pocket by the west wall: visual freezer flavour, off at start.
+            l.hazards.Add(new HazardSpec { kind = HazardKind.Cold, rect = R(-7.3f, 0f, 2.0f, 3.6f), startsActive = false });
 
             l.objectives.Add(new ObjectiveSpec("Центральный узел распределения", new Vector2(0.4f, 1.6f), 26f));
             l.objectives.Add(new ObjectiveSpec("Шлюз морозильника А", new Vector2(-7.4f, 3.8f), 22f));

@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e171e6ed4bfef470da75ca6965526592, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LastShift.Data.EscalationData
-  resolvePenalty: 22
-  autoActivateInterval: 5
+  resolvePenalty: 18
+  autoActivateInterval: 8
   hazardExpandScale: 1.5
   objectiveDamageFraction: 0.35
   warningColor: {r: 1, g: 0.15, b: 0.1, a: 0.16}

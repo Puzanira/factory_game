@@ -75,7 +75,7 @@ namespace LastShift.Core
                 if (InWindow(hazardContactAt) && OffCooldown(lastDisplacementAt))
                 {
                     lastDisplacementAt = Time.time;
-                    Reward(Loc.ComboDisplacement, tactics.comboDisplacementPressure, 0f, "combo displacement");
+                    Reward(Loc.ComboDisplacement, tactics.comboDisplacementResolve, "combo displacement");
                 }
                 else
                 {
@@ -85,7 +85,7 @@ namespace LastShift.Core
             else if (machine is MobileUnitMachine && InWindow(hazardContactAt) && OffCooldown(lastDisplacementAt))
             {
                 lastDisplacementAt = Time.time;
-                Reward(Loc.ComboDisplacement, tactics.comboDisplacementPressure, 0f, "combo displacement");
+                Reward(Loc.ComboDisplacement, tactics.comboDisplacementResolve, "combo displacement");
             }
         }
 
@@ -98,7 +98,7 @@ namespace LastShift.Core
             if (InWindow(doorClosedAt) && OffCooldown(lastRedirectAt))
             {
                 lastRedirectAt = Time.time;
-                Reward(Loc.ComboRedirect, tactics.comboRedirectPressure, 0f, "combo redirect");
+                Reward(Loc.ComboRedirect, tactics.comboRedirectResolve, "combo redirect");
             }
             else
             {
@@ -114,7 +114,7 @@ namespace LastShift.Core
             if (InWindow(conveyorCarryAt) && OffCooldown(lastLineGrabAt))
             {
                 lastLineGrabAt = Time.time;
-                Reward(Loc.ComboLineGrab, tactics.comboLineGrabPressure, tactics.comboLineGrabResolve, "combo line grab");
+                Reward(Loc.ComboLineGrab, tactics.comboLineGrabResolve, "combo line grab");
                 return;
             }
 
@@ -123,7 +123,7 @@ namespace LastShift.Core
             if (e != null && e.IsMarked && OffCooldown(lastMarkedAt))
             {
                 lastMarkedAt = Time.time;
-                Reward(Loc.ComboMarkedTarget, tactics.comboMarkedPressure, 0f, "combo marked");
+                Reward(Loc.ComboMarkedTarget, tactics.comboMarkedResolve, "combo marked");
             }
         }
 
@@ -137,7 +137,7 @@ namespace LastShift.Core
             if (e != null && e.IsMarked && OffCooldown(lastMarkedAt))
             {
                 lastMarkedAt = Time.time;
-                Reward(Loc.ComboMarkedTarget, tactics.comboMarkedPressure, 0f, "combo marked");
+                Reward(Loc.ComboMarkedTarget, tactics.comboMarkedResolve, "combo marked");
                 return;
             }
 
@@ -152,13 +152,12 @@ namespace LastShift.Core
 
         // ---------------- rewards / hints ----------------
 
-        void Reward(string title, float pressure, float resolve, string reason)
+        void Reward(string title, float resolve, string reason)
         {
-            if (pressure > 0f && lm.Pressure != null) lm.Pressure.Add(pressure, reason);
             if (resolve > 0f && lm.Engineer != null) lm.Engineer.Stats.LoseResolve(resolve, reason);
             FactoryControlResource.NotifyCombo();
             Audio.AudioManager.Play("repair_done", Audio.SfxBus.UI, 0.4f);
-            ComboTriggered?.Invoke(title, pressure > 0f ? pressure : resolve);
+            ComboTriggered?.Invoke(title, resolve);
         }
 
         void Hint(bool relevant, string text)

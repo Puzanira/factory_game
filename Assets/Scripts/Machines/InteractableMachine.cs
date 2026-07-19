@@ -186,12 +186,9 @@ namespace LastShift.Machines
                 Judged?.Invoke(this, lastJudgedEffective);
                 // Timing bonus only for machines that actually have a zone to hit —
                 // support systems (drone, room alarm, door re-open) earn nothing
-                // for merely being pressed, keeping "Pressure only from real effects".
+                // for merely being pressed.
                 if (lastJudgedEffective && !ActivationAlwaysEffective)
-                {
-                    AddPressure(tactics.effectivePressureBonus, displayName);
                     Core.FactoryControlResource.NotifyEffectiveAction();
-                }
             }
             else
             {

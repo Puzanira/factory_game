@@ -22,6 +22,9 @@ namespace LastShift.Hazards
         protected override void BuildExtraVisuals()
         {
             plume = FxFactory.Steam(transform, Area.size);
+            // Dormant zones must look OFF: particles autoplay on creation, and
+            // SetActive is only called later (if ever) — stop them now.
+            if (!Active) plume.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         }
 
         void OnActive(bool active)

@@ -384,10 +384,43 @@ namespace LastShift.Engineer
             ProcessConveyors(dt);
             GlobalTransitions();
             Fsm.Tick(dt);
+            TickStuckWatchdog(dt);
             UpdateVisuals(dt);
 
             var grid = PathGrid.Instance;
             if (grid != null) Stats.Safety = grid.DangerAt(Pos);
+        }
+
+        Vector2 stuckAnchor;
+        float stuckTimer;
+
+        /// <summary>
+        /// Safety net against pinning (belt vs waypoint, gate housings, future
+        /// geometry): if a walking state makes no spatial progress for a while,
+        /// re-plan instead of grinding in place forever.
+        /// </summary>
+        void TickStuckWatchdog(float dt)
+        {
+            var id = Fsm.CurrentId;
+            bool walking = id == EngineerStateId.MoveToObjective || id == EngineerStateId.Panic ||
+                           id == EngineerStateId.RetreatToExit;
+            if (!walking || !Nav.HasPath)
+            {
+                stuckTimer = 0f;
+                stuckAnchor = Pos;
+                return;
+            }
+            if (Vector2.Distance(Pos, stuckAnchor) > 0.12f)
+            {
+                stuckAnchor = Pos;
+                stuckTimer = 0f;
+                return;
+            }
+            stuckTimer += dt;
+            if (stuckTimer < 2.5f) return;
+            stuckTimer = 0f;
+            if (id == EngineerStateId.RetreatToExit) Nav.SetDestination(ExitPos, 0.5f);
+            else Fsm.ChangeState(EngineerStateId.Repath);
         }
 
         void GlobalTransitions()
@@ -403,8 +436,13 @@ namespace LastShift.Engineer
             }
 
             if (!Stats.IsResolveEmpty && Data != null && Stats.Stress >= Data.panicEnterThreshold &&
-                (id == EngineerStateId.MoveToObjective || id == EngineerStateId.Repath || id == EngineerStateId.AvoidHazard))
+                (id == EngineerStateId.MoveToObjective || id == EngineerStateId.Repath ||
+                 id == EngineerStateId.AvoidHazard || id == EngineerStateId.RepairObjective ||
+                 id == EngineerStateId.BackOff))
             {
+                // Panic can now break an active repair: sirens/scanners that max his
+                // stress really do pull him off the panel.
+                if (id == EngineerStateId.RepairObjective) NotifyRepairInterrupted();
                 Fsm.ChangeState(EngineerStateId.Panic);
             }
         }
@@ -514,26 +552,33 @@ namespace LastShift.Engineer
         void ProcessConveyors(float dt)
         {
             if (Fsm.CurrentId == EngineerStateId.Stunned) { /* still gets carried */ }
-            Vector2 push = ConveyorMachine.TotalPushAt(Pos);
+            // The room is already won when he retreats: he simply steps over the
+            // belts on his way out — they cannot pin him away from the exit.
+            Vector2 push = IsRetreating ? Vector2.zero : ConveyorMachine.TotalPushAt(Pos);
             if (push.sqrMagnitude < 0.001f)
             {
                 conveyorDisplacement = Mathf.Max(0f, conveyorDisplacement - dt);
                 return;
             }
+
             Vector2 target = Pos + push * dt;
             var grid = PathGrid.Instance;
             if (grid == null || grid.IsFree(target))
             {
                 transform.position = new Vector3(target.x, target.y, 0f);
+                // Being actively carried: poor footing — his own walking barely
+                // works, so the belt genuinely carries him toward its end.
+                ApplySlow(0.4f, 0.15f);
                 conveyorDisplacement += push.magnitude * dt;
                 if (conveyorDisplacement > 1.2f)
                 {
                     conveyorDisplacement = 0f;
                     Stats.AddStress(9f);
-                    AddPressure(4f, "conveyor");
                     ConveyorCarried?.Invoke();
                 }
             }
+            // Pressed against a belt end / gate housing / wall: the push cannot move
+            // him and his footing is back — he steps off at full speed, no sticking.
         }
 
         void OnPathInvalidated()

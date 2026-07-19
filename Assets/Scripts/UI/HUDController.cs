@@ -22,7 +22,6 @@ namespace LastShift.UI
         Text objectiveLabel;
         Text stateLabel;
         RectTransform resolveFill;
-        RectTransform pressureFill;
         RectTransform repairFill;
         Image escalationOverlay;
         Image alarmOverlay;
@@ -50,15 +49,12 @@ namespace LastShift.UI
             roomLabel = UIBuilder.Label(top, "Room", "ЦЕХ", 28, new Color(0.95f, 0.9f, 0.75f), TextAnchor.MiddleLeft);
             SetOffsets(roomLabel.rectTransform, new Vector2(0f, 0f), new Vector2(0.34f, 1f), new Vector2(18f, 0f), new Vector2(0f, 0f));
 
+            // Single wide gauge: the room is decided by Resolve alone (Room
+            // Pressure was removed by design).
             var resolveTitle = UIBuilder.Label(top, "ResolveTitle", Loc.EngineerResolve, 16, new Color(1f, 0.7f, 0.4f), TextAnchor.UpperLeft);
-            SetOffsets(resolveTitle.rectTransform, new Vector2(0.36f, 0.5f), new Vector2(0.66f, 1f), new Vector2(0f, 0f), new Vector2(0f, -6f));
-            resolveFill = UIBuilder.Bar(top, "ResolveBar", new Vector2(0.36f, 0.14f), new Vector2(0.66f, 0.5f),
+            SetOffsets(resolveTitle.rectTransform, new Vector2(0.36f, 0.5f), new Vector2(1f, 1f), new Vector2(0f, 0f), new Vector2(-14f, -6f));
+            resolveFill = UIBuilder.Bar(top, "ResolveBar", new Vector2(0.36f, 0.14f), new Vector2(1f, 0.5f),
                 new Vector2(0f, 0f), new Vector2(-14f, 0f), new Color(0.12f, 0.1f, 0.08f), new Color(1f, 0.6f, 0.25f));
-
-            var pressureTitle = UIBuilder.Label(top, "PressureTitle", Loc.RoomPressure, 16, new Color(1f, 0.35f, 0.3f), TextAnchor.UpperLeft);
-            SetOffsets(pressureTitle.rectTransform, new Vector2(0.68f, 0.5f), new Vector2(1f, 1f), new Vector2(0f, 0f), new Vector2(-14f, -6f));
-            pressureFill = UIBuilder.Bar(top, "PressureBar", new Vector2(0.68f, 0.14f), new Vector2(1f, 0.5f),
-                new Vector2(0f, 0f), new Vector2(-14f, 0f), new Color(0.12f, 0.07f, 0.07f), new Color(0.95f, 0.2f, 0.15f));
 
             // Objective strip under the top bar.
             RectTransform strip = UIBuilder.Panel(root, "ObjectiveStrip",
@@ -165,9 +161,6 @@ namespace LastShift.UI
                 UIBuilder.SetBar(resolveFill, engineer.Stats.Resolve / max);
                 stateLabel.text = Loc.EngineerLabel + (engineer.Fsm != null ? engineer.Fsm.CurrentLabel.ToUpper() : "—");
             }
-
-            if (lm.Pressure != null)
-                UIBuilder.SetBar(pressureFill, lm.Pressure.Value / lm.Pressure.Max);
 
             var obj = lm.CurrentObjectiveForHud;
             if (engineer != null && engineer.IsRetreating)

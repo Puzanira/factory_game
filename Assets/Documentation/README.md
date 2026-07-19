@@ -1,5 +1,14 @@
 # LAST SHIFT / ПОСЛЕДНЯЯ СМЕНА — Vertical Slice
 
+> **Pass 8.1 (2026-07-19): Room Pressure removed.** Playtest verdict: давление и
+> аварийный режим (машины, стреляющие сами) убраны совсем. Цех решается только
+> РЕШИМОСТЬЮ против ремонтов; HUD показывает одну широкую полосу решимости;
+> награды комбинаций — прямые потери решимости; оборудование срабатывает только
+> по команде игрока. Конвейеры теперь по-настоящему уносят стоящего на ленте
+> инженера к её концу (плохая опора — своя скорость падает), но при отступлении
+> он просто перешагивает ленты — заблокировать уже выигранный цех невозможно.
+> Спящие зоны пара/тумана больше не выглядят включёнными (частицы глушатся).
+
 > **Pass 8 (2026-07-19): tactical gameplay + interactive tutorial.** Machines now
 > have visible purposes and effective zones; activating at the wrong moment is a
 > «СИСТЕМА СРАБОТАЛА ВПУСТУЮ» with a longer cooldown, at the right moment an
@@ -194,8 +203,8 @@ Arduino Nano:
   после эффективных действий и комбинаций. Если ресурса не хватает —
   «НЕДОСТАТОЧНО РЕСУРСА УПРАВЛЕНИЯ», и нужно дождаться восстановления:
   включить всё подряд просто не получится.
-- **Обратная связь.** Эффективные действия показывают «ДАВЛЕНИЕ +N» и
-  «РЕШИМОСТЬ −N», комбинации — «КОМБИНАЦИЯ +N» с отдельным звуком.
+- **Обратная связь.** Удары и ловушки показывают «РЕШИМОСТЬ −N»; комбинации —
+  своё название и бонусную потерю решимости с отдельным сдержанным звуком.
 
 Все параметры (заряды, скорость восстановления, окна комбинаций, бонусы)
 настраиваются в `TacticsData` (Assets ▸ Create ▸ Last Shift ▸ Tactics Data,
@@ -315,8 +324,8 @@ Escape        — пауза / назад
 4. Press **Play**. The title card loads Level 1 automatically.
 5. Use **Up/Down/Enter** to drive the factory terminal on the left.
    - Selected machine gets a bright ring in the room, plus an effect/route preview.
-   - Watch **ENGINEER RESOLVE** and **ROOM PRESSURE** in the top HUD.
-   - At 100 Pressure the room escalates (red overlay, machines fire on their own).
+   - Watch **ENGINEER RESOLVE** in the top HUD (Room Pressure was removed in
+     Pass 8.1 — machinery only ever fires on the player's command).
    - When Resolve hits 0 the exit unlocks and the engineer retreats; when he reaches
      the exit you get **ENGINEER RETREATED → ENTER — NEXT ROOM**.
 6. If the engineer completes all repairs, you lose the room: **ROOM STABILIZED**,
@@ -330,7 +339,7 @@ managers bootstrap themselves.
 | Scene | Room | Notes |
 |-------|------|-------|
 | `Boot` | Title card | Initializes GameManager, loads Level 1 |
-| `Level_01_RawMilkIntake` | RAW MILK INTAKE | Tutorial: conveyors, security gate, sorting arm, forklift, cleaning spray, alarm |
+| `Level_01_RawMilkIntake` | RAW MILK INTAKE | Tutorial: conveyors, security gate, sorting arm, forklift, cleaning spray, steam purge, alarm |
 | `Level_02_PackagingLine` | PACKAGING LINE | Fast arcade: high-speed conveyors, press modules, packing arms, scanner gate, pallet mover, emergency door |
 | `Level_03_ColdStorage` | COLD STORAGE | Strategic: freezer fog, ice floor, cold doors, inventory drone, pallet-shifting stacker, final end panel |
 
@@ -393,10 +402,10 @@ Assets/
 - **Resolve (0–100)**: drops from grabs/stuns (−5), hazard contact (−4…−8), blocked
   routes (−4), no valid path (−6 per 4 s), damaged objectives (−10), escalation (−20),
   alarm/drone exposure (gradual). At 0 → exit unlocks, engineer retreats permanently.
-- **Pressure (0–100)**: rises only from *meaningful* interference (stuns, forced
-  repaths, hazard hits, interrupted repairs), never from merely activating a machine.
-  At 100 → escalation: big Resolve hit, objective damage, hazards expand, flagged
-  machines auto-fire until the room ends.
+- **Pressure/escalation: removed (Pass 8.1)**. `RoomPressureController` and
+  `RoomEscalationController` are no longer created by LevelManager; the
+  `escalationAuto`/`escalationExpand` flags in LevelLayouts are inert. The room
+  is decided purely by Resolve vs repairs.
 - **Engineer FSM**: EnterRoom → Assess → MoveToObjective → Repair, with AvoidHazard,
   Repath (shows "Blocked" when stuck), Stunned, Panic (fast but sloppy pathing),
   BackOff («Отходит»: short step-away-and-return after a shock), RetreatToExit,

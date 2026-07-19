@@ -32,6 +32,8 @@ namespace LastShift.Hazards
         protected override void BuildExtraVisuals()
         {
             fog = FxFactory.ColdFog(transform, Area.size);
+            // Dormant zones must look OFF (particles autoplay on creation).
+            if (!Active) fog.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 
             // Frost edge buildup along the zone borders.
             var frost = new Color(0.85f, 0.95f, 1f, 0.35f);

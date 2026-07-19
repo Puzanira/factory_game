@@ -29,19 +29,20 @@ namespace LastShift.Data
         public float wastedCooldownMultiplier = 1.6f;
         [Tooltip("Cooldown multiplier for an effective activation.")]
         public float effectiveCooldownMultiplier = 0.85f;
-        [Tooltip("Small immediate Pressure reward for a well-timed activation.")]
-        public float effectivePressureBonus = 2f;
 
-        [Header("Combinations")]
+        [Header("Combinations (rewards are Resolve damage)")]
         [Tooltip("Seconds after the setup during which the payoff still counts.")]
         public float comboWindowSeconds = 5f;
         [Tooltip("Per-combination cooldown so one pair can't be farmed.")]
         public float comboCooldownSeconds = 10f;
-        public float comboRedirectPressure = 12f;
+        public float comboRedirectResolve = 6f;
         public float comboLineGrabResolve = 8f;
-        public float comboLineGrabPressure = 8f;
-        public float comboMarkedPressure = 8f;
-        public float comboDisplacementPressure = 6f;
+        public float comboMarkedResolve = 5f;
+        public float comboDisplacementResolve = 4f;
+
+        [Header("Alarm as anti-repair")]
+        [Tooltip("Alarm stress-per-second multiplier while the engineer is repairing («вой не даёт сосредоточиться») — the universal answer when no machine zone reaches the panel.")]
+        public float alarmRepairStressMultiplier = 3f;
 
         [Header("Drone mark synergy")]
         [Tooltip("Resolve-loss multiplier for stuns/hazards while the engineer is marked.")]
