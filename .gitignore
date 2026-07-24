@@ -35,8 +35,8 @@ sysinfo.txt
 crashlytics-build.properties
 
 # Лог генератора проекта (только дописывается, шумит в диффах)
-Assets/Documentation/BuildLog.txt
-Assets/Documentation/BuildLog.txt.meta
+Assets/FactoryGame/Documentation/BuildLog.txt
+Assets/FactoryGame/Documentation/BuildLog.txt.meta
 
 # Reference example, not part of the project
 for_claude_example_unity_grabber/
