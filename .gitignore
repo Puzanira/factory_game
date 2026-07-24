@@ -40,3 +40,6 @@ Assets/Documentation/BuildLog.txt.meta
 
 # Reference example, not part of the project
 for_claude_example_unity_grabber/
+
+# Mono crash reports
+mono_crash.*.json
