@@ -11,7 +11,7 @@ namespace LastShift.EditorTools
     /// </summary>
     public static class ArduinoSetup
     {
-        const string AssetPath = "Assets/Resources/ArduinoSerialSettings.asset";
+        const string AssetPath = "Assets/FactoryGame/Resources/ArduinoSerialSettings.asset";
 
         [MenuItem("LastShift/Create Arduino Serial Settings")]
         public static void CreateSettingsAsset()
@@ -22,8 +22,8 @@ namespace LastShift.EditorTools
                 return;
             }
 
-            if (!AssetDatabase.IsValidFolder("Assets/Resources"))
-                AssetDatabase.CreateFolder("Assets", "Resources");
+            if (!AssetDatabase.IsValidFolder("Assets/FactoryGame/Resources"))
+                AssetDatabase.CreateFolder("Assets/FactoryGame", "Resources");
 
             var settings = ScriptableObject.CreateInstance<SerialConnectionSettings>();
             AssetDatabase.CreateAsset(settings, AssetPath);

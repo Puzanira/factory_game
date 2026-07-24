@@ -17,7 +17,7 @@ namespace LastShift.EditorTools
     /// </summary>
     public static class ProjectBuilder
     {
-        const string DocsPath = "Assets/Documentation";
+        const string DocsPath = "Assets/FactoryGame/Documentation";
 
         static PrefabLibrary library;
         static EngineerData engineerData;
@@ -85,17 +85,17 @@ namespace LastShift.EditorTools
 
         static readonly string[] Folders =
         {
-            "Assets/Art", "Assets/Art/Placeholder", "Assets/Art/Sprites", "Assets/Art/Materials",
-            "Assets/Audio", "Assets/Audio/SFX", "Assets/Audio/Music",
-            "Assets/Documentation",
-            "Assets/Prefabs", "Assets/Prefabs/Engineer", "Assets/Prefabs/Machines",
-            "Assets/Prefabs/Hazards", "Assets/Prefabs/Objectives", "Assets/Prefabs/UI",
-            "Assets/Scenes",
-            "Assets/Scripts",
-            "Assets/ScriptableObjects", "Assets/ScriptableObjects/Levels",
-            "Assets/ScriptableObjects/Machines", "Assets/ScriptableObjects/Engineer",
-            "Assets/ScriptableObjects/Escalation",
-            "Assets/Settings",
+            "Assets/FactoryGame/Art", "Assets/FactoryGame/Art/Placeholder", "Assets/FactoryGame/Art/Sprites", "Assets/FactoryGame/Art/Materials",
+            "Assets/FactoryGame/Audio", "Assets/FactoryGame/Audio/SFX", "Assets/FactoryGame/Audio/Music",
+            "Assets/FactoryGame/Documentation",
+            "Assets/FactoryGame/Prefabs", "Assets/FactoryGame/Prefabs/Engineer", "Assets/FactoryGame/Prefabs/Machines",
+            "Assets/FactoryGame/Prefabs/Hazards", "Assets/FactoryGame/Prefabs/Objectives", "Assets/FactoryGame/Prefabs/UI",
+            "Assets/FactoryGame/Scenes",
+            "Assets/FactoryGame/Scripts",
+            "Assets/FactoryGame/ScriptableObjects", "Assets/FactoryGame/ScriptableObjects/Levels",
+            "Assets/FactoryGame/ScriptableObjects/Machines", "Assets/FactoryGame/ScriptableObjects/Engineer",
+            "Assets/FactoryGame/ScriptableObjects/Escalation",
+            "Assets/FactoryGame/Settings",
         };
 
         static void CreateFolders()
@@ -123,8 +123,8 @@ namespace LastShift.EditorTools
 
         static void CreateCoreData()
         {
-            engineerData = CreateAsset<EngineerData>("Assets/ScriptableObjects/Engineer/EngineerData.asset");
-            escalationData = CreateAsset<EscalationData>("Assets/ScriptableObjects/Escalation/EscalationData.asset");
+            engineerData = CreateAsset<EngineerData>("Assets/FactoryGame/ScriptableObjects/Engineer/EngineerData.asset");
+            escalationData = CreateAsset<EscalationData>("Assets/FactoryGame/ScriptableObjects/Escalation/EscalationData.asset");
             ResetToScriptDefaults(engineerData);
             ResetToScriptDefaults(escalationData);
             EditorUtility.SetDirty(engineerData);
@@ -142,7 +142,7 @@ namespace LastShift.EditorTools
 
         static MachineData CreateMachineData(MachineKind kind, string displayName, string verb, float cooldown)
         {
-            var data = CreateAsset<MachineData>($"Assets/ScriptableObjects/Machines/{kind}Data.asset");
+            var data = CreateAsset<MachineData>($"Assets/FactoryGame/ScriptableObjects/Machines/{kind}Data.asset");
             data.kind = kind;
             data.displayName = displayName;
             data.commandVerb = verb;
@@ -153,7 +153,7 @@ namespace LastShift.EditorTools
 
         static void CreateLevelData()
         {
-            var l1 = CreateAsset<LevelData>("Assets/ScriptableObjects/Levels/Level_01_RawMilkIntake.asset");
+            var l1 = CreateAsset<LevelData>("Assets/FactoryGame/ScriptableObjects/Levels/Level_01_RawMilkIntake.asset");
             l1.levelIndex = 0;
             l1.roomName = "ПРИЁМКА СЫРЬЯ";
             l1.sceneName = GameManager.Level1Scene;
@@ -163,7 +163,7 @@ namespace LastShift.EditorTools
             l1.escalationData = escalationData;
             EditorUtility.SetDirty(l1);
 
-            var l2 = CreateAsset<LevelData>("Assets/ScriptableObjects/Levels/Level_02_PackagingLine.asset");
+            var l2 = CreateAsset<LevelData>("Assets/FactoryGame/ScriptableObjects/Levels/Level_02_PackagingLine.asset");
             l2.levelIndex = 1;
             l2.roomName = "УПАКОВОЧНАЯ ЛИНИЯ";
             l2.sceneName = GameManager.Level2Scene;
@@ -173,7 +173,7 @@ namespace LastShift.EditorTools
             l2.escalationData = escalationData;
             EditorUtility.SetDirty(l2);
 
-            var l3 = CreateAsset<LevelData>("Assets/ScriptableObjects/Levels/Level_03_ColdStorage.asset");
+            var l3 = CreateAsset<LevelData>("Assets/FactoryGame/ScriptableObjects/Levels/Level_03_ColdStorage.asset");
             l3.levelIndex = 2;
             l3.roomName = "ХОЛОДИЛЬНЫЙ СКЛАД";
             l3.sceneName = GameManager.Level3Scene;
@@ -197,27 +197,27 @@ namespace LastShift.EditorTools
 
         static void CreatePrefabs()
         {
-            library = CreateAsset<PrefabLibrary>("Assets/ScriptableObjects/PrefabLibrary.asset");
+            library = CreateAsset<PrefabLibrary>("Assets/FactoryGame/ScriptableObjects/PrefabLibrary.asset");
 
-            library.engineer = SavePrefab(PrefabFactories.CreateEngineer(), "Assets/Prefabs/Engineer/Engineer.prefab");
+            library.engineer = SavePrefab(PrefabFactories.CreateEngineer(), "Assets/FactoryGame/Prefabs/Engineer/Engineer.prefab");
 
-            library.doorMachine = SaveMachine(MachineKind.Door, "Door", "Close", 8f, "Assets/Prefabs/Machines/DoorMachine.prefab");
-            library.conveyorMachine = SaveMachine(MachineKind.Conveyor, "Conveyor", "Reverse", 6f, "Assets/Prefabs/Machines/ConveyorMachine.prefab");
-            library.roboticArmMachine = SaveMachine(MachineKind.RoboticArm, "Robotic Arm", "Grab", 9f, "Assets/Prefabs/Machines/RoboticArmMachine.prefab");
-            library.mobileUnitMachine = SaveMachine(MachineKind.MobileUnit, "Mobile Unit", "Start Route", 12f, "Assets/Prefabs/Machines/MobileUnitMachine.prefab");
-            library.droneMachine = SaveMachine(MachineKind.Drone, "Drone", "Scan Engineer", 12f, "Assets/Prefabs/Machines/DroneMachine.prefab");
-            library.alarmMachine = SaveMachine(MachineKind.Alarm, "Alarm", "Activate", 14f, "Assets/Prefabs/Machines/AlarmMachine.prefab");
-            library.hazardEmitterMachine = SaveMachine(MachineKind.HazardEmitter, "Hazard Emitter", "Activate", 12f, "Assets/Prefabs/Machines/HazardEmitterMachine.prefab");
+            library.doorMachine = SaveMachine(MachineKind.Door, "Door", "Close", 8f, "Assets/FactoryGame/Prefabs/Machines/DoorMachine.prefab");
+            library.conveyorMachine = SaveMachine(MachineKind.Conveyor, "Conveyor", "Reverse", 6f, "Assets/FactoryGame/Prefabs/Machines/ConveyorMachine.prefab");
+            library.roboticArmMachine = SaveMachine(MachineKind.RoboticArm, "Robotic Arm", "Grab", 9f, "Assets/FactoryGame/Prefabs/Machines/RoboticArmMachine.prefab");
+            library.mobileUnitMachine = SaveMachine(MachineKind.MobileUnit, "Mobile Unit", "Start Route", 12f, "Assets/FactoryGame/Prefabs/Machines/MobileUnitMachine.prefab");
+            library.droneMachine = SaveMachine(MachineKind.Drone, "Drone", "Scan Engineer", 12f, "Assets/FactoryGame/Prefabs/Machines/DroneMachine.prefab");
+            library.alarmMachine = SaveMachine(MachineKind.Alarm, "Alarm", "Activate", 14f, "Assets/FactoryGame/Prefabs/Machines/AlarmMachine.prefab");
+            library.hazardEmitterMachine = SaveMachine(MachineKind.HazardEmitter, "Hazard Emitter", "Activate", 12f, "Assets/FactoryGame/Prefabs/Machines/HazardEmitterMachine.prefab");
 
-            library.steamHazard = SavePrefab(PrefabFactories.CreateHazard(HazardKind.Steam), "Assets/Prefabs/Hazards/SteamHazard.prefab");
-            library.coldHazard = SavePrefab(PrefabFactories.CreateHazard(HazardKind.Cold), "Assets/Prefabs/Hazards/ColdHazard.prefab");
-            library.slipperyFloor = SavePrefab(PrefabFactories.CreateHazard(HazardKind.Slippery), "Assets/Prefabs/Hazards/SlipperyFloor.prefab");
-            library.dangerZone = SavePrefab(PrefabFactories.CreateHazard(HazardKind.Danger), "Assets/Prefabs/Hazards/DangerZone.prefab");
+            library.steamHazard = SavePrefab(PrefabFactories.CreateHazard(HazardKind.Steam), "Assets/FactoryGame/Prefabs/Hazards/SteamHazard.prefab");
+            library.coldHazard = SavePrefab(PrefabFactories.CreateHazard(HazardKind.Cold), "Assets/FactoryGame/Prefabs/Hazards/ColdHazard.prefab");
+            library.slipperyFloor = SavePrefab(PrefabFactories.CreateHazard(HazardKind.Slippery), "Assets/FactoryGame/Prefabs/Hazards/SlipperyFloor.prefab");
+            library.dangerZone = SavePrefab(PrefabFactories.CreateHazard(HazardKind.Danger), "Assets/FactoryGame/Prefabs/Hazards/DangerZone.prefab");
 
-            library.repairObjective = SavePrefab(PrefabFactories.CreateRepairObjective(), "Assets/Prefabs/Objectives/RepairObjective.prefab");
-            library.exitDoor = SavePrefab(PrefabFactories.CreateExitDoor(), "Assets/Prefabs/Objectives/ExitDoor.prefab");
+            library.repairObjective = SavePrefab(PrefabFactories.CreateRepairObjective(), "Assets/FactoryGame/Prefabs/Objectives/RepairObjective.prefab");
+            library.exitDoor = SavePrefab(PrefabFactories.CreateExitDoor(), "Assets/FactoryGame/Prefabs/Objectives/ExitDoor.prefab");
 
-            library.uiRoot = SavePrefab(PrefabFactories.CreateUIRoot(), "Assets/Prefabs/UI/UIRoot.prefab");
+            library.uiRoot = SavePrefab(PrefabFactories.CreateUIRoot(), "Assets/FactoryGame/Prefabs/UI/UIRoot.prefab");
 
             EditorUtility.SetDirty(library);
             Log("Prefabs created and registered in PrefabLibrary.");
@@ -245,11 +245,11 @@ namespace LastShift.EditorTools
             bootGO.AddComponent<BootController>();
             var gmGO = new GameObject("GameManager");
             gmGO.AddComponent<GameManager>();
-            EditorSceneManager.SaveScene(boot, "Assets/Scenes/Boot.unity");
+            EditorSceneManager.SaveScene(boot, "Assets/FactoryGame/Scenes/Boot.unity");
 
-            CreateLevelScene(GameManager.Level1Scene, "Assets/ScriptableObjects/Levels/Level_01_RawMilkIntake.asset");
-            CreateLevelScene(GameManager.Level2Scene, "Assets/ScriptableObjects/Levels/Level_02_PackagingLine.asset");
-            CreateLevelScene(GameManager.Level3Scene, "Assets/ScriptableObjects/Levels/Level_03_ColdStorage.asset");
+            CreateLevelScene(GameManager.Level1Scene, "Assets/FactoryGame/ScriptableObjects/Levels/Level_01_RawMilkIntake.asset");
+            CreateLevelScene(GameManager.Level2Scene, "Assets/FactoryGame/ScriptableObjects/Levels/Level_02_PackagingLine.asset");
+            CreateLevelScene(GameManager.Level3Scene, "Assets/FactoryGame/ScriptableObjects/Levels/Level_03_ColdStorage.asset");
             Log("Scenes created: Boot + 3 levels.");
         }
 
@@ -261,7 +261,7 @@ namespace LastShift.EditorTools
             var lm = rootGO.AddComponent<LevelManager>();
             lm.levelData = AssetDatabase.LoadAssetAtPath<LevelData>(levelDataPath);
             lm.prefabLibrary = library;
-            EditorSceneManager.SaveScene(scene, "Assets/Scenes/" + sceneName + ".unity");
+            EditorSceneManager.SaveScene(scene, "Assets/FactoryGame/Scenes/" + sceneName + ".unity");
         }
 
         static void CreateSceneCamera()
@@ -282,10 +282,10 @@ namespace LastShift.EditorTools
         {
             EditorBuildSettings.scenes = new[]
             {
-                new EditorBuildSettingsScene("Assets/Scenes/Boot.unity", true),
-                new EditorBuildSettingsScene("Assets/Scenes/" + GameManager.Level1Scene + ".unity", true),
-                new EditorBuildSettingsScene("Assets/Scenes/" + GameManager.Level2Scene + ".unity", true),
-                new EditorBuildSettingsScene("Assets/Scenes/" + GameManager.Level3Scene + ".unity", true),
+                new EditorBuildSettingsScene("Assets/FactoryGame/Scenes/Boot.unity", true),
+                new EditorBuildSettingsScene("Assets/FactoryGame/Scenes/" + GameManager.Level1Scene + ".unity", true),
+                new EditorBuildSettingsScene("Assets/FactoryGame/Scenes/" + GameManager.Level2Scene + ".unity", true),
+                new EditorBuildSettingsScene("Assets/FactoryGame/Scenes/" + GameManager.Level3Scene + ".unity", true),
             };
             Log("Build Settings updated (Boot first, then Levels 1-3).");
         }

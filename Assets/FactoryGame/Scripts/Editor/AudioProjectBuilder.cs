@@ -25,17 +25,17 @@ namespace LastShift.EditorTools
     /// </summary>
     public static class AudioProjectBuilder
     {
-        const string GeneratedDir = "Assets/Audio/Generated";
-        const string MixerPath = "Assets/Audio/Mixers/LastShiftMixer.mixer";
-        const string LibraryPath = "Assets/Audio/Resources/" + AudioLibrary.ResourceName + ".asset";
+        const string GeneratedDir = "Assets/FactoryGame/Audio/Generated";
+        const string MixerPath = "Assets/FactoryGame/Audio/Mixers/LastShiftMixer.mixer";
+        const string LibraryPath = "Assets/FactoryGame/Audio/Resources/" + AudioLibrary.ResourceName + ".asset";
 
         static readonly string[] Folders =
         {
-            "Assets/Audio",
-            "Assets/Audio/Mixers", "Assets/Audio/Music", "Assets/Audio/Ambient",
-            "Assets/Audio/Machines", "Assets/Audio/Hazards", "Assets/Audio/Engineer",
-            "Assets/Audio/UI", "Assets/Audio/Alerts", "Assets/Audio/Generated",
-            "Assets/Audio/Scripts", "Assets/Audio/Resources",
+            "Assets/FactoryGame/Audio",
+            "Assets/FactoryGame/Audio/Mixers", "Assets/FactoryGame/Audio/Music", "Assets/FactoryGame/Audio/Ambient",
+            "Assets/FactoryGame/Audio/Machines", "Assets/FactoryGame/Audio/Hazards", "Assets/FactoryGame/Audio/Engineer",
+            "Assets/FactoryGame/Audio/UI", "Assets/FactoryGame/Audio/Alerts", "Assets/FactoryGame/Audio/Generated",
+            "Assets/FactoryGame/Audio/Scripts", "Assets/FactoryGame/Audio/Resources",
         };
 
         static readonly string[] ChildGroups =

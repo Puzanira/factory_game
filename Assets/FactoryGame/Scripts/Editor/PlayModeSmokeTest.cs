@@ -67,7 +67,7 @@ namespace LastShift.EditorTools
             SessionState.SetInt(FailKey, 0);
 
             SessionState.SetBool(RunningKey, true);
-            EditorSceneManager.OpenScene("Assets/Scenes/" + scene + ".unity");
+            EditorSceneManager.OpenScene("Assets/FactoryGame/Scenes/" + scene + ".unity");
             Arm();
             EditorApplication.isPlaying = true;
         }
@@ -248,7 +248,7 @@ namespace LastShift.EditorTools
                     bool foundTitle = false;
                     bool foundRepeat = false;
                     bool foundQuit = false;
-                    foreach (var t in Object.FindObjectsByType<UnityEngine.UI.Text>(FindObjectsSortMode.None))
+                    foreach (var t in Object.FindObjectsByType<UnityEngine.UI.Text>(FindObjectsInactive.Exclude))
                     {
                         if (!t.gameObject.activeInHierarchy) continue;
                         if (t.text == LastShift.Data.Loc.FactoryWon) foundTitle = true;
@@ -399,7 +399,7 @@ namespace LastShift.EditorTools
                         if (panel.SelectedIndex != LastShift.UI.EndRoomPanel.OptionRepeatRoom)
                             Fail("initial selection is " + panel.SelectedIndex + ", expected ПОВТОРИТЬ ЦЕХ");
                         bool titleOk = false, selRepeat = false, quitLabel = false;
-                        foreach (var t in Object.FindObjectsByType<UnityEngine.UI.Text>(FindObjectsSortMode.None))
+                        foreach (var t in Object.FindObjectsByType<UnityEngine.UI.Text>(FindObjectsInactive.Exclude))
                         {
                             if (!t.gameObject.activeInHierarchy) continue;
                             if (t.text == LastShift.Data.Loc.RoomStabilized) titleOk = true;
@@ -452,10 +452,10 @@ namespace LastShift.EditorTools
                     {
                         if (lm.RoomEnded) Fail("room state not reset after restart");
                         if (Mathf.Abs(Time.timeScale - 1f) > 0.01f) Fail("timeScale is " + Time.timeScale + " after restart");
-                        int gm = Object.FindObjectsByType<GameManager>(FindObjectsSortMode.None).Length;
-                        int bridges = Object.FindObjectsByType<LastShift.Input.ArduinoInputBridge>(FindObjectsSortMode.None).Length;
-                        int audio = Object.FindObjectsByType<LastShift.Audio.AudioManager>(FindObjectsSortMode.None).Length;
-                        int panels = Object.FindObjectsByType<LastShift.UI.EndRoomPanel>(FindObjectsInactive.Include, FindObjectsSortMode.None).Length;
+                        int gm = Object.FindObjectsByType<GameManager>(FindObjectsInactive.Exclude).Length;
+                        int bridges = Object.FindObjectsByType<LastShift.Input.ArduinoInputBridge>(FindObjectsInactive.Exclude).Length;
+                        int audio = Object.FindObjectsByType<LastShift.Audio.AudioManager>(FindObjectsInactive.Exclude).Length;
+                        int panels = Object.FindObjectsByType<LastShift.UI.EndRoomPanel>(FindObjectsInactive.Include).Length;
                         if (gm > 1) Fail("duplicate GameManager after restart: " + gm);
                         if (bridges > 1) Fail("duplicate ArduinoInputBridge after restart: " + bridges);
                         if (audio > 1) Fail("duplicate AudioManager after restart: " + audio);
