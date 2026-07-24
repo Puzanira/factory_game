@@ -22,8 +22,8 @@ namespace LastShift.Audio
         {
             engineer = controller;
             lastPos = transform.position;
-            repairLoopId = "eng_repair_" + GetInstanceID();
-            panicLoopId = "eng_panic_" + GetInstanceID();
+            repairLoopId = "eng_repair_" + GetEntityId();
+            panicLoopId = "eng_panic_" + GetEntityId();
             if (engineer.Fsm != null) engineer.Fsm.StateChanged += OnStateChanged;
         }
 

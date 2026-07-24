@@ -30,7 +30,7 @@ namespace LastShift.Machines
         /// <summary>The drone chases the engineer itself — launching it is never wasted.</summary>
         public override bool ActivationAlwaysEffective => true;
 
-        string LoopId => "drone_" + GetInstanceID();
+        string LoopId => "drone_" + GetEntityId();
 
         protected override void OnConfigure(MachineSpec s)
         {

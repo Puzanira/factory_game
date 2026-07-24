@@ -162,7 +162,7 @@ namespace LastShift.Audio
             gamePaused = false;
 
             // Runtime-created cameras may lack a listener; audio needs exactly one.
-            if (FindFirstObjectByType<AudioListener>() == null)
+            if (FindAnyObjectByType<AudioListener>() == null)
             {
                 var cam = Camera.main;
                 (cam != null ? cam.gameObject : gameObject).AddComponent<AudioListener>();

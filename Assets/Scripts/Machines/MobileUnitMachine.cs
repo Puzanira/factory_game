@@ -49,7 +49,7 @@ namespace LastShift.Machines
         }
 
         protected override string ActivateSfxName => "forklift_start";
-        string LoopId => "forklift_" + GetInstanceID();
+        string LoopId => "forklift_" + GetEntityId();
         float nextWarnBeepAt;
 
         class Pallet

@@ -33,7 +33,7 @@ namespace LastShift.Input
         static void Bootstrap()
         {
             if (Instance != null) return;
-            if (FindFirstObjectByType<ArduinoInputBridge>() != null) return;
+            if (FindAnyObjectByType<ArduinoInputBridge>() != null) return;
 
             var go = new GameObject("ArduinoInput");
             go.AddComponent<ArduinoControllerReader>();

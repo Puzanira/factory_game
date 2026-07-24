@@ -17,7 +17,7 @@ namespace LastShift.Audio
         public void Bind(HazardZone hazardZone)
         {
             zone = hazardZone;
-            loopId = "hazard_" + GetInstanceID();
+            loopId = "hazard_" + GetEntityId();
             zone.ActiveChanged += OnActiveChanged;
         }
 
