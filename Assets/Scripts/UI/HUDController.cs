@@ -10,23 +10,23 @@ using LastShift.Machines;
 namespace LastShift.UI
 {
     /// <summary>
-    /// Top HUD (room name, Resolve, Pressure, objective, repair progress), full-screen
-    /// overlays (escalation, alarm, fog) and the Russian toast notification stack
-    /// (machine actions, combo bonuses, warnings, tutorial hints).
+    /// Screen effects and transient messages only. The permanent top HUD strip was
+    /// removed: the upper part of the screen belongs to the room. Resolve and the
+    /// control resource live in the terminal's lower-left detail panel, repair
+    /// progress lives at the repair console, and the engineer's state stays above
+    /// the engineer. What is left here: full-screen overlays (escalation, alarm,
+    /// fog), the Russian toast stack, and a room title that fades away at room start.
     /// </summary>
     public class HUDController : MonoBehaviour
     {
         LevelManager lm;
 
-        Text roomLabel;
-        Text objectiveLabel;
-        Text stateLabel;
-        RectTransform resolveFill;
-        RectTransform repairFill;
         Image escalationOverlay;
         Image alarmOverlay;
         Image fogOverlay;
         RectTransform toastStack;
+        Text roomTitle;
+        CanvasGroup roomTitleGroup;
         readonly List<GameObject> activeToasts = new List<GameObject>();
 
         public void Bind(LevelManager levelManager, Canvas canvas)
@@ -37,47 +37,32 @@ namespace LastShift.UI
 
         void Build(Transform root)
         {
-            // Overlays sit under the panels so text stays readable.
+            // Overlays sit under everything else so text stays readable.
             fogOverlay = Panel(root, "FogOverlay", new Color(0.5f, 0.7f, 1f, 0f));
             alarmOverlay = Panel(root, "AlarmOverlay", new Color(1f, 0.15f, 0.1f, 0f));
             escalationOverlay = Panel(root, "EscalationOverlay", new Color(1f, 0.1f, 0.05f, 0f));
 
-            // Top bar over the play area (terminal occupies the left 28%).
-            RectTransform top = UIBuilder.Panel(root, "TopBar",
-                new Vector2(0.28f, 0.92f), new Vector2(1f, 1f), new Color(0.05f, 0.06f, 0.07f, 0.92f));
+            // Room title: shown briefly at room start, then gone — never a header.
+            RectTransform titleRow = UIBuilder.Panel(root, "RoomTitle",
+                new Vector2(0.3f, 0.88f), new Vector2(0.98f, 0.97f), new Color(0f, 0f, 0f, 0f));
+            roomTitleGroup = titleRow.gameObject.AddComponent<CanvasGroup>();
+            roomTitleGroup.alpha = 0f;
+            roomTitleGroup.blocksRaycasts = false;
+            roomTitle = UIBuilder.Label(titleRow, "Label", "", 30, new Color(0.95f, 0.9f, 0.75f), TextAnchor.MiddleCenter);
+            roomTitle.raycastTarget = false;
 
-            roomLabel = UIBuilder.Label(top, "Room", "ЦЕХ", 28, new Color(0.95f, 0.9f, 0.75f), TextAnchor.MiddleLeft);
-            SetOffsets(roomLabel.rectTransform, new Vector2(0f, 0f), new Vector2(0.34f, 1f), new Vector2(18f, 0f), new Vector2(0f, 0f));
-
-            // Single wide gauge: the room is decided by Resolve alone (Room
-            // Pressure was removed by design).
-            var resolveTitle = UIBuilder.Label(top, "ResolveTitle", Loc.EngineerResolve, 16, new Color(1f, 0.7f, 0.4f), TextAnchor.UpperLeft);
-            SetOffsets(resolveTitle.rectTransform, new Vector2(0.36f, 0.5f), new Vector2(1f, 1f), new Vector2(0f, 0f), new Vector2(-14f, -6f));
-            resolveFill = UIBuilder.Bar(top, "ResolveBar", new Vector2(0.36f, 0.14f), new Vector2(1f, 0.5f),
-                new Vector2(0f, 0f), new Vector2(-14f, 0f), new Color(0.12f, 0.1f, 0.08f), new Color(1f, 0.6f, 0.25f));
-
-            // Objective strip under the top bar.
-            RectTransform strip = UIBuilder.Panel(root, "ObjectiveStrip",
-                new Vector2(0.28f, 0.865f), new Vector2(1f, 0.92f), new Color(0.05f, 0.06f, 0.07f, 0.75f));
-            objectiveLabel = UIBuilder.Label(strip, "Objective", "", 19, new Color(0.8f, 0.95f, 0.8f), TextAnchor.MiddleLeft);
-            SetOffsets(objectiveLabel.rectTransform, Vector2.zero, new Vector2(0.62f, 1f), new Vector2(18f, 0f), Vector2.zero);
-            var repairTitle = UIBuilder.Label(strip, "RepairTitle", Loc.RepairProgress, 15, new Color(0.7f, 0.8f, 0.7f), TextAnchor.MiddleLeft);
-            SetOffsets(repairTitle.rectTransform, new Vector2(0.64f, 0f), new Vector2(0.72f, 1f), Vector2.zero, Vector2.zero);
-            repairFill = UIBuilder.Bar(strip, "RepairBar", new Vector2(0.72f, 0.25f), new Vector2(0.97f, 0.75f),
-                Vector2.zero, Vector2.zero, new Color(0.1f, 0.12f, 0.1f), new Color(0.45f, 0.95f, 0.55f));
-
-            // Toast stack: top-center of the play area, below the objective strip.
+            // Toast stack: top of the play area, under the (temporary) room title.
             toastStack = UIBuilder.Panel(root, "ToastStack",
-                new Vector2(0.34f, 0.62f), new Vector2(0.94f, 0.855f), new Color(0f, 0f, 0f, 0f));
+                new Vector2(0.34f, 0.6f), new Vector2(0.96f, 0.87f), new Color(0f, 0f, 0f, 0f));
             toastStack.GetComponent<Image>().raycastTarget = false;
 
-            // Engineer state echo + hints, bottom right.
+            // Minimal corner hint — no permanent information strip.
             RectTransform bottom = UIBuilder.Panel(root, "BottomHints",
-                new Vector2(0.62f, 0f), new Vector2(1f, 0.05f), new Color(0.05f, 0.06f, 0.07f, 0.6f));
-            stateLabel = UIBuilder.Label(bottom, "State", "", 17, new Color(0.95f, 0.9f, 0.7f), TextAnchor.MiddleLeft);
-            SetOffsets(stateLabel.rectTransform, Vector2.zero, new Vector2(0.55f, 1f), new Vector2(14f, 0f), Vector2.zero);
-            var hints = UIBuilder.Label(bottom, "Hints", Loc.BottomHints, 15, new Color(0.6f, 0.65f, 0.6f), TextAnchor.MiddleRight);
-            SetOffsets(hints.rectTransform, new Vector2(0.55f, 0f), Vector2.one, Vector2.zero, new Vector2(-14f, 0f));
+                new Vector2(0.78f, 0f), new Vector2(1f, 0.038f), new Color(0f, 0f, 0f, 0f));
+            var hints = UIBuilder.Label(bottom, "Hints", Loc.BottomHints, 15,
+                new Color(0.5f, 0.6f, 0.52f), TextAnchor.MiddleRight);
+            hints.raycastTarget = false;
+            SetOffsets(hints.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, new Vector2(-16f, 0f));
         }
 
         Image Panel(Transform root, string name, Color color)
@@ -94,6 +79,28 @@ namespace LastShift.UI
             rt.anchorMax = aMax;
             rt.offsetMin = oMin;
             rt.offsetMax = oMax;
+        }
+
+        // ---------------- room title ----------------
+
+        /// <summary>Announce the room, then fade out — the top of the screen is gameplay space.</summary>
+        public void ShowRoomTitle(string title, string goal)
+        {
+            if (roomTitle == null) return;
+            roomTitle.text = string.IsNullOrEmpty(goal) ? title : title + "   —   " + goal.ToUpper();
+            StartCoroutine(RoomTitleRoutine());
+        }
+
+        IEnumerator RoomTitleRoutine()
+        {
+            const float fadeIn = 0.5f, hold = 3.2f, fadeOut = 1.1f;
+            float t = 0f;
+            while (t < fadeIn) { t += Time.unscaledDeltaTime; roomTitleGroup.alpha = t / fadeIn; yield return null; }
+            roomTitleGroup.alpha = 1f;
+            yield return new WaitForSecondsRealtime(hold);
+            t = 0f;
+            while (t < fadeOut) { t += Time.unscaledDeltaTime; roomTitleGroup.alpha = 1f - t / fadeOut; yield return null; }
+            roomTitleGroup.alpha = 0f;
         }
 
         // ---------------- toast notifications ----------------
@@ -123,7 +130,7 @@ namespace LastShift.UI
             rt.pivot = new Vector2(0.5f, 1f);
             rt.sizeDelta = new Vector2(560f, 34f);
             var bg = go.AddComponent<Image>();
-            bg.color = warning ? new Color(0.3f, 0.05f, 0.03f, 0.88f) : new Color(0.03f, 0.1f, 0.06f, 0.88f);
+            bg.color = warning ? new Color(0.3f, 0.05f, 0.03f, 0.92f) : new Color(0.02f, 0.09f, 0.055f, 0.92f);
             bg.raycastTarget = false;
             var group = go.AddComponent<CanvasGroup>();
             var text = UIBuilder.Label(go.transform, "Text", message, 18,
@@ -151,33 +158,6 @@ namespace LastShift.UI
         void Update()
         {
             if (lm == null) return;
-            var engineer = lm.Engineer;
-
-            roomLabel.text = lm.RoomName;
-
-            if (engineer != null && engineer.Stats != null)
-            {
-                float max = engineer.Data != null ? engineer.Data.resolveMax : 100f;
-                UIBuilder.SetBar(resolveFill, engineer.Stats.Resolve / max);
-                stateLabel.text = Loc.EngineerLabel + (engineer.Fsm != null ? engineer.Fsm.CurrentLabel.ToUpper() : "—");
-            }
-
-            var obj = lm.CurrentObjectiveForHud;
-            if (engineer != null && engineer.IsRetreating)
-            {
-                objectiveLabel.text = Loc.CurrentObjective + ": " + Loc.ObjectiveReachExit;
-                UIBuilder.SetBar(repairFill, 0f);
-            }
-            else if (obj != null)
-            {
-                objectiveLabel.text = Loc.CurrentObjective + ": " + obj.objectiveName.ToUpper();
-                UIBuilder.SetBar(repairFill, obj.Progress01);
-            }
-            else
-            {
-                objectiveLabel.text = Loc.CurrentObjective + ": —";
-                UIBuilder.SetBar(repairFill, 0f);
-            }
 
             // Overlays. Fog kept subtle so routes stay readable.
             float esc = lm.Escalated ? 0.09f + 0.07f * Mathf.PingPong(Time.unscaledTime * 2.5f, 1f) : 0f;

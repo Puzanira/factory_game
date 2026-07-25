@@ -52,14 +52,35 @@ namespace LastShift.Utilities
             return s;
         }
 
+        /// <summary>
+        /// Texture resolution per shape. Round shapes are drawn large: a ring is
+        /// stretched over whole metres of the room (an arm's reach), so a small
+        /// texture reads as a pixelated circle.
+        /// </summary>
+        static int ResolutionOf(PlaceholderShape shape)
+        {
+            switch (shape)
+            {
+                case PlaceholderShape.Square: return 16;   // flat fill, no edges to smooth
+                case PlaceholderShape.Circle:
+                case PlaceholderShape.Ring: return 512;
+                default: return 256;
+            }
+        }
+
+        /// <summary>Pixel coverage from a signed distance in pixels (positive = inside).</summary>
+        static float Coverage(float signedDistancePx) => Mathf.Clamp01(signedDistancePx + 0.5f);
+
         static Sprite Build(PlaceholderShape shape)
         {
-            const int size = 64;
-            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            int size = ResolutionOf(shape);
+            bool mip = shape != PlaceholderShape.Square; // smooth when scaled down
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, mip);
             tex.filterMode = FilterMode.Bilinear;
             tex.wrapMode = TextureWrapMode.Clamp;
             var pixels = new Color32[size * size];
             float half = size * 0.5f;
+            float ringThickness = size * 0.09f; // same proportions as before, any resolution
 
             for (int y = 0; y < size; y++)
             {
@@ -67,35 +88,43 @@ namespace LastShift.Utilities
                 {
                     float dx = x + 0.5f - half;
                     float dy = y + 0.5f - half;
-                    bool on = false;
+                    float a;
                     switch (shape)
                     {
-                        case PlaceholderShape.Square:
-                            on = true;
-                            break;
                         case PlaceholderShape.Circle:
-                            on = dx * dx + dy * dy <= (half - 1f) * (half - 1f);
+                            a = Coverage(half - 1f - Mathf.Sqrt(dx * dx + dy * dy));
                             break;
                         case PlaceholderShape.Ring:
+                        {
                             float d = Mathf.Sqrt(dx * dx + dy * dy);
-                            on = d <= half - 1f && d >= half - 7f;
+                            float outer = Coverage(half - 1f - d);
+                            float inner = Coverage(d - (half - 1f - ringThickness));
+                            a = Mathf.Min(outer, inner);
                             break;
+                        }
                         case PlaceholderShape.Arrow:
-                            // Triangle pointing +X.
-                            float t = (x + 0.5f) / size;                 // 0..1 across width
-                            float spread = (1f - t) * half * 0.9f;       // wide at left, point at right
-                            on = Mathf.Abs(dy) <= spread && t > 0.05f;
+                        {
+                            // Triangle pointing +X: wide at the left, a point at the right.
+                            float t = (x + 0.5f) / size;
+                            float spread = (1f - t) * half * 0.9f;
+                            a = Mathf.Min(Coverage(spread - Mathf.Abs(dy)),
+                                          Coverage((t - 0.05f) * size));
                             break;
+                        }
                         case PlaceholderShape.Diamond:
-                            on = Mathf.Abs(dx) + Mathf.Abs(dy) <= half - 1f;
+                            a = Coverage(half - 1f - (Mathf.Abs(dx) + Mathf.Abs(dy)));
+                            break;
+                        default: // Square
+                            a = 1f;
                             break;
                     }
-                    pixels[y * size + x] = on ? new Color32(255, 255, 255, 255) : new Color32(255, 255, 255, 0);
+                    byte alpha = (byte)Mathf.RoundToInt(Mathf.Clamp01(a) * 255f);
+                    pixels[y * size + x] = new Color32(255, 255, 255, alpha);
                 }
             }
 
             tex.SetPixels32(pixels);
-            tex.Apply();
+            tex.Apply(mip);
             // pixelsPerUnit == texture size -> sprite is exactly 1x1 world units.
             return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
         }

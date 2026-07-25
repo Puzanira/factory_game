@@ -60,6 +60,14 @@ namespace LastShift.UI
             SetRect(cooldownText.rectTransform, new Vector2(0.59f, 0.05f), new Vector2(0.98f, 0.35f));
         }
 
+        /// <summary>Re-fits the row when the panel's real height differs from the reference.</summary>
+        public void SetRowHeight(int index, float height)
+        {
+            var rt = (RectTransform)transform;
+            rt.sizeDelta = new Vector2(0f, height);
+            rt.anchoredPosition = new Vector2(0f, -index * height);
+        }
+
         static void SetRect(RectTransform rt, Vector2 aMin, Vector2 aMax)
         {
             rt.anchorMin = aMin;

@@ -24,12 +24,6 @@ namespace LastShift.Core
         /// </summary>
         public static bool TutorialRequested { get; set; }
 
-        /// <summary>
-        /// Tutorial finished: the next Boot load skips the title card and goes
-        /// straight to the normal intro briefing (so story text is never duplicated).
-        /// </summary>
-        public static bool ResumeAtBriefing { get; set; }
-
         void Awake()
         {
             if (Instance != null && Instance != this)

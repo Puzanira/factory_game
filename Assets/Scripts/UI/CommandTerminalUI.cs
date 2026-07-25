@@ -20,14 +20,39 @@ namespace LastShift.UI
         Image screenBg;
         Text header;
         Text statusLine;
-        Text descriptionText;
-        Text zoneStatusText;
-        Text enterHint;
         Image powerLed;
-        Text resourceLabel;
-        readonly List<Image> resourceCells = new List<Image>();
-        float resourceFlashUntil;
+        RectTransform rowsRt;      // viewport (clips the list)
+        RectTransform rowsContent; // scrolled content
+        Text scrollUpMark;
+        Text scrollDownMark;
+        float rowHeight;
+        float scrollOffset;
         readonly List<CommandListItemUI> rows = new List<CommandListItemUI>();
+
+        readonly TacticalDetailPanelController detail = new TacticalDetailPanelController();
+
+        /// <summary>Command list container (tutorial step «СИСТЕМЫ ЗАВОДА»).</summary>
+        public RectTransform CommandListRect => rowsRt;
+        /// <summary>Lower-left detail panel and its rows (tutorial steps 4-6).</summary>
+        public TacticalDetailPanelController Detail => detail;
+
+        /// <summary>
+        /// Smoke-test check: the selected command must always be fully inside the
+        /// list viewport — a room with many systems must never hide its selection.
+        /// </summary>
+        public bool DevSelectedRowVisible
+        {
+            get
+            {
+                if (terminal == null || rowsRt == null) return true;
+                int sel = terminal.SelectedIndex;
+                if (sel < 0 || sel >= rows.Count || rows[sel] == null) return true;
+                Rect view = TutorialUiSpace.ScreenRectOf(rowsRt);
+                if (view.height < 1f) return true;
+                Rect row = TutorialUiSpace.ScreenRectOf((RectTransform)rows[sel].transform);
+                return row.yMin >= view.yMin - 1f && row.yMax <= view.yMax + 1f;
+            }
+        }
 
         static readonly Color ScreenGreen = new Color(0.02f, 0.07f, 0.04f, 1f);
         static readonly Color ScreenRed = new Color(0.11f, 0.025f, 0.02f, 1f);
@@ -83,59 +108,47 @@ namespace LastShift.UI
                 new Color(0.95f, 0.75f, 0.35f), TextAnchor.MiddleCenter);
             SetRect(statusLine.rectTransform, new Vector2(0f, 0.895f), new Vector2(1f, 0.93f));
 
-            // «РЕСУРС УПРАВЛЕНИЯ» — three industrial power cells.
-            var resRow = UIBuilder.Panel(screen, "ResourceRow",
-                new Vector2(0.03f, 0.852f), new Vector2(0.97f, 0.893f), new Color(0.01f, 0.05f, 0.03f, 0.85f));
-            resourceLabel = UIBuilder.Label(resRow, "ResourceLabel", Loc.ControlResource, 14,
-                new Color(0.6f, 0.9f, 0.68f), TextAnchor.MiddleLeft);
-            SetRect(resourceLabel.rectTransform, new Vector2(0.03f, 0f), new Vector2(0.62f, 1f));
-            int maxCells = Data.TacticsData.Get().resourceMax;
-            for (int i = 0; i < maxCells; i++)
-            {
-                var cellGO = new GameObject("Cell" + i);
-                cellGO.transform.SetParent(resRow, false);
-                var cellRt = cellGO.AddComponent<RectTransform>();
-                float x0 = 0.66f + i * 0.11f;
-                cellRt.anchorMin = new Vector2(x0, 0.22f);
-                cellRt.anchorMax = new Vector2(x0 + 0.085f, 0.78f);
-                cellRt.offsetMin = Vector2.zero;
-                cellRt.offsetMax = Vector2.zero;
-                var img = cellGO.AddComponent<Image>();
-                img.color = new Color(0.4f, 1f, 0.55f, 0.9f);
-                img.raycastTarget = false;
-                var outline = cellGO.AddComponent<Outline>();
-                outline.effectColor = new Color(0.35f, 0.7f, 0.45f, 0.7f);
-                outline.effectDistance = new Vector2(1f, 1f);
-                resourceCells.Add(img);
-            }
-
-            // Rows container fills the middle of the panel.
+            // Command list fills the middle of the panel (the freed top row of the
+            // old resource strip now belongs to the list). It is a clipped viewport:
+            // rows shrink to fit, and if there are too many for a readable height the
+            // list scrolls with the selection instead of running off the panel.
+            const float ListBottom = 0.37f, ListTop = 0.888f;
             var rowsGO = new GameObject("Rows");
             rowsGO.transform.SetParent(screen, false);
-            var rowsRt = rowsGO.AddComponent<RectTransform>();
-            SetRect(rowsRt, new Vector2(0.02f, 0.24f), new Vector2(0.98f, 0.848f));
+            rowsRt = rowsGO.AddComponent<RectTransform>();
+            SetRect(rowsRt, new Vector2(0.02f, ListBottom), new Vector2(0.98f, ListTop));
+            rowsGO.AddComponent<RectMask2D>();
+
+            var contentGO = new GameObject("Content");
+            contentGO.transform.SetParent(rowsRt, false);
+            rowsContent = contentGO.AddComponent<RectTransform>();
+            rowsContent.anchorMin = new Vector2(0f, 1f);
+            rowsContent.anchorMax = new Vector2(1f, 1f);
+            rowsContent.pivot = new Vector2(0.5f, 1f);
+            rowsContent.offsetMin = new Vector2(0f, rowsContent.offsetMin.y);
+            rowsContent.offsetMax = new Vector2(0f, rowsContent.offsetMax.y);
 
             var items = terminal.Items;
-            float rowHeight = Mathf.Min(72f, 700f / Mathf.Max(1, items.Count));
+            // Reference-resolution height of the viewport (canvas is 1920x1080-based).
+            float viewportHeight = (1080f - 24f) * (ListTop - ListBottom);
+            rowHeight = Mathf.Clamp(viewportHeight / Mathf.Max(1, items.Count), 42f, 66f);
+            rowsContent.sizeDelta = new Vector2(0f, rowHeight * items.Count);
             for (int i = 0; i < items.Count; i++)
-                rows.Add(CommandListItemUI.Create(rowsRt, i, rowHeight));
+                rows.Add(CommandListItemUI.Create(rowsContent, i, rowHeight));
 
-            // Description box at the bottom, framed like a readout module.
-            RectTransform descBox = UIBuilder.PanelPx(screen, "DescriptionBox",
-                new Vector2(0.03f, 0.02f), new Vector2(0.97f, 0.22f),
-                Vector2.zero, Vector2.zero, new Color(0.01f, 0.04f, 0.025f, 0.95f));
-            var descOutline = descBox.gameObject.AddComponent<Outline>();
-            descOutline.effectColor = new Color(0.35f, 0.7f, 0.45f, 0.45f);
-            descOutline.effectDistance = new Vector2(1.5f, 1.5f);
-            enterHint = UIBuilder.Label(descBox, "EnterHint", Loc.EnterExecute, 17,
-                new Color(0.95f, 0.85f, 0.45f), TextAnchor.UpperLeft);
-            SetRect(enterHint.rectTransform, new Vector2(0.04f, 0.7f), new Vector2(0.96f, 0.98f));
-            descriptionText = UIBuilder.Label(descBox, "Description", "", 15,
-                new Color(0.7f, 0.9f, 0.75f), TextAnchor.UpperLeft);
-            SetRect(descriptionText.rectTransform, new Vector2(0.04f, 0.3f), new Vector2(0.96f, 0.7f));
-            zoneStatusText = UIBuilder.Label(descBox, "ZoneStatus", "", 14,
-                new Color(0.5f, 0.95f, 0.6f), TextAnchor.UpperLeft);
-            SetRect(zoneStatusText.rectTransform, new Vector2(0.04f, 0.03f), new Vector2(0.96f, 0.3f));
+            // Terminal-style "more above / more below" marks (no mouse scrollbar).
+            scrollUpMark = UIBuilder.Label(screen, "ScrollUp", "▲", 14,
+                new Color(0.6f, 0.9f, 0.68f), TextAnchor.MiddleCenter);
+            SetRect(scrollUpMark.rectTransform, new Vector2(0.86f, ListTop), new Vector2(0.98f, ListTop + 0.028f));
+            scrollDownMark = UIBuilder.Label(screen, "ScrollDown", "▼", 14,
+                new Color(0.6f, 0.9f, 0.68f), TextAnchor.MiddleCenter);
+            SetRect(scrollDownMark.rectTransform, new Vector2(0.86f, ListBottom - 0.028f), new Vector2(0.98f, ListBottom));
+            scrollUpMark.enabled = false;
+            scrollDownMark.enabled = false;
+
+            // Lower-left detail panel: selected system, purpose, tactical status,
+            // control resource and engineer resolve (both moved out of the top HUD).
+            detail.Build(screen, new Vector2(0.03f, 0.02f), new Vector2(0.97f, 0.355f));
         }
 
         void AddBolt(RectTransform frame, Vector2 anchor)
@@ -188,67 +201,51 @@ namespace LastShift.UI
             for (int i = 0; i < rows.Count && i < items.Count; i++)
                 rows[i].Refresh(items[i], i == terminal.SelectedIndex, emergency);
 
-            var selected = terminal.Selected;
-            if (selected != null)
+            detail.SetEmergency(emergency);
+            detail.Refresh(terminal.Selected, lm != null ? lm.Engineer : null);
+
+            UpdateScroll(items.Count);
+        }
+
+        /// <summary>Keeps the selected command visible when the list is longer than the panel.</summary>
+        void UpdateScroll(int count)
+        {
+            if (rowsContent == null || rowsRt == null) return;
+            float viewH = rowsRt.rect.height;
+            if (viewH < 1f) return; // layout has not run yet
+
+            // Re-fit to the panel's real height (it varies with aspect ratio), so the
+            // list only scrolls when the rows would otherwise become unreadable.
+            float ideal = Mathf.Clamp(viewH / Mathf.Max(1, count), 42f, 66f);
+            if (Mathf.Abs(ideal - rowHeight) > 0.5f)
             {
-                enterHint.text = selected.IsReady
-                    ? Loc.EnterExecute + selected.CommandLabel.ToUpper()
-                    : Loc.SystemBusy + " — " + selected.displayName.ToUpper();
+                rowHeight = ideal;
+                for (int i = 0; i < rows.Count; i++)
+                    if (rows[i] != null) rows[i].SetRowHeight(i, rowHeight);
+                rowsContent.sizeDelta = new Vector2(0f, rowHeight * count);
+            }
 
-                // Purpose: one main line + one tactical hint.
-                string purpose = selected.PurposeLine;
-                if (!string.IsNullOrEmpty(selected.PurposeHint))
-                    purpose += "\n" + selected.PurposeHint;
-                descriptionText.text = string.IsNullOrEmpty(purpose) ? selected.Description : purpose;
+            float contentH = rowHeight * count;
+            float maxScroll = Mathf.Max(0f, contentH - viewH);
 
-                // Zone status: teaches that timing matters (recovery moves stay neutral).
-                if (selected.ActivationAlwaysEffective)
-                {
-                    zoneStatusText.text = "";
-                }
-                else if (selected.EngineerInEffectiveZone)
-                {
-                    zoneStatusText.text = selected is DoorMachine ? Loc.InsightDoorBlock : Loc.TargetInZone;
-                    zoneStatusText.color = new Color(0.5f, 0.95f, 0.6f);
-                }
-                else
-                {
-                    zoneStatusText.text = Loc.TargetOutOfZone;
-                    zoneStatusText.color = new Color(0.85f, 0.7f, 0.4f);
-                }
+            if (maxScroll <= 0.5f)
+            {
+                scrollOffset = 0f;
             }
             else
             {
-                enterHint.text = Loc.NoSystemsOnline;
-                descriptionText.text = "";
-                zoneStatusText.text = "";
+                int sel = Mathf.Clamp(terminal.SelectedIndex, 0, Mathf.Max(0, count - 1));
+                // Scroll only as far as needed to bring the selected row into view.
+                scrollOffset = Mathf.Clamp(scrollOffset, (sel + 1) * rowHeight - viewH, sel * rowHeight);
+                scrollOffset = Mathf.Clamp(scrollOffset, 0f, maxScroll);
             }
 
-            RefreshResourceCells();
-        }
-
-        void RefreshResourceCells()
-        {
-            var res = Core.FactoryControlResource.Instance;
-            if (res == null || resourceCells.Count == 0) return;
-            bool flashing = Time.unscaledTime < resourceFlashUntil;
-            for (int i = 0; i < resourceCells.Count; i++)
-            {
-                float fill = Mathf.Clamp01(res.Charges - i);
-                Color c;
-                if (fill >= 1f) c = new Color(0.4f, 1f, 0.55f, 0.95f);          // full cell
-                else if (fill > 0f) c = new Color(0.4f, 0.85f, 0.5f, 0.2f + 0.5f * fill); // charging
-                else c = new Color(0.15f, 0.3f, 0.2f, 0.55f);                    // empty
-                if (flashing && fill < 1f)
-                {
-                    float blink = Mathf.PingPong(Time.unscaledTime * 8f, 1f);
-                    c = Color.Lerp(c, new Color(1f, 0.35f, 0.25f, 0.9f), blink);
-                }
-                resourceCells[i].color = c;
-            }
+            rowsContent.anchoredPosition = new Vector2(0f, scrollOffset);
+            if (scrollUpMark != null) scrollUpMark.enabled = scrollOffset > 0.5f;
+            if (scrollDownMark != null) scrollDownMark.enabled = scrollOffset < maxScroll - 0.5f;
         }
 
         /// <summary>Insufficient-resource feedback: brief red blink on the empty cells.</summary>
-        public void FlashResource() => resourceFlashUntil = Time.unscaledTime + 1.2f;
+        public void FlashResource() => detail.FlashResource();
     }
 }

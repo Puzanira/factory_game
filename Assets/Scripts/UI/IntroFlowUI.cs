@@ -10,19 +10,20 @@ using LastShift.Utilities;
 namespace LastShift.UI
 {
     /// <summary>
-    /// Boot-scene flow: title card «ПОСЛЕДНЯЯ СМЕНА» → four-page Russian terminal
-    /// briefing → Level 1. Keyboard only (Up/Down/Enter/Esc), no EventSystem needed.
-    /// Runs every new game (no PlayerPrefs). DevAdvance() lets the headless smoke
-    /// test drive the flow.
+    /// Boot-scene onboarding flow, in this exact order on every new game:
+    /// title card «ПОСЛЕДНЯЯ СМЕНА» → three mandatory Russian instruction pages →
+    /// «ВВОДНЫЙ УРОК» choice → interactive tutorial or Level 1.
+    /// Keyboard/Arduino only (Up/Down/Enter + Esc) through the shared GameInput
+    /// funnel — no EventSystem, no mouse, no PlayerPrefs. DevAdvance() lets the
+    /// headless smoke test drive the flow.
     /// </summary>
     public class IntroFlowUI : MonoBehaviour
     {
         public static IntroFlowUI Instance { get; private set; }
 
-        enum Screen { Title, TutorialChoice, Briefing, ConfirmQuit, ConfirmSkip }
+        enum Screen { Title, Instructions, TutorialChoice, ConfirmQuit }
 
         Screen current = Screen.Title;
-        int menuIndex;
         int pageIndex;
         int modalIndex;
         int choiceIndex;
@@ -30,15 +31,16 @@ namespace LastShift.UI
 
         GameObject titleRoot;
         GameObject choiceRoot;
-        readonly List<Text> choiceMenu = new List<Text>();
-        readonly List<Image> choiceMenuBgs = new List<Image>();
-        GameObject briefingRoot;
+        GameObject instructionRoot;
         GameObject modalRoot;
         Text modalQuestion;
-        readonly List<Text> titleMenu = new List<Text>();
-        readonly List<Image> titleMenuBgs = new List<Image>();
+        readonly List<Text> choiceMenu = new List<Text>();
+        readonly List<Image> choiceMenuBgs = new List<Image>();
+        readonly List<List<Image>> choiceMenuEdges = new List<List<Image>>();
         readonly List<Text> modalMenu = new List<Text>();
+        readonly List<GameObject> pageDiagrams = new List<GameObject>();
         Text pageHeader;
+        Text pageSubheader;
         Text pageBody;
         Text pageFooter;
         Text pageCounter;
@@ -48,6 +50,9 @@ namespace LastShift.UI
         static readonly Color Phosphor = new Color(0.62f, 1f, 0.72f);
         static readonly Color PhosphorDim = new Color(0.45f, 0.68f, 0.52f);
         static readonly Color Amber = new Color(0.95f, 0.85f, 0.45f);
+        static readonly Color Warn = new Color(0.9f, 0.42f, 0.3f);
+        static readonly Color PanelFill = new Color(0.017f, 0.045f, 0.032f, 1f);
+        static readonly Color Border = new Color(0.35f, 0.7f, 0.45f, 0.75f);
 
         void Awake() => Instance = this;
         void OnDestroy() { if (Instance == this) Instance = null; }
@@ -57,34 +62,100 @@ namespace LastShift.UI
             var canvas = UIBuilder.CreateCanvas("IntroCanvas", 20);
             BuildBackdrop(canvas.transform);
             BuildTitle(canvas.transform);
+            BuildInstructions(canvas.transform);
             BuildTutorialChoice(canvas.transform);
-            BuildBriefing(canvas.transform);
             BuildModal(canvas.transform);
 
-            // Returning from the finished tutorial: skip the title, go straight to
-            // the normal intro briefing so story text is never duplicated.
-            if (Core.GameManager.ResumeAtBriefing)
-            {
-                Core.GameManager.ResumeAtBriefing = false;
-                StartBriefing();
-            }
-            else
-            {
-                ShowScreen(Screen.Title);
-            }
+            ShowScreen(Screen.Title);
 
             // Title mood: quiet terminal drone with distant machinery, faded in.
             AudioManager.Ensure();
             AudioManager.LoopOn("intro_drone", "intro_drone_loop", SfxBus.Music, 1f, 1.8f);
         }
 
-        // ================= construction =================
+        // ================= shared construction helpers =================
+
+        static void SetRect(RectTransform rt, Vector2 aMin, Vector2 aMax)
+        {
+            rt.anchorMin = aMin;
+            rt.anchorMax = aMax;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+        }
+
+        /// <summary>Thin technical border around a panel (four hairlines, no rounding).</summary>
+        static void Frame(Transform parent, Color color, float t = 0.004f)
+        {
+            UIBuilder.Panel(parent, "EdgeT", new Vector2(0f, 1f - t), new Vector2(1f, 1f), color);
+            UIBuilder.Panel(parent, "EdgeB", new Vector2(0f, 0f), new Vector2(1f, t), color);
+            UIBuilder.Panel(parent, "EdgeL", new Vector2(0f, 0f), new Vector2(t * 0.45f, 1f), color);
+            UIBuilder.Panel(parent, "EdgeR", new Vector2(1f - t * 0.45f, 0f), new Vector2(1f, 1f), color);
+        }
+
+        /// <summary>Terminal corner brackets on a panel (industrial readout look).</summary>
+        static void Brackets(Transform parent, Color color)
+        {
+            const float len = 0.06f, thick = 0.006f, tw = 0.0028f;
+            // bottom-left / bottom-right / top-left / top-right
+            UIBuilder.Panel(parent, "BrBL_h", new Vector2(0f, 0f), new Vector2(len, thick), color);
+            UIBuilder.Panel(parent, "BrBL_v", new Vector2(0f, 0f), new Vector2(tw, len * 1.6f), color);
+            UIBuilder.Panel(parent, "BrBR_h", new Vector2(1f - len, 0f), new Vector2(1f, thick), color);
+            UIBuilder.Panel(parent, "BrBR_v", new Vector2(1f - tw, 0f), new Vector2(1f, len * 1.6f), color);
+            UIBuilder.Panel(parent, "BrTL_h", new Vector2(0f, 1f - thick), new Vector2(len, 1f), color);
+            UIBuilder.Panel(parent, "BrTL_v", new Vector2(0f, 1f - len * 1.6f), new Vector2(tw, 1f), color);
+            UIBuilder.Panel(parent, "BrTR_h", new Vector2(1f - len, 1f - thick), new Vector2(1f, 1f), color);
+            UIBuilder.Panel(parent, "BrTR_v", new Vector2(1f - tw, 1f - len * 1.6f), new Vector2(1f, 1f), color);
+        }
+
+        /// <summary>Selection frame for a menu row; returns the holder whose children are the edges.</summary>
+        static Transform BuildRowFrame(Transform row)
+        {
+            RectTransform holder = UIBuilder.Panel(row, "SelFrame", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0f));
+            Frame(holder, new Color(0f, 0f, 0f, 0f), 0.02f);
+            return holder;
+        }
+
+        static void Scanlines(Transform parent, float alpha)
+        {
+            var scan = UIBuilder.Panel(parent, "Scanlines", Vector2.zero, Vector2.one, Color.white);
+            var img = scan.GetComponent<Image>();
+            img.sprite = TextureFactory.Scanlines();
+            img.type = Image.Type.Tiled;
+            img.pixelsPerUnitMultiplier = 0.35f;
+            img.color = new Color(1f, 1f, 1f, alpha);
+            img.raycastTarget = false;
+        }
+
+        static void Box(Transform parent, Vector2 min, Vector2 max, Color c)
+        {
+            const float t = 0.006f;
+            UIBuilder.Panel(parent, "BoxT", new Vector2(min.x, max.y - t * 0.4f), new Vector2(max.x, max.y), c);
+            UIBuilder.Panel(parent, "BoxB", new Vector2(min.x, min.y), new Vector2(max.x, min.y + t * 0.4f), c);
+            UIBuilder.Panel(parent, "BoxL", new Vector2(min.x, min.y), new Vector2(min.x + t * 0.2f, max.y), c);
+            UIBuilder.Panel(parent, "BoxR", new Vector2(max.x - t * 0.2f, min.y), new Vector2(max.x, max.y), c);
+        }
+
+        static void Dashes(Transform parent, Vector2 from, Vector2 to, int count, Color c, float thickness = 0.0035f)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                float k0 = (float)i / count;
+                float k1 = k0 + 0.55f / count;
+                Vector2 a = Vector2.Lerp(from, to, k0);
+                Vector2 b = Vector2.Lerp(from, to, k1);
+                UIBuilder.Panel(parent, "Dash",
+                    new Vector2(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y) - thickness),
+                    new Vector2(Mathf.Max(a.x, b.x) + thickness, Mathf.Max(a.y, b.y) + thickness), c);
+            }
+        }
+
+        // ================= backdrop =================
 
         void BuildBackdrop(Transform root)
         {
             UIBuilder.Panel(root, "Backdrop", Vector2.zero, Vector2.one, new Color(0.015f, 0.03f, 0.025f));
 
-            // Faint factory schematic: room outlines, conveyor routes, pipes.
+            // Faint factory floor plan: room outlines, conveyor routes, pipes.
             var lineColor = new Color(0.4f, 0.8f, 0.55f, 0.07f);
             var schematic = UIBuilder.Panel(root, "Schematic", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0f));
             Box(schematic, new Vector2(0.08f, 0.55f), new Vector2(0.3f, 0.85f), lineColor);
@@ -92,14 +163,12 @@ namespace LastShift.UI
             Box(schematic, new Vector2(0.62f, 0.5f), new Vector2(0.92f, 0.88f), lineColor);
             Box(schematic, new Vector2(0.12f, 0.12f), new Vector2(0.45f, 0.4f), lineColor);
             Box(schematic, new Vector2(0.55f, 0.1f), new Vector2(0.88f, 0.35f), lineColor);
-            // Conveyor routes (dashed).
-            Dashes(schematic, new Vector2(0.1f, 0.47f), new Vector2(0.9f, 0.47f), 22, lineColor);
-            Dashes(schematic, new Vector2(0.5f, 0.12f), new Vector2(0.5f, 0.85f), 16, lineColor);
-            // Pipes.
-            HLine(schematic, 0.94f, lineColor);
-            HLine(schematic, 0.045f, lineColor);
+            Dashes(schematic, new Vector2(0.1f, 0.47f), new Vector2(0.9f, 0.47f), 22, lineColor, 0.0012f);
+            Dashes(schematic, new Vector2(0.5f, 0.12f), new Vector2(0.5f, 0.85f), 16, lineColor, 0.0012f);
+            UIBuilder.Panel(schematic, "PipeTop", new Vector2(0.03f, 0.9388f), new Vector2(0.97f, 0.9412f), lineColor);
+            UIBuilder.Panel(schematic, "PipeBottom", new Vector2(0.03f, 0.0438f), new Vector2(0.97f, 0.0462f), lineColor);
 
-            // Blinking control LEDs.
+            // Blinking control LEDs along the top rail.
             for (int i = 0; i < 5; i++)
             {
                 var led = new GameObject("Led" + i);
@@ -116,41 +185,10 @@ namespace LastShift.UI
                 leds.Add(img);
             }
 
-            // CRT scanlines above everything in the backdrop.
-            var scan = UIBuilder.Panel(root, "Scanlines", Vector2.zero, Vector2.one, Color.white);
-            var scanImg = scan.GetComponent<Image>();
-            scanImg.sprite = TextureFactory.Scanlines();
-            scanImg.type = Image.Type.Tiled;
-            scanImg.pixelsPerUnitMultiplier = 0.35f;
-            scanImg.color = new Color(1f, 1f, 1f, 0.4f);
-            scanImg.raycastTarget = false;
+            Scanlines(root, 0.4f);
         }
 
-        void Box(Transform parent, Vector2 min, Vector2 max, Color c)
-        {
-            const float t = 0.0016f;
-            UIBuilder.Panel(parent, "BoxT", new Vector2(min.x, max.y - t), new Vector2(max.x, max.y), c);
-            UIBuilder.Panel(parent, "BoxB", new Vector2(min.x, min.y), new Vector2(max.x, min.y + t), c);
-            UIBuilder.Panel(parent, "BoxL", new Vector2(min.x, min.y), new Vector2(min.x + t * 0.6f, max.y), c);
-            UIBuilder.Panel(parent, "BoxR", new Vector2(max.x - t * 0.6f, min.y), new Vector2(max.x, max.y), c);
-        }
-
-        void Dashes(Transform parent, Vector2 from, Vector2 to, int count, Color c)
-        {
-            for (int i = 0; i < count; i++)
-            {
-                float k0 = (float)i / count;
-                float k1 = k0 + 0.5f / count;
-                Vector2 a = Vector2.Lerp(from, to, k0);
-                Vector2 b = Vector2.Lerp(from, to, k1);
-                UIBuilder.Panel(parent, "Dash",
-                    new Vector2(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y) - 0.0012f),
-                    new Vector2(Mathf.Max(a.x, b.x) + 0.0012f, Mathf.Max(a.y, b.y) + 0.0012f), c);
-            }
-        }
-
-        void HLine(Transform parent, float y, Color c) =>
-            UIBuilder.Panel(parent, "HLine", new Vector2(0.03f, y - 0.0012f), new Vector2(0.97f, y + 0.0012f), c);
+        // ================= title card =================
 
         void BuildTitle(Transform root)
         {
@@ -158,101 +196,238 @@ namespace LastShift.UI
             titleRoot = rt.gameObject;
 
             var title = UIBuilder.Label(rt, "Title", Loc.GameTitle, 92, Phosphor, TextAnchor.MiddleCenter);
-            SetRect(title.rectTransform, new Vector2(0f, 0.58f), new Vector2(1f, 0.82f));
+            SetRect(title.rectTransform, new Vector2(0f, 0.56f), new Vector2(1f, 0.8f));
             var latin = UIBuilder.Label(rt, "Latin", Loc.GameTitleLatin, 26, PhosphorDim, TextAnchor.MiddleCenter);
-            SetRect(latin.rectTransform, new Vector2(0f, 0.54f), new Vector2(1f, 0.595f));
+            SetRect(latin.rectTransform, new Vector2(0f, 0.52f), new Vector2(1f, 0.575f));
             var sub = UIBuilder.Label(rt, "Subtitle", Loc.TitleSubtitle, 26, Amber, TextAnchor.MiddleCenter);
-            SetRect(sub.rectTransform, new Vector2(0f, 0.485f), new Vector2(1f, 0.54f));
-            UIBuilder.Panel(rt, "TitleLine", new Vector2(0.3f, 0.478f), new Vector2(0.7f, 0.4805f),
+            SetRect(sub.rectTransform, new Vector2(0f, 0.465f), new Vector2(1f, 0.52f));
+            UIBuilder.Panel(rt, "TitleLine", new Vector2(0.3f, 0.458f), new Vector2(0.7f, 0.4605f),
                 new Color(0.35f, 0.7f, 0.45f, 0.5f));
 
-            // Menu.
-            string[] options = { Loc.MenuStartShift, Loc.MenuBriefing, Loc.MenuExit };
-            for (int i = 0; i < options.Length; i++)
-            {
-                RectTransform row = UIBuilder.Panel(rt, "Option" + i,
-                    new Vector2(0.36f, 0.36f - i * 0.07f), new Vector2(0.64f, 0.42f - i * 0.07f),
-                    new Color(0f, 0f, 0f, 0f));
-                titleMenuBgs.Add(row.GetComponent<Image>());
-                var label = UIBuilder.Label(row, "Label", options[i], 27, PhosphorDim, TextAnchor.MiddleCenter);
-                titleMenu.Add(label);
-            }
-            var hint = UIBuilder.Label(rt, "Hint", Loc.MenuHint, 16, new Color(0.4f, 0.55f, 0.45f), TextAnchor.MiddleCenter);
-            SetRect(hint.rectTransform, new Vector2(0f, 0.08f), new Vector2(1f, 0.12f));
+            var footer = UIBuilder.Label(rt, "Footer", Loc.FooterContinue, 26, Amber, TextAnchor.MiddleCenter);
+            SetRect(footer.rectTransform, new Vector2(0f, 0.16f), new Vector2(1f, 0.22f));
+            var hint = UIBuilder.Label(rt, "Hint", "ESC — ВЫХОД", 15, new Color(0.4f, 0.55f, 0.45f), TextAnchor.MiddleCenter);
+            SetRect(hint.rectTransform, new Vector2(0f, 0.09f), new Vector2(1f, 0.13f));
         }
+
+        // ================= instruction pages =================
+
+        void BuildInstructions(Transform root)
+        {
+            RectTransform rt = UIBuilder.Panel(root, "Instructions", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0f));
+            instructionRoot = rt.gameObject;
+
+            // Opaque industrial terminal card: nothing shows through it.
+            RectTransform card = UIBuilder.Panel(rt, "Card", new Vector2(0.1f, 0.1f), new Vector2(0.9f, 0.9f), PanelFill);
+            pageGroup = card.gameObject.AddComponent<CanvasGroup>();
+            Frame(card, Border);
+            Brackets(card, Amber);
+            Scanlines(card, 0.22f);
+
+            pageHeader = UIBuilder.Label(card, "Header", "", 40, Amber, TextAnchor.MiddleLeft);
+            SetRect(pageHeader.rectTransform, new Vector2(0.05f, 0.87f), new Vector2(0.72f, 0.97f));
+            pageSubheader = UIBuilder.Label(card, "Subheader", "", 20, PhosphorDim, TextAnchor.MiddleLeft);
+            SetRect(pageSubheader.rectTransform, new Vector2(0.05f, 0.82f), new Vector2(0.72f, 0.87f));
+            pageCounter = UIBuilder.Label(card, "Counter", "", 17, PhosphorDim, TextAnchor.MiddleRight);
+            SetRect(pageCounter.rectTransform, new Vector2(0.62f, 0.88f), new Vector2(0.95f, 0.96f));
+            UIBuilder.Panel(card, "HeaderLine", new Vector2(0.05f, 0.805f), new Vector2(0.95f, 0.8075f),
+                new Color(0.35f, 0.7f, 0.45f, 0.55f));
+
+            pageBody = UIBuilder.Label(card, "Body", "", 23, Phosphor, TextAnchor.UpperLeft);
+            SetRect(pageBody.rectTransform, new Vector2(0.05f, 0.2f), new Vector2(0.55f, 0.78f));
+
+            // Right-hand technical diagram column (one per page, toggled).
+            var diagramArea = UIBuilder.Panel(card, "DiagramArea", new Vector2(0.58f, 0.18f), new Vector2(0.95f, 0.78f),
+                new Color(0.01f, 0.03f, 0.022f, 1f));
+            Frame(diagramArea, new Color(0.3f, 0.6f, 0.4f, 0.45f), 0.006f);
+            pageDiagrams.Add(BuildDiagramRole(diagramArea));
+            pageDiagrams.Add(BuildDiagramGoal(diagramArea));
+            pageDiagrams.Add(BuildDiagramControls(diagramArea));
+
+            UIBuilder.Panel(card, "FooterLine", new Vector2(0.05f, 0.135f), new Vector2(0.95f, 0.1375f),
+                new Color(0.35f, 0.7f, 0.45f, 0.5f));
+            pageFooter = UIBuilder.Label(card, "Footer", "", 24, Amber, TextAnchor.MiddleCenter);
+            SetRect(pageFooter.rectTransform, new Vector2(0f, 0.045f), new Vector2(1f, 0.125f));
+        }
+
+        /// <summary>Page 1 diagram: factory AI core, pipes/conveyor, engineer silhouette.</summary>
+        GameObject BuildDiagramRole(Transform area)
+        {
+            RectTransform rt = UIBuilder.Panel(area, "DiagramRole", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0f));
+            var line = new Color(0.4f, 0.85f, 0.58f, 0.5f);
+
+            // AI core: nested squares with a pulse dot.
+            Box(rt, new Vector2(0.3f, 0.66f), new Vector2(0.7f, 0.92f), line);
+            Box(rt, new Vector2(0.36f, 0.7f), new Vector2(0.64f, 0.88f), new Color(0.4f, 0.85f, 0.58f, 0.28f));
+            var core = UIBuilder.Label(rt, "CoreLabel", "ИНТЕЛЛЕКТ\nЗАВОДА", 15, Amber, TextAnchor.MiddleCenter);
+            SetRect(core.rectTransform, new Vector2(0.3f, 0.66f), new Vector2(0.7f, 0.92f));
+
+            // Bus lines from the core down to the equipment row.
+            Dashes(rt, new Vector2(0.5f, 0.66f), new Vector2(0.5f, 0.5f), 5, line);
+            UIBuilder.Panel(rt, "Bus", new Vector2(0.16f, 0.492f), new Vector2(0.84f, 0.5f), line);
+            Dashes(rt, new Vector2(0.2f, 0.49f), new Vector2(0.2f, 0.42f), 2, line);
+            Dashes(rt, new Vector2(0.5f, 0.49f), new Vector2(0.5f, 0.42f), 2, line);
+            Dashes(rt, new Vector2(0.8f, 0.49f), new Vector2(0.8f, 0.42f), 2, line);
+
+            // Equipment row: conveyor strip, gate, arm.
+            Box(rt, new Vector2(0.08f, 0.33f), new Vector2(0.32f, 0.42f), line);
+            var l1 = UIBuilder.Label(rt, "L1", "ЛЕНТА", 12, PhosphorDim, TextAnchor.MiddleCenter);
+            SetRect(l1.rectTransform, new Vector2(0.08f, 0.33f), new Vector2(0.32f, 0.42f));
+            Box(rt, new Vector2(0.38f, 0.33f), new Vector2(0.62f, 0.42f), line);
+            var l2 = UIBuilder.Label(rt, "L2", "ВОРОТА", 12, PhosphorDim, TextAnchor.MiddleCenter);
+            SetRect(l2.rectTransform, new Vector2(0.38f, 0.33f), new Vector2(0.62f, 0.42f));
+            Box(rt, new Vector2(0.68f, 0.33f), new Vector2(0.92f, 0.42f), line);
+            var l3 = UIBuilder.Label(rt, "L3", "МАНИПУЛ.", 12, PhosphorDim, TextAnchor.MiddleCenter);
+            SetRect(l3.rectTransform, new Vector2(0.68f, 0.33f), new Vector2(0.92f, 0.42f));
+
+            // Engineer silhouette inside a restrained warning frame.
+            Box(rt, new Vector2(0.38f, 0.06f), new Vector2(0.62f, 0.26f), new Color(0.9f, 0.42f, 0.3f, 0.55f));
+            var head = UIBuilder.Panel(rt, "Head", new Vector2(0.475f, 0.2f), new Vector2(0.525f, 0.235f), Warn);
+            head.GetComponent<Image>().sprite = TextureFactory.SoftCircle();
+            UIBuilder.Panel(rt, "Torso", new Vector2(0.465f, 0.115f), new Vector2(0.535f, 0.195f), Warn);
+            UIBuilder.Panel(rt, "LegL", new Vector2(0.472f, 0.08f), new Vector2(0.492f, 0.118f), Warn);
+            UIBuilder.Panel(rt, "LegR", new Vector2(0.508f, 0.08f), new Vector2(0.528f, 0.118f), Warn);
+            var eng = UIBuilder.Label(rt, "EngLabel", "ДЕЖУРНЫЙ ИНЖЕНЕР", 12, Warn, TextAnchor.MiddleCenter);
+            SetRect(eng.rectTransform, new Vector2(0.02f, 0.0f), new Vector2(0.98f, 0.055f));
+
+            return rt.gameObject;
+        }
+
+        /// <summary>Page 2 diagram: repair console → route → exit, with system symbols.</summary>
+        GameObject BuildDiagramGoal(Transform area)
+        {
+            RectTransform rt = UIBuilder.Panel(area, "DiagramGoal", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0f));
+            var line = new Color(0.4f, 0.85f, 0.58f, 0.5f);
+
+            // Repair console (bottom) with a warning frame.
+            Box(rt, new Vector2(0.08f, 0.12f), new Vector2(0.36f, 0.28f), new Color(0.9f, 0.42f, 0.3f, 0.6f));
+            var cons = UIBuilder.Label(rt, "Console", "ПУЛЬТ", 13, Warn, TextAnchor.MiddleCenter);
+            SetRect(cons.rectTransform, new Vector2(0.08f, 0.12f), new Vector2(0.36f, 0.28f));
+            var lbl1 = UIBuilder.Label(rt, "LabelEngineer", Loc.InstructionLabelEngineer, 12, Warn, TextAnchor.MiddleLeft);
+            SetRect(lbl1.rectTransform, new Vector2(0.06f, 0.03f), new Vector2(0.98f, 0.1f));
+
+            // Exit (top right).
+            Box(rt, new Vector2(0.64f, 0.72f), new Vector2(0.92f, 0.88f), new Color(0.4f, 0.95f, 0.55f, 0.7f));
+            var ex = UIBuilder.Label(rt, "Exit", "ВЫХОД", 13, new Color(0.55f, 1f, 0.7f), TextAnchor.MiddleCenter);
+            SetRect(ex.rectTransform, new Vector2(0.64f, 0.72f), new Vector2(0.92f, 0.88f));
+
+            // Engineer route: console → mid → exit (dashed, with a blocked segment).
+            Dashes(rt, new Vector2(0.22f, 0.3f), new Vector2(0.22f, 0.55f), 5, line);
+            Dashes(rt, new Vector2(0.22f, 0.55f), new Vector2(0.78f, 0.55f), 11, line);
+            Dashes(rt, new Vector2(0.78f, 0.57f), new Vector2(0.78f, 0.7f), 3, line);
+
+            // Factory systems pressing on the route.
+            Box(rt, new Vector2(0.42f, 0.62f), new Vector2(0.6f, 0.72f), Amber);
+            var g = UIBuilder.Label(rt, "Gate", "ВОРОТА", 11, Amber, TextAnchor.MiddleCenter);
+            SetRect(g.rectTransform, new Vector2(0.42f, 0.62f), new Vector2(0.6f, 0.72f));
+            UIBuilder.Panel(rt, "GateDrop", new Vector2(0.505f, 0.56f), new Vector2(0.513f, 0.62f), Amber);
+
+            Box(rt, new Vector2(0.06f, 0.62f), new Vector2(0.28f, 0.72f), Amber);
+            var b = UIBuilder.Label(rt, "Belt", "КОНВЕЙЕР", 11, Amber, TextAnchor.MiddleCenter);
+            SetRect(b.rectTransform, new Vector2(0.06f, 0.62f), new Vector2(0.28f, 0.72f));
+
+            var lbl2 = UIBuilder.Label(rt, "LabelFactory", Loc.InstructionLabelFactory, 12, Amber, TextAnchor.MiddleLeft);
+            SetRect(lbl2.rectTransform, new Vector2(0.06f, 0.9f), new Vector2(0.98f, 0.98f));
+
+            return rt.gameObject;
+        }
+
+        /// <summary>Page 3 diagram: arrow-key cluster, joystick and the two buttons.</summary>
+        GameObject BuildDiagramControls(Transform area)
+        {
+            RectTransform rt = UIBuilder.Panel(area, "DiagramControls", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0f));
+            var line = new Color(0.4f, 0.85f, 0.58f, 0.55f);
+
+            var kb = UIBuilder.Label(rt, "KbTitle", "КЛАВИАТУРА", 13, Amber, TextAnchor.MiddleCenter);
+            SetRect(kb.rectTransform, new Vector2(0f, 0.9f), new Vector2(1f, 0.97f));
+            Box(rt, new Vector2(0.38f, 0.78f), new Vector2(0.62f, 0.88f), line);
+            var up = UIBuilder.Label(rt, "KeyUp", "▲", 20, Phosphor, TextAnchor.MiddleCenter);
+            SetRect(up.rectTransform, new Vector2(0.38f, 0.78f), new Vector2(0.62f, 0.88f));
+            Box(rt, new Vector2(0.38f, 0.66f), new Vector2(0.62f, 0.76f), line);
+            var dn = UIBuilder.Label(rt, "KeyDown", "▼", 20, Phosphor, TextAnchor.MiddleCenter);
+            SetRect(dn.rectTransform, new Vector2(0.38f, 0.66f), new Vector2(0.62f, 0.76f));
+            Box(rt, new Vector2(0.64f, 0.66f), new Vector2(0.96f, 0.76f), line);
+            var en = UIBuilder.Label(rt, "KeyEnter", "ENTER", 14, Phosphor, TextAnchor.MiddleCenter);
+            SetRect(en.rectTransform, new Vector2(0.64f, 0.66f), new Vector2(0.96f, 0.76f));
+
+            UIBuilder.Panel(rt, "Split", new Vector2(0.06f, 0.605f), new Vector2(0.94f, 0.6075f),
+                new Color(0.35f, 0.7f, 0.45f, 0.4f));
+
+            var ar = UIBuilder.Label(rt, "ArdTitle", "ARDUINO", 13, Amber, TextAnchor.MiddleCenter);
+            SetRect(ar.rectTransform, new Vector2(0f, 0.52f), new Vector2(1f, 0.59f));
+
+            // Joystick: gate ring with four direction stubs.
+            var ring = UIBuilder.Panel(rt, "JoyRing", new Vector2(0.3f, 0.26f), new Vector2(0.56f, 0.48f),
+                new Color(0.4f, 0.85f, 0.58f, 0.22f));
+            ring.GetComponent<Image>().sprite = SpriteFactory.Get(PlaceholderShape.Ring);
+            var knob = UIBuilder.Panel(rt, "JoyKnob", new Vector2(0.39f, 0.33f), new Vector2(0.47f, 0.41f), Amber);
+            knob.GetComponent<Image>().sprite = TextureFactory.SoftCircle();
+            UIBuilder.Panel(rt, "JoyUp", new Vector2(0.42f, 0.48f), new Vector2(0.44f, 0.52f), line);
+            UIBuilder.Panel(rt, "JoyDn", new Vector2(0.42f, 0.22f), new Vector2(0.44f, 0.26f), line);
+            UIBuilder.Panel(rt, "JoyL", new Vector2(0.26f, 0.36f), new Vector2(0.3f, 0.38f), line);
+            UIBuilder.Panel(rt, "JoyR", new Vector2(0.56f, 0.36f), new Vector2(0.6f, 0.38f), line);
+            var jl = UIBuilder.Label(rt, "JoyLabel", "ДЖОЙСТИК", 11, PhosphorDim, TextAnchor.MiddleCenter);
+            SetRect(jl.rectTransform, new Vector2(0.24f, 0.15f), new Vector2(0.62f, 0.22f));
+
+            var btn = UIBuilder.Panel(rt, "Button", new Vector2(0.7f, 0.3f), new Vector2(0.9f, 0.44f), Amber);
+            btn.GetComponent<Image>().sprite = TextureFactory.SoftCircle();
+            var bl = UIBuilder.Label(rt, "BtnLabel", "КНОПКА", 11, PhosphorDim, TextAnchor.MiddleCenter);
+            SetRect(bl.rectTransform, new Vector2(0.64f, 0.15f), new Vector2(0.96f, 0.22f));
+
+            var note = UIBuilder.Label(rt, "Note", Loc.InstructionTacticalNote, 14, Phosphor, TextAnchor.UpperCenter);
+            SetRect(note.rectTransform, new Vector2(0.04f, 0.01f), new Vector2(0.96f, 0.13f));
+
+            return rt.gameObject;
+        }
+
+        // ================= tutorial choice =================
 
         void BuildTutorialChoice(Transform root)
         {
             RectTransform rt = UIBuilder.Panel(root, "TutorialChoice", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0f));
             choiceRoot = rt.gameObject;
 
-            RectTransform card = UIBuilder.Panel(rt, "Card", new Vector2(0.28f, 0.2f), new Vector2(0.72f, 0.8f),
-                new Color(0.02f, 0.05f, 0.035f, 0.97f));
-            var outline = card.gameObject.AddComponent<Outline>();
-            outline.effectColor = new Color(0.35f, 0.7f, 0.45f, 0.6f);
-            outline.effectDistance = new Vector2(2f, 2f);
+            RectTransform card = UIBuilder.Panel(rt, "Card", new Vector2(0.26f, 0.16f), new Vector2(0.74f, 0.84f), PanelFill);
+            Frame(card, Border);
+            Brackets(card, Amber);
+            Scanlines(card, 0.22f);
 
             var header = UIBuilder.Label(card, "Header", Loc.TutorialChoiceHeader, 40, Amber, TextAnchor.MiddleCenter);
-            SetRect(header.rectTransform, new Vector2(0f, 0.8f), new Vector2(1f, 0.95f));
-            UIBuilder.Panel(card, "HeaderLine", new Vector2(0.08f, 0.79f), new Vector2(0.92f, 0.793f),
-                new Color(0.35f, 0.7f, 0.45f, 0.5f));
+            SetRect(header.rectTransform, new Vector2(0f, 0.82f), new Vector2(1f, 0.94f));
+            UIBuilder.Panel(card, "HeaderLine", new Vector2(0.08f, 0.805f), new Vector2(0.92f, 0.8075f),
+                new Color(0.35f, 0.7f, 0.45f, 0.55f));
 
-            var body = UIBuilder.Label(card, "Body", Loc.TutorialChoiceBody, 26, Phosphor, TextAnchor.MiddleCenter);
-            SetRect(body.rectTransform, new Vector2(0.05f, 0.6f), new Vector2(0.95f, 0.78f));
+            var body = UIBuilder.Label(card, "Body", Loc.TutorialChoiceBody, 24, Phosphor, TextAnchor.UpperCenter);
+            SetRect(body.rectTransform, new Vector2(0.06f, 0.55f), new Vector2(0.94f, 0.78f));
 
             string[] options = { Loc.TutorialChoiceYes, Loc.TutorialChoiceNo };
             for (int i = 0; i < options.Length; i++)
             {
                 RectTransform row = UIBuilder.Panel(card, "Option" + i,
-                    new Vector2(0.2f, 0.42f - i * 0.14f), new Vector2(0.8f, 0.53f - i * 0.14f),
+                    new Vector2(0.16f, 0.38f - i * 0.12f), new Vector2(0.84f, 0.48f - i * 0.12f),
                     new Color(0f, 0f, 0f, 0f));
                 choiceMenuBgs.Add(row.GetComponent<Image>());
+                // Thin technical border, lit only for the selected row.
+                var edges = new List<Image>();
+                foreach (Transform child in BuildRowFrame(row)) edges.Add(child.GetComponent<Image>());
+                choiceMenuEdges.Add(edges);
                 choiceMenu.Add(UIBuilder.Label(row, "Label", options[i], 27, PhosphorDim, TextAnchor.MiddleCenter));
             }
 
             var footer = UIBuilder.Label(card, "Footer", Loc.TutorialChoiceFooter, 16,
-                new Color(0.4f, 0.55f, 0.45f), TextAnchor.MiddleCenter);
-            SetRect(footer.rectTransform, new Vector2(0f, 0.04f), new Vector2(1f, 0.16f));
+                new Color(0.45f, 0.62f, 0.5f), TextAnchor.MiddleCenter);
+            SetRect(footer.rectTransform, new Vector2(0f, 0.05f), new Vector2(1f, 0.16f));
         }
 
-        void BuildBriefing(Transform root)
-        {
-            RectTransform rt = UIBuilder.Panel(root, "Briefing", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0f));
-            briefingRoot = rt.gameObject;
-
-            // Terminal card.
-            RectTransform card = UIBuilder.Panel(rt, "Card", new Vector2(0.16f, 0.12f), new Vector2(0.84f, 0.88f),
-                new Color(0.02f, 0.05f, 0.035f, 0.97f));
-            var outline = card.gameObject.AddComponent<Outline>();
-            outline.effectColor = new Color(0.35f, 0.7f, 0.45f, 0.6f);
-            outline.effectDistance = new Vector2(2f, 2f);
-            pageGroup = card.gameObject.AddComponent<CanvasGroup>();
-
-            pageHeader = UIBuilder.Label(card, "Header", "", 40, Amber, TextAnchor.MiddleCenter);
-            SetRect(pageHeader.rectTransform, new Vector2(0f, 0.84f), new Vector2(1f, 0.97f));
-            UIBuilder.Panel(card, "HeaderLine", new Vector2(0.08f, 0.835f), new Vector2(0.92f, 0.838f),
-                new Color(0.9f, 0.4f, 0.3f, 0.45f)); // subtle red warning accent
-
-            pageBody = UIBuilder.Label(card, "Body", "", 24, Phosphor, TextAnchor.UpperLeft);
-            SetRect(pageBody.rectTransform, new Vector2(0.09f, 0.2f), new Vector2(0.91f, 0.8f));
-
-            UIBuilder.Panel(card, "FooterLine", new Vector2(0.08f, 0.155f), new Vector2(0.92f, 0.158f),
-                new Color(0.35f, 0.7f, 0.45f, 0.5f));
-            pageFooter = UIBuilder.Label(card, "Footer", "", 24, Amber, TextAnchor.MiddleCenter);
-            SetRect(pageFooter.rectTransform, new Vector2(0f, 0.05f), new Vector2(1f, 0.15f));
-            pageCounter = UIBuilder.Label(card, "Counter", "", 16, PhosphorDim, TextAnchor.LowerRight);
-            SetRect(pageCounter.rectTransform, new Vector2(0.6f, 0.02f), new Vector2(0.95f, 0.09f));
-        }
+        // ================= quit modal =================
 
         void BuildModal(Transform root)
         {
-            RectTransform rt = UIBuilder.Panel(root, "Modal", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0.6f));
+            RectTransform rt = UIBuilder.Panel(root, "Modal", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0.75f));
             modalRoot = rt.gameObject;
-            RectTransform box = UIBuilder.Panel(rt, "Box", new Vector2(0.34f, 0.38f), new Vector2(0.66f, 0.62f),
-                new Color(0.03f, 0.07f, 0.05f, 0.98f));
-            var outline = box.gameObject.AddComponent<Outline>();
-            outline.effectColor = new Color(0.35f, 0.7f, 0.45f, 0.7f);
-            outline.effectDistance = new Vector2(2f, 2f);
+            RectTransform box = UIBuilder.Panel(rt, "Box", new Vector2(0.34f, 0.38f), new Vector2(0.66f, 0.62f), PanelFill);
+            Frame(box, Border);
+            Brackets(box, Amber);
 
             modalQuestion = UIBuilder.Label(box, "Question", "", 26, Phosphor, TextAnchor.MiddleCenter);
             SetRect(modalQuestion.rectTransform, new Vector2(0f, 0.62f), new Vector2(1f, 0.95f));
@@ -266,58 +441,55 @@ namespace LastShift.UI
             }
         }
 
-        static void SetRect(RectTransform rt, Vector2 aMin, Vector2 aMax)
-        {
-            rt.anchorMin = aMin;
-            rt.anchorMax = aMax;
-            rt.offsetMin = Vector2.zero;
-            rt.offsetMax = Vector2.zero;
-        }
-
         // ================= flow =================
 
         void ShowScreen(Screen screen)
         {
             current = screen;
             titleRoot.SetActive(screen == Screen.Title);
+            instructionRoot.SetActive(screen == Screen.Instructions);
             choiceRoot.SetActive(screen == Screen.TutorialChoice);
-            briefingRoot.SetActive(screen == Screen.Briefing);
-            modalRoot.SetActive(screen == Screen.ConfirmQuit || screen == Screen.ConfirmSkip);
-            if (screen == Screen.Title) { menuIndex = 0; RefreshTitleMenu(); }
+            modalRoot.SetActive(screen == Screen.ConfirmQuit);
+
             if (screen == Screen.TutorialChoice)
             {
                 choiceIndex = 0; // default: «ПРОЙТИ УРОК»
                 RefreshChoiceMenu();
             }
-            if (screen == Screen.ConfirmQuit || screen == Screen.ConfirmSkip)
+            if (screen == Screen.ConfirmQuit)
             {
-                modalQuestion.text = screen == Screen.ConfirmQuit ? Loc.ConfirmQuit : Loc.ConfirmSkip;
+                modalQuestion.text = Loc.ConfirmQuit;
                 modalIndex = 1; // default to «НЕТ» — safe choice
                 RefreshModal();
             }
         }
 
-        void StartBriefing()
+        void StartInstructions()
         {
             pageIndex = 0;
-            ShowScreen(Screen.Briefing);
-            ApplyPage(instant: false);
+            ShowScreen(Screen.Instructions);
+            ApplyPage();
         }
 
-        void ApplyPage(bool instant)
+        void ApplyPage()
         {
-            pageHeader.text = Loc.IntroHeaders[pageIndex];
-            pageBody.text = Loc.IntroBodies[pageIndex];
-            pageFooter.text = pageIndex == Loc.IntroHeaders.Length - 1 ? Loc.FooterStart : Loc.FooterNext;
-            pageCounter.text = (pageIndex + 1) + " / " + Loc.IntroHeaders.Length;
-            if (!instant) StartCoroutine(FadePage());
+            int total = Loc.InstructionHeaders.Length;
+            pageIndex = Mathf.Clamp(pageIndex, 0, total - 1);
+            pageHeader.text = Loc.InstructionHeaders[pageIndex];
+            pageSubheader.text = Loc.InstructionSubheaders[pageIndex];
+            pageBody.text = Loc.InstructionBodies[pageIndex];
+            pageFooter.text = pageIndex == total - 1 ? Loc.FooterContinue : Loc.FooterNext;
+            pageCounter.text = string.Format(Loc.InstructionCounter, pageIndex + 1, total);
+            for (int i = 0; i < pageDiagrams.Count; i++)
+                if (pageDiagrams[i] != null) pageDiagrams[i].SetActive(i == pageIndex);
+            StartCoroutine(FadePage());
         }
 
         IEnumerator FadePage()
         {
             if (pageGroup == null) yield break;
             float t = 0f;
-            const float dur = 0.35f; // spec: max 0.5s
+            const float dur = 0.3f;
             pageGroup.alpha = 0f;
             while (t < dur)
             {
@@ -328,10 +500,11 @@ namespace LastShift.UI
             pageGroup.alpha = 1f;
         }
 
-        void LoadLevel1()
+        void LoadLevel1(bool tutorial)
         {
             if (loading) return;
             loading = true;
+            GameManager.TutorialRequested = tutorial;
             SceneLoader.Load(GameManager.Level1Scene);
         }
 
@@ -353,33 +526,42 @@ namespace LastShift.UI
             switch (current)
             {
                 case Screen.Title:
-                    if (GameInput.UpPressed) { menuIndex = (menuIndex + titleMenu.Count - 1) % titleMenu.Count; UiSfx.TerminalMove(); RefreshTitleMenu(); }
-                    if (GameInput.DownPressed) { menuIndex = (menuIndex + 1) % titleMenu.Count; UiSfx.TerminalMove(); RefreshTitleMenu(); }
                     if (GameInput.ConfirmPressed) Confirm();
                     if (GameInput.EscapePressed) { UiSfx.PauseMove(); ShowScreen(Screen.ConfirmQuit); }
+                    break;
+
+                case Screen.Instructions:
+                    // Enter only: no Up/Down needed on the instruction pages.
+                    if (GameInput.ConfirmPressed) Confirm();
+                    if (GameInput.EscapePressed)
+                    {
+                        UiSfx.PauseMove();
+                        if (pageIndex == 0) ShowScreen(Screen.Title);
+                        else { pageIndex--; ApplyPage(); }
+                    }
                     break;
 
                 case Screen.TutorialChoice:
                     if (GameInput.UpPressed || GameInput.DownPressed)
                     {
-                        choiceIndex = 1 - choiceIndex;
+                        choiceIndex = 1 - choiceIndex; // two options: navigation wraps
                         UiSfx.TerminalMove();
                         RefreshChoiceMenu();
                     }
                     if (GameInput.ConfirmPressed) Confirm();
-                    if (GameInput.EscapePressed) { UiSfx.PauseMove(); ShowScreen(Screen.Title); }
-                    break;
-
-                case Screen.Briefing:
-                    if (GameInput.ConfirmPressed) Confirm();
-                    if (GameInput.EscapePressed) { UiSfx.PauseMove(); ShowScreen(Screen.ConfirmSkip); }
+                    if (GameInput.EscapePressed)
+                    {
+                        UiSfx.PauseMove();
+                        pageIndex = Loc.InstructionHeaders.Length - 1;
+                        ShowScreen(Screen.Instructions);
+                        ApplyPage();
+                    }
                     break;
 
                 case Screen.ConfirmQuit:
-                case Screen.ConfirmSkip:
                     if (GameInput.UpPressed || GameInput.DownPressed) { modalIndex = 1 - modalIndex; UiSfx.TerminalMove(); RefreshModal(); }
                     if (GameInput.ConfirmPressed) Confirm();
-                    if (GameInput.EscapePressed) { UiSfx.PauseMove(); ShowScreen(current == Screen.ConfirmSkip ? Screen.Briefing : Screen.Title); }
+                    if (GameInput.EscapePressed) { UiSfx.PauseMove(); ShowScreen(Screen.Title); }
                     break;
             }
         }
@@ -390,52 +572,34 @@ namespace LastShift.UI
             {
                 case Screen.Title:
                     UiSfx.Confirm();
-                    if (menuIndex == 2) ShowScreen(Screen.ConfirmQuit);
-                    // «НАЧАТЬ СМЕНУ» and «ИНСТРУКТАЖ» both pass through the
-                    // first-launch tutorial choice before the normal briefing.
-                    else ShowScreen(Screen.TutorialChoice);
+                    StartInstructions();
+                    break;
+
+                case Screen.Instructions:
+                    if (pageIndex < Loc.InstructionHeaders.Length - 1)
+                    {
+                        UiSfx.PageFlip();
+                        pageIndex++;
+                        ApplyPage();
+                    }
+                    else
+                    {
+                        // The tutorial choice always comes after ALL instruction pages.
+                        UiSfx.Confirm();
+                        ShowScreen(Screen.TutorialChoice);
+                    }
                     break;
 
                 case Screen.TutorialChoice:
                     UiSfx.Confirm();
-                    if (choiceIndex == 0)
-                    {
-                        // «ПРОЙТИ УРОК» — load Level 1 in interactive-tutorial mode.
-                        if (!loading)
-                        {
-                            loading = true;
-                            Core.GameManager.TutorialRequested = true;
-                            SceneLoader.Load(GameManager.Level1Scene);
-                        }
-                    }
-                    else
-                    {
-                        // «СРАЗУ К СМЕНЕ» — straight into the normal intro flow.
-                        Core.GameManager.TutorialRequested = false;
-                        StartBriefing();
-                    }
-                    break;
-
-                case Screen.Briefing:
-                    if (pageIndex < Loc.IntroHeaders.Length - 1)
-                    {
-                        UiSfx.PageFlip();
-                        pageIndex++;
-                        ApplyPage(instant: false);
-                    }
-                    else { UiSfx.Confirm(); LoadLevel1(); }
+                    // 0 = «ПРОЙТИ УРОК» (interactive lesson first), 1 = «НАЧАТЬ СМЕНУ».
+                    LoadLevel1(choiceIndex == 0);
                     break;
 
                 case Screen.ConfirmQuit:
                     UiSfx.Confirm();
                     if (modalIndex == 0) SceneLoader.Quit();
                     else ShowScreen(Screen.Title);
-                    break;
-
-                case Screen.ConfirmSkip:
-                    UiSfx.Confirm();
-                    if (modalIndex == 0) LoadLevel1();
-                    else ShowScreen(Screen.Briefing);
                     break;
             }
         }
@@ -467,20 +631,10 @@ namespace LastShift.UI
                 choiceMenu[i].text = (sel ? "> " : "") + baseLabel + (sel ? " <" : "");
                 choiceMenu[i].color = sel ? new Color(0.95f, 1f, 0.7f) : PhosphorDim;
                 choiceMenu[i].fontStyle = sel ? FontStyle.Bold : FontStyle.Normal;
-                choiceMenuBgs[i].color = sel ? new Color(0.2f, 0.45f, 0.25f, 0.35f) : new Color(0f, 0f, 0f, 0f);
-            }
-        }
-
-        void RefreshTitleMenu()
-        {
-            for (int i = 0; i < titleMenu.Count; i++)
-            {
-                bool sel = i == menuIndex;
-                string baseLabel = i == 0 ? Loc.MenuStartShift : i == 1 ? Loc.MenuBriefing : Loc.MenuExit;
-                titleMenu[i].text = (sel ? "> " : "") + baseLabel + (sel ? " <" : "");
-                titleMenu[i].color = sel ? new Color(0.95f, 1f, 0.7f) : PhosphorDim;
-                titleMenu[i].fontStyle = sel ? FontStyle.Bold : FontStyle.Normal;
-                titleMenuBgs[i].color = sel ? new Color(0.2f, 0.45f, 0.25f, 0.35f) : new Color(0f, 0f, 0f, 0f);
+                choiceMenuBgs[i].color = sel ? new Color(0.1f, 0.3f, 0.16f, 0.95f) : new Color(0f, 0f, 0f, 0f);
+                Color edge = sel ? new Color(0.95f, 0.85f, 0.45f, 0.85f) : new Color(0f, 0f, 0f, 0f);
+                foreach (var img in choiceMenuEdges[i])
+                    if (img != null) img.color = edge;
             }
         }
 

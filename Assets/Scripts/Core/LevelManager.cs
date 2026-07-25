@@ -37,6 +37,7 @@ namespace LastShift.Core
         PauseMenuUI pauseMenu;
         EndRoomPanel endPanel;
         HUDController hud;
+        VictorySequenceController victory;
 
         public string RoomName => layout != null ? layout.roomName : "";
         public bool Escalated => Escalation != null && Escalation.Escalated;
@@ -49,6 +50,15 @@ namespace LastShift.Core
         public bool IsPaused => paused;
         /// <summary>Set by the tutorial while its completion panel owns the input.</summary>
         public bool TutorialOverlayLock { get; set; }
+
+        /// <summary>
+        /// An informational tutorial step owns the clock (the room is frozen while
+        /// the player reads). LevelManager must not touch Time.timeScale then.
+        /// </summary>
+        public bool TutorialTimeFreeze { get; set; }
+
+        /// <summary>True while the industrial victory animation is still running.</summary>
+        public bool VictoryPlaying => victory != null && victory.Playing;
 
         public RepairObjective CurrentObjectiveForHud
         {
@@ -165,6 +175,9 @@ namespace LastShift.Core
 
             WireToasts();
 
+            // The room announces itself once and fades: no permanent top header.
+            if (hud != null) hud.ShowRoomTitle(layout.roomName, layout.goalText);
+
             if (TutorialMode)
             {
                 gameObject.AddComponent<TutorialFlowController>().Init(this, refs, hud);
@@ -217,6 +230,9 @@ namespace LastShift.Core
 
         CommandTerminalUI GetTerminalUi() =>
             Terminal != null ? Terminal.GetComponent<CommandTerminalUI>() : null;
+
+        /// <summary>Terminal view (command list + lower-left detail panel rects).</summary>
+        public CommandTerminalUI TerminalUi => GetTerminalUi();
 
         /// <summary>
         /// Timing feedback: effective activations get a positive line and a soft
@@ -312,10 +328,10 @@ namespace LastShift.Core
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.055f, 0.06f, 0.07f);
 
-            // Fit the whole room into the area right of the terminal (28%) and
-            // below the HUD strip (~13.5%), then shift so the room centres there.
+            // Fit the whole room into the area right of the terminal (28%). The top
+            // HUD strip is gone, so only a thin margin is reserved above.
             const float panelFrac = 0.28f;
-            const float topFrac = 0.135f;
+            const float topFrac = 0.02f;
             float aspect = cam.aspect;
             float margin = 1.0f;
             float orthoForH = (layout.roomSize.y + margin) / (2f * (1f - topFrac));
@@ -360,6 +376,15 @@ namespace LastShift.Core
             if (roomComplete) return;
             if (TutorialMode) return; // cannot happen in the lesson; never end the room
             roomComplete = true;
+            // The factory won this room: play the short industrial victory animation
+            // first, and only then show the (opaque) result screen with its menu.
+            victory = gameObject.AddComponent<VictorySequenceController>();
+            victory.Play(this, ShowVictoryResult);
+        }
+
+        void ShowVictoryResult()
+        {
+            if (endPanel == null) return;
             if (levelData.finalLevel) endPanel.ShowSliceComplete();
             else endPanel.ShowRoomComplete();
         }
@@ -370,6 +395,8 @@ namespace LastShift.Core
         {
             if (roomComplete)
             {
+                // Result input only wakes up once the victory animation is done.
+                if (VictoryPlaying || endPanel == null || !endPanel.Visible) return;
                 if (levelData.finalLevel) HandleEndMenu();
                 else if (GameInput.ConfirmPressed) { UiSfx.Confirm(); SceneLoader.Load(levelData.nextSceneName); }
                 return;
@@ -396,8 +423,9 @@ namespace LastShift.Core
 
             if (GameInput.EscapePressed) { SetPaused(true); return; }
 
-            // Editor-only fast-forward; does nothing in released builds.
-            Time.timeScale = GameInput.SpeedHeld ? 3f : 1f;
+            // Editor-only fast-forward; does nothing in released builds. While an
+            // informational tutorial step is up, the lesson owns the clock.
+            if (!TutorialTimeFreeze) Time.timeScale = GameInput.SpeedHeld ? 3f : 1f;
         }
 
         /// <summary>

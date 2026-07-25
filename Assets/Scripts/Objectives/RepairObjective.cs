@@ -16,6 +16,9 @@ namespace LastShift.Objectives
 
         public float Progress01 { get; private set; }
 
+        /// <summary>True while the engineer is actively working on this console.</summary>
+        public bool IsBeingRepaired => !Completed && Time.time - lastRepairTick < 0.35f;
+
         SpriteRenderer body;
         SpriteRenderer screen;
         SpriteRenderer statusLed;
@@ -80,6 +83,10 @@ namespace LastShift.Objectives
             currentRing.gameObject.SetActive(false);
 
             sparks = FxFactory.Sparks(transform);
+
+            // Local «РЕМОНТ» readout above the console — repair progress is shown
+            // where the work happens, never as a global bar at the top of the screen.
+            LastShift.UI.LocalRepairProgressUI.Attach(this, 1.05f);
         }
 
         public void SetIsCurrent(bool current)

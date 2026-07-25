@@ -22,11 +22,17 @@ dotnet build Assembly-CSharp-Editor.csproj -v q -nologo
 # Play Mode smoke tests (batch Unity; exits nonzero on runtime errors)
 UNITY="/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity"
 "$UNITY" -batchmode -projectPath <path> -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -logFile smoke.log
-# Variants: -smokeScene Level_02_PackagingLine | -smokeFinal (final victory screen)
-#           -smokeDefeat (drives the restart/quit menu end-to-end via UnifiedGameInput)
-#           -smokeTutorial (takes «ПРОЙТИ УРОК» at the choice screen and validates the
-#           interactive tutorial room; the default Boot run picks «СРАЗУ К СМЕНЕ»)
-# Grep the log for SMOKE_RESULT / SMOKE_ERR.
+# Variants: -smokeScene Level_02_PackagingLine
+#           -smokeScene Level_03_ColdStorage -smokeFinal (final «ЗАВОД ПОБЕДИЛ» screen +
+#           victory-animation gating; needs the FINAL room, not Boot/Level 1)
+#           -smokeScene Level_01_RawMilkIntake -smokeDefeat (drives the restart/quit menu
+#           end-to-end via UnifiedGameInput; does not walk the Boot flow)
+#           -smokeTutorial (takes «ПРОЙТИ УРОК» at the choice screen, acknowledges the
+#           lesson's informational steps via Submit and asserts callout layout; the
+#           default Boot run picks «НАЧАТЬ СМЕНУ»)
+#           -smokeSeconds 110 (longer play window; with -smokeTutorial walks the whole
+#           ten-step lesson — the default 35 s only covers its text steps)
+# Grep the log for SMOKE_RESULT / SMOKE_ERR / SMOKE_FAIL.
 ```
 
 If the user's Unity editor has the project open (`Temp/UnityLockfile` exists), batch mode can't run on the same path — rsync `Assets Packages ProjectSettings Library UserSettings` to a scratch copy and run there (Library copy keeps import fast).
@@ -44,7 +50,13 @@ In-editor tools: **Tools ▸ Last Shift ▸ Build All** regenerates all scenes, 
 
 **Per-room flow**: `LevelManager` (one per level scene) builds the room, spawns the engineer, owns pause/end-of-room state, and routes all input in `Update()` — menus like `PauseMenuUI`/`EndRoomPanel` are pure views whose selection is driven by LevelManager polling `GameInput`. `GameManager` (persistent) holds scene-name constants; `SceneLoader.Reload()` restarts the current room (always resets `Time.timeScale`); `SceneLoader.Quit()` wraps `Application.Quit` / editor-stop behind `#if UNITY_EDITOR`.
 
-**End screens**: `EndRoomPanel` shows win («ИНЖЕНЕР ОТСТУПИЛ», Enter → next room), defeat («ЦЕХ СТАБИЛИЗИРОВАН») and final victory («ЗАВОД ПОБЕДИЛ»). Defeat and final share one two-option menu — «ПОВТОРИТЬ ЦЕХ» (reload current room) / «ВЫЙТИ ИЗ ИГРЫ» — handled by `LevelManager.HandleEndMenu()`; initial selection is always «ПОВТОРИТЬ ЦЕХ», navigation wraps, Esc jumps to quit. The pause menu (Esc) reuses the same labels.
+**End screens**: `EndRoomPanel` shows win («ИНЖЕНЕР ОТСТУПИЛ», Enter → next room), defeat («ЦЕХ СТАБИЛИЗИРОВАН») and final victory («ЗАВОД ПОБЕДИЛ») on a *fully opaque* terminal panel. Defeat and final share one two-option menu — «ПОВТОРИТЬ ЦЕХ» (reload current room) / «ВЫЙТИ ИЗ ИГРЫ» — handled by `LevelManager.HandleEndMenu()`; initial selection is always «ПОВТОРИТЬ ЦЕХ», navigation wraps, Esc jumps to quit. The pause menu (Esc) reuses the same labels. Every factory win first runs `VictorySequenceController` (~3.5 s); result input is gated behind `LevelManager.VictoryPlaying`.
+
+**Onboarding**: `IntroFlowUI` runs Title → three mandatory instruction pages → «ВВОДНЫЙ УРОК» choice → tutorial or Level 1, on every new game, with no PlayerPrefs. The choice must never appear before all three pages.
+
+**HUD**: there is no permanent top strip. «РЕСУРС УПРАВЛЕНИЯ» and «РЕШИМОСТЬ ИНЖЕНЕРА» live in `TacticalDetailPanelController` (lower-left of the terminal); repair progress is a local `LocalRepairProgressUI` plate at the console being repaired; the room title only flashes at room start. Do not reintroduce a global bar for any of these.
+
+**Tutorial**: `TutorialFlowController` (Core) sequences 10 steps; presentation is `TutorialStepController` + `TutorialFocusOverlay` / `TutorialHighlightTarget` / `TutorialCalloutPanel` / `TutorialInputLock` (UI). Exactly one target is highlighted at a time, everything else dims, and informational steps freeze the room and wait for Submit. `TutorialStepController` runs at execution order −60 (after `ArduinoInputBridge` at −100, before the command terminal at 0), so the acknowledging Enter never reaches the terminal. Highlight shape follows the target: rectangles for rectangular objects/UI, corner brackets for irregular ones, a ring only for genuinely round elements — never a generic circle, never a speech bubble.
 
 **Audio**: persistent `AudioManager` singleton; `OnSceneLoaded` stops all loops and clears the pause duck, so restarts can't leak audio state. Per-room ambience lives in `RoomAudioDirector` (created by LevelManager, dies with the scene).
 

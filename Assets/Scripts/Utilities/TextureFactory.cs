@@ -146,7 +146,9 @@ namespace LastShift.Utilities
         {
             return Cached("soft", () =>
             {
-                const int S = 64;
+                // Glows are stretched over metres of the room, so the gradient needs
+                // enough samples not to band or read as a pixelated blob.
+                const int S = 256;
                 var tex = NewTex(S, S, false);
                 var px = new Color32[S * S];
                 float half = S * 0.5f;
@@ -161,7 +163,7 @@ namespace LastShift.Utilities
                     }
                 }
                 tex.SetPixels32(px);
-                return MakeSprite(tex, 64f);
+                return MakeSprite(tex, S);
             });
         }
 

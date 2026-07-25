@@ -20,11 +20,16 @@ namespace LastShift.EditorTools
 
         static double startTime;
         static double lastActivation;
+        static double lastTutorialSubmit;
+        static double lastTutorialAct;
+        static double victoryForcedAt;
+        static bool victoryAnimChecked;
         static int errorCount;
 
         const string FinalKey = "LastShift.SmokeFinal";
         const string DefeatKey = "LastShift.SmokeDefeat";
         const string TutorialKey = "LastShift.SmokeTutorial";
+        const string SecondsKey = "LastShift.SmokeSeconds";
         const string PhaseKey = "LastShift.SmokePhase";
         const string FailKey = "LastShift.SmokeFails";
 
@@ -38,6 +43,7 @@ namespace LastShift.EditorTools
             bool final = false;
             bool defeat = false;
             bool tutorial = false;
+            float playSeconds = (float)PlaySeconds;
             string[] args = System.Environment.GetCommandLineArgs();
             for (int i = 0; i < args.Length; i++)
             {
@@ -45,10 +51,17 @@ namespace LastShift.EditorTools
                 if (args[i] == "-smokeFinal") final = true;
                 if (args[i] == "-smokeDefeat") defeat = true;
                 if (args[i] == "-smokeTutorial") tutorial = true;
+                // Opt-in longer window: the ten-step lesson needs ~110 s to be walked
+                // end to end (practical steps wait for the engineer to come to them).
+                if (args[i] == "-smokeSeconds" && i + 1 < args.Length &&
+                    float.TryParse(args[i + 1], System.Globalization.NumberStyles.Float,
+                                   System.Globalization.CultureInfo.InvariantCulture, out float secs))
+                    playSeconds = secs;
             }
             SessionState.SetBool(FinalKey, final);
             SessionState.SetBool(DefeatKey, defeat);
             SessionState.SetBool(TutorialKey, tutorial);
+            SessionState.SetFloat(SecondsKey, playSeconds);
             SessionState.SetString(PhaseKey, "boot");
             SessionState.SetInt(FailKey, 0);
 
@@ -69,6 +82,10 @@ namespace LastShift.EditorTools
         {
             startTime = EditorApplication.timeSinceStartup;
             lastActivation = 0;
+            lastTutorialSubmit = 0;
+            lastTutorialAct = 0;
+            victoryForcedAt = 0;
+            victoryAnimChecked = false;
             errorCount = 0;
             Application.logMessageReceived += OnLog;
             EditorApplication.update += Tick;
@@ -139,11 +156,57 @@ namespace LastShift.EditorTools
                 return;
             }
 
+            // Tutorial scenario: walk the whole lesson. Text steps are acknowledged
+            // the way a player does — a real Submit through UnifiedGameInput (the
+            // Arduino path); practical steps activate the system the step asks for,
+            // and only at a moment when it can actually work.
+            bool tutorialRun = SessionState.GetBool(TutorialKey, false);
+            if (tutorialRun && LevelManager.Instance != null && elapsed > 6.0)
+            {
+                var tf = LevelManager.Instance.GetComponent<TutorialFlowController>();
+                if (tf != null && tf.DevRouteBlocked)
+                {
+                    errorCount++;
+                    Debug.Log("SMOKE_FAIL: lesson dead-end — the gate blocks the route while "
+                              + "only the arm may be activated");
+                }
+
+                var need = tf != null ? tf.DevRequiredMachine : null;
+                if (need != null)
+                {
+                    bool worthIt = need.ActivationAlwaysEffective || need.EngineerInEffectiveZone;
+                    if (need.IsReady && worthIt && elapsed - lastTutorialAct > 1.0)
+                    {
+                        lastTutorialAct = elapsed;
+                        need.TryActivate();
+                        Debug.Log("SMOKE_TUTORIAL_ACT " + need.displayName + " step=" + tf.DevStep
+                            + " t=" + elapsed.ToString("0.0"));
+                    }
+                }
+                else if (elapsed - lastTutorialSubmit > 2.0)
+                {
+                    lastTutorialSubmit = elapsed;
+                    CheckTutorialLayout(tf);
+                    SmokeInputDriver.Get().QueueSubmit();
+                    Debug.Log("SMOKE_TUTORIAL_SUBMIT step=" + (tf != null ? tf.DevStep : -1)
+                        + " t=" + elapsed.ToString("0.0"));
+                }
+                // No early return here: the run must still reach its end-of-window
+                // check below, otherwise this scenario would never finish.
+            }
+
             // Exercise the terminal: activate the selected command every 4 seconds.
-            if (elapsed > 8.0 && elapsed - lastActivation > 4.0)
+            // Skipped in the tutorial scenario — the lesson driver above owns input there.
+            if (!tutorialRun && elapsed > 8.0 && elapsed - lastActivation > 4.0)
             {
                 lastActivation = elapsed;
                 var lm = LevelManager.Instance;
+                var view = lm != null ? lm.TerminalUi : null;
+                if (view != null && !view.DevSelectedRowVisible)
+                {
+                    errorCount++;
+                    Debug.Log("SMOKE_FAIL: selected command is outside the list viewport");
+                }
                 if (lm != null && lm.Terminal != null && lm.Terminal.Selected != null)
                 {
                     bool ok = lm.Terminal.Selected.TryActivate();
@@ -162,8 +225,22 @@ namespace LastShift.EditorTools
                 {
                     Debug.Log("SMOKE_FORCE_ESCAPE");
                     flm.OnEngineerEscaped();
+                    victoryForcedAt = elapsed;
                 }
-                if (elapsed > 18.0)
+                // The industrial victory animation must run first and must hold the
+                // result menu back until it finishes.
+                if (victoryForcedAt > 0.0 && !victoryAnimChecked && elapsed - victoryForcedAt > 0.6)
+                {
+                    victoryAnimChecked = true;
+                    bool playing = flm != null && flm.VictoryPlaying;
+                    bool menuLive = false;
+                    if (flm != null && PanelOf(flm) != null) menuLive = PanelOf(flm).HasMenu;
+                    if (!playing) Debug.Log("SMOKE_FAIL: victory animation did not start");
+                    if (menuLive) Debug.Log("SMOKE_FAIL: result menu live during the victory animation");
+                    if (!playing || menuLive) errorCount++;
+                    Debug.Log("SMOKE_VICTORY_ANIM playing=" + playing + " menuLive=" + menuLive);
+                }
+                if (victoryForcedAt > 0.0 && elapsed - victoryForcedAt > 6.0)
                 {
                     bool foundTitle = false;
                     bool foundRepeat = false;
@@ -185,7 +262,7 @@ namespace LastShift.EditorTools
                 }
             }
 
-            if (elapsed < PlaySeconds) return;
+            if (elapsed < SessionState.GetFloat(SecondsKey, (float)PlaySeconds)) return;
 
             EditorApplication.update -= Tick;
             SessionState.SetBool(RunningKey, false);
@@ -202,13 +279,53 @@ namespace LastShift.EditorTools
             bool tutorialOk = true;
             if (SessionState.GetBool(TutorialKey, false))
             {
+                var flow = level != null ? level.GetComponent<TutorialFlowController>() : null;
+                int reached = flow != null ? flow.DevStep : 0;
+                // The lesson must have advanced past step 1 through the shared input
+                // funnel: informational steps really wait for (and accept) Submit.
+                // Within the default 35 s window the lesson gets through its text
+                // steps; step > 1 proves they really wait for (and accept) Submit one
+                // at a time. Use «-smokeSeconds 110» to walk it up to the combination.
                 tutorialOk = level != null && level.TutorialMode &&
-                             level.RoomName == LastShift.Data.Loc.TutorialRoomName;
-                Debug.Log("SMOKE_TUTORIAL_OK=" + tutorialOk);
+                             level.RoomName == LastShift.Data.Loc.TutorialRoomName &&
+                             reached > 1;
+                Debug.Log("SMOKE_TUTORIAL_OK=" + tutorialOk + " step=" + reached);
             }
             bool pass = errorCount == 0 && sceneOk && russianOk && tutorialOk;
             Debug.Log(pass ? "SMOKE_RESULT: PASS" : "SMOKE_RESULT: FAIL errors=" + errorCount);
             EditorApplication.Exit(pass ? 0 : 1);
+        }
+
+        /// <summary>
+        /// Layout rules the redesigned lesson must keep on every step: exactly one
+        /// marked target, a callout that stays on screen and never covers it.
+        /// </summary>
+        static void CheckTutorialLayout(TutorialFlowController flow)
+        {
+            var steps = flow != null ? flow.DevSteps : null;
+            if (steps == null || !steps.DevCalloutVisible) return;
+            Rect card = steps.DevCalloutRect;
+            float w = UnityEngine.Screen.width, h = UnityEngine.Screen.height;
+            bool onScreen = card.xMin >= -1f && card.yMin >= -1f && card.xMax <= w + 1f && card.yMax <= h + 1f;
+            if (!onScreen)
+            {
+                errorCount++;
+                Debug.Log("SMOKE_FAIL: callout off screen " + card + " screen=" + w + "x" + h);
+            }
+            if (steps.DevHasTarget)
+            {
+                Rect target = steps.DevTargetRect;
+                bool overlaps = card.xMin < target.xMax && card.xMax > target.xMin &&
+                                card.yMin < target.yMax && card.yMax > target.yMin;
+                if (overlaps)
+                {
+                    errorCount++;
+                    Debug.Log("SMOKE_FAIL: callout covers its target card=" + card + " target=" + target);
+                }
+                Debug.Log("SMOKE_TUTORIAL_LAYOUT step=" + flow.DevStep + " onScreen=" + onScreen +
+                          " coversTarget=" + overlaps);
+            }
+            else Debug.Log("SMOKE_TUTORIAL_LAYOUT step=" + flow.DevStep + " onScreen=" + onScreen + " (no target)");
         }
 
         // ---------------- defeat-menu scenario ----------------

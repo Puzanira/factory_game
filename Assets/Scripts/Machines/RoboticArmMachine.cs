@@ -47,6 +47,11 @@ namespace LastShift.Machines
             }
         }
 
+        /// <summary>Bounded work area: the press bed, or the arm's reach box.</summary>
+        public override Rect EffectiveZoneRect => pressMode && spec != null
+            ? Viz.RectAt(spec.pos, spec.size + new Vector2(1.2f, 1.2f))
+            : Viz.RectAt(transform.position, new Vector2(radius * 2f, radius * 2f));
+
         protected override string SelectionSfxName => "servo_soft";
         protected override string ActivateSfxName => "arm_windup"; // hydraulic charge telegraph
         protected override float ActivateSfxVolume => 0.55f;

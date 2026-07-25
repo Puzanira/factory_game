@@ -66,6 +66,14 @@ namespace LastShift.Machines
         /// <summary>Recovery-style activations (e.g. re-opening a door) are never judged wasted.</summary>
         public virtual bool ActivationAlwaysEffective => false;
 
+        /// <summary>
+        /// World-space footprint of this machine's effective zone. Subclasses report
+        /// their real shape (belt strip, doorway, arm work area) so the tutorial can
+        /// frame the actual zone instead of a generic circle around everything.
+        /// </summary>
+        public virtual Rect EffectiveZoneRect =>
+            Viz.RectAt(transform.position, BodySize + new Vector2(0.6f, 0.6f));
+
         /// <summary>Control charges one player activation costs.</summary>
         public virtual int ResourceCost => 1;
 
@@ -108,18 +116,48 @@ namespace LastShift.Machines
         /// <summary>Build the effect-range / route preview shown while selected.</summary>
         protected abstract void BuildPreview(Transform root);
 
+        /// <summary>
+        /// Selection marker: a thin amber rectangle matching the machine's real
+        /// footprint (a conveyor gets a long belt-shaped frame, not a circle around
+        /// it), with terminal corner brackets and a soft glow.
+        /// </summary>
         void BuildHighlight()
         {
-            float d = Mathf.Max(BodySize.x, BodySize.y) + 0.55f;
+            Vector2 size = BodySize + new Vector2(0.55f, 0.55f);
             var holder = new GameObject("Highlight");
             holder.transform.SetParent(transform, false);
-            Viz.Make("Ring", holder.transform, PlaceholderShape.Ring,
-                new Color(1f, 0.85f, 0.4f, 0.95f), Vector2.zero, new Vector2(d, d), 12, unlit: true);
-            var glow = FxFactory.Glow(holder.transform, new Color(1f, 0.8f, 0.35f, 0.18f),
-                new Vector2(d * 1.5f, d * 1.5f), 11);
+
+            var amber = new Color(1f, 0.85f, 0.4f, 0.95f);
+            float t = Mathf.Clamp(Mathf.Min(size.x, size.y) * 0.06f, 0.05f, 0.1f);
+            Viz.Make("EdgeT", holder.transform, PlaceholderShape.Square, amber,
+                new Vector2(0f, size.y * 0.5f), new Vector2(size.x, t), 12, unlit: true);
+            Viz.Make("EdgeB", holder.transform, PlaceholderShape.Square, amber,
+                new Vector2(0f, -size.y * 0.5f), new Vector2(size.x, t), 12, unlit: true);
+            Viz.Make("EdgeL", holder.transform, PlaceholderShape.Square, amber,
+                new Vector2(-size.x * 0.5f, 0f), new Vector2(t, size.y), 12, unlit: true);
+            Viz.Make("EdgeR", holder.transform, PlaceholderShape.Square, amber,
+                new Vector2(size.x * 0.5f, 0f), new Vector2(t, size.y), 12, unlit: true);
+
+            // Corner brackets: thicker stubs so the frame reads as a technical marker.
+            float armLen = Mathf.Min(Mathf.Min(size.x, size.y) * 0.45f, 0.55f);
+            float bt = t * 1.8f;
+            for (int i = 0; i < 4; i++)
+            {
+                float sx = (i & 1) == 0 ? -1f : 1f;
+                float sy = (i & 2) == 0 ? -1f : 1f;
+                Vector2 corner = new Vector2(sx * size.x * 0.5f, sy * size.y * 0.5f);
+                Viz.Make("Corner" + i + "H", holder.transform, PlaceholderShape.Square, amber,
+                    corner - new Vector2(sx * armLen * 0.5f, 0f), new Vector2(armLen, bt), 13, unlit: true);
+                Viz.Make("Corner" + i + "V", holder.transform, PlaceholderShape.Square, amber,
+                    corner - new Vector2(0f, sy * armLen * 0.5f), new Vector2(bt, armLen), 13, unlit: true);
+            }
+
+            var glow = FxFactory.Glow(holder.transform, new Color(1f, 0.8f, 0.35f, 0.16f),
+                new Vector2(size.x * 1.15f, size.y * 1.6f), 11);
             glow.name = "SelectionGlow";
             var pulse = holder.AddComponent<SelectionPulse>();
             pulse.target = holder.transform;
+            pulse.amount = Mathf.Max(size.x, size.y) > 4f ? 0.02f : 0.05f; // stays subtle on long belts
             highlight = holder;
             highlight.SetActive(false);
         }
@@ -241,19 +279,36 @@ namespace LastShift.Machines
 
         IEnumerator FlashRoutine()
         {
-            float d = Mathf.Max(BodySize.x, BodySize.y) + 0.3f;
-            var sr = Viz.Make("Flash", transform, PlaceholderShape.Ring,
-                new Color(1f, 1f, 1f, 0.9f), Vector2.zero, new Vector2(d, d), 11);
+            // Rectangular flash frame: same shape language as the selection marker,
+            // so a long conveyor never flashes as a huge circle.
+            Vector2 size = BodySize + new Vector2(0.3f, 0.3f);
+            var holder = new GameObject("Flash");
+            holder.transform.SetParent(transform, false);
+            var white = new Color(1f, 1f, 1f, 0.9f);
+            float thick = Mathf.Clamp(Mathf.Min(size.x, size.y) * 0.07f, 0.05f, 0.12f);
+            var edges = new[]
+            {
+                Viz.Make("FlashT", holder.transform, PlaceholderShape.Square, white,
+                    new Vector2(0f, size.y * 0.5f), new Vector2(size.x, thick), 11, unlit: true),
+                Viz.Make("FlashB", holder.transform, PlaceholderShape.Square, white,
+                    new Vector2(0f, -size.y * 0.5f), new Vector2(size.x, thick), 11, unlit: true),
+                Viz.Make("FlashL", holder.transform, PlaceholderShape.Square, white,
+                    new Vector2(-size.x * 0.5f, 0f), new Vector2(thick, size.y), 11, unlit: true),
+                Viz.Make("FlashR", holder.transform, PlaceholderShape.Square, white,
+                    new Vector2(size.x * 0.5f, 0f), new Vector2(thick, size.y), 11, unlit: true),
+            };
             float t = 0f;
             while (t < 0.35f)
             {
                 t += Time.deltaTime;
                 float k = t / 0.35f;
-                sr.transform.localScale = Vector3.one * (d * (1f + k * 0.7f));
-                sr.color = new Color(1f, 1f, 1f, 0.9f * (1f - k));
+                holder.transform.localScale = Vector3.one * (1f + k * 0.25f);
+                var c = new Color(1f, 1f, 1f, 0.9f * (1f - k));
+                for (int i = 0; i < edges.Length; i++)
+                    if (edges[i] != null) edges[i].color = c;
                 yield return null;
             }
-            Destroy(sr.gameObject);
+            Destroy(holder);
         }
 
         protected static void AddPressure(float amount, string reason)

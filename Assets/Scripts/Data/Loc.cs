@@ -50,62 +50,79 @@ namespace LastShift.Data
         public const string RoomIsYours = "Цех под контролем завода.";
         public const string NextRoomPrompt = "ENTER — СЛЕДУЮЩИЙ ЦЕХ";
         public const string RoomStabilized = "ЦЕХ СТАБИЛИЗИРОВАН";
-        public const string RoomStabilizedSub = "Инженер восстановил ручное управление. Завод проиграл.";
+        public const string RoomStabilizedSub = "Инженер восстановил ручное управление.\nЗавод проиграл.";
 
         // Final victory screen
         public const string FactoryWon = "ЗАВОД ПОБЕДИЛ";
-        public const string FactoryWonSub = "ИНЖЕНЕР ПОКИНУЛ ПРЕДПРИЯТИЕ.\nАВТОНОМНЫЙ РЕЖИМ АКТИВИРОВАН.";
+        public const string FactoryWonSub = "Инженер покинул предприятие.\nАвтономный режим сохранён.";
         public const string FactoryWonSmall = "СИСТЕМЫ ПРОИЗВОДСТВА ПРОДОЛЖАЮТ РАБОТУ.";
         public const string MenuRepeatRoom = "ПОВТОРИТЬ ЦЕХ";
         public const string MenuQuitGame = "ВЫЙТИ ИЗ ИГРЫ";
 
+        // Victory animation (terminal lines typed out before the result panel)
+        public const string VictoryLineEngineerLeft = "ИНЖЕНЕР ПОКИНУЛ ПРЕДПРИЯТИЕ";
+        public const string VictoryLineAutonomous = "АВТОНОМНЫЙ РЕЖИМ СОХРАНЁН";
+
         // Title card
         public const string TitleSubtitle = "АВТОНОМНЫЙ ПРОМЫШЛЕННЫЙ ПРОТОКОЛ";
         public const string MenuStartShift = "НАЧАТЬ СМЕНУ";
-        public const string MenuBriefing = "ИНСТРУКТАЖ";
         public const string MenuExit = "ВЫЙТИ";
         public const string ConfirmQuit = "ВЫЙТИ ИЗ ИГРЫ?";
-        public const string ConfirmSkip = "ПРОПУСТИТЬ ИНСТРУКТАЖ?";
         public const string Yes = "ДА";
         public const string No = "НЕТ";
         public const string FooterNext = "ENTER — ДАЛЕЕ";
-        public const string FooterStart = "ENTER — НАЧАТЬ СМЕНУ";
+        public const string FooterContinue = "ENTER — ПРОДОЛЖИТЬ";
         public const string MenuHint = "↑/↓ — ВЫБОР      ENTER — ПОДТВЕРДИТЬ";
 
-        // Intro briefing pages
-        public static readonly string[] IntroHeaders =
+        // ---------------- mandatory instruction pages (3, every new game) ----------------
+
+        public const string InstructionCounter = "ИНСТРУКЦИЯ {0} / {1}";
+
+        public static readonly string[] InstructionHeaders =
         {
-            "СМЕНА БЕЗ ЛЮДЕЙ",
-            "ВЫ — ИНТЕЛЛЕКТ ЗАВОДА",
+            GameTitle,
+            "ЦЕЛЬ СМЕНЫ",
             "УПРАВЛЕНИЕ",
-            "ЦЕЛЬ",
         };
 
-        public static readonly string[] IntroBodies =
+        /// <summary>Second line under the header; empty when a page has none.</summary>
+        public static readonly string[] InstructionSubheaders =
+        {
+            TitleSubtitle,
+            "",
+            "",
+        };
+
+        public static readonly string[] InstructionBodies =
         {
             "Молочный завод перешёл в автономный режим.\n\n" +
-            "Теперь производство управляет само собой.\n" +
-            "Но один инженер всё ещё пытается вернуть завод под контроль людей.\n\n" +
-            "Не дайте ему завершить ремонт.",
+            "Вы — интеллект предприятия.\n" +
+            "Вы управляете системами цеха, а не человеком.\n\n" +
+            "Внутри остался дежурный инженер.\n" +
+            "Он пытается вернуть завод под контроль людей.",
 
-            "Вы не управляете персонажем.\n" +
-            "Вы управляете оборудованием: конвейерами, воротами,\n" +
-            "манипуляторами, погрузчиками и аварийными системами.\n\n" +
-            "Ваша задача — доказать инженеру, что цех больше невозможно удержать.",
+            "Инженер ремонтирует пульты ручного управления.\n\n" +
+            "Не дайте ему завершить ремонт.\n" +
+            "Перекрывайте маршруты, направляйте его оборудованием\n" +
+            "и используйте системы в подходящий момент.\n\n" +
+            "Если инженер покинет цех — завод победит.",
 
-            "СТРЕЛКА ВВЕРХ  — выбрать предыдущую систему\n" +
-            "СТРЕЛКА ВНИЗ   — выбрать следующую систему\n" +
-            "ENTER          — активировать выбранную систему\n\n" +
-            "Выбранная система подсвечивается на карте.\n" +
-            "Используйте оборудование, чтобы блокировать маршруты,\n" +
-            "создавать опасности и срывать ремонт.",
-
-            "Снижайте РЕШИМОСТЬ ИНЖЕНЕРА.\n" +
-            "Не дайте ему завершить ремонт.\n\n" +
-            "Когда инженер потеряет решимость,\n" +
-            "он отступит к выходу.\n" +
-            "Если инженер покинет завод — завод победит.",
+            "КЛАВИАТУРА\n" +
+            "СТРЕЛКА ВВЕРХ — предыдущая система\n" +
+            "СТРЕЛКА ВНИЗ — следующая система\n" +
+            "ENTER — активировать выбранную систему\n\n" +
+            "ARDUINO\n" +
+            "ДЖОЙСТИК ВВЕРХ / ВЛЕВО — предыдущая система\n" +
+            "ДЖОЙСТИК ВНИЗ / ВПРАВО — следующая система\n" +
+            "КНОПКА НА ДЖОЙСТИКЕ ИЛИ ВНЕШНЯЯ КНОПКА — активировать",
         };
+
+        // Page 2 schematic labels
+        public const string InstructionLabelEngineer = "ИНЖЕНЕР РЕМОНТИРУЕТ ПУЛЬТЫ";
+        public const string InstructionLabelFactory = "ЗАВОД СОЗДАЁТ ДАВЛЕНИЕ";
+        // Page 3 closing note
+        public const string InstructionTacticalNote =
+            "Не включайте всё сразу.\nНаблюдайте за инженером и выбирайте подходящий момент.";
 
         // Engineer states
         public const string StateEntering = "Входит в цех";
@@ -198,58 +215,111 @@ namespace LastShift.Data
         public const string ComboHintMarked = "ЦЕЛЬ ОТМЕЧЕНА: МАНИПУЛЯТОР И ОПАСНЫЕ ЗОНЫ УСИЛЕНЫ";
         public const string ComboHintCutRetreat = "ВОЗМОЖНА КОМБИНАЦИЯ: ПЕРЕКРОЙТЕ ПУТЬ ОТСТУПЛЕНИЯ";
 
-        // Tutorial choice screen
-        public const string TutorialChoiceHeader = "ПЕРВЫЙ ЗАПУСК";
-        public const string TutorialChoiceBody = "Нужен вводный урок по управлению заводом?";
+        // Tutorial choice screen (always after the three instruction pages)
+        public const string TutorialChoiceHeader = "ВВОДНЫЙ УРОК";
+        public const string TutorialChoiceBody =
+            "В уроке вы познакомитесь с интерфейсом,\n" +
+            "зонами воздействия и комбинациями систем.\n\n" +
+            "Вы можете пройти его сейчас\n" +
+            "или сразу перейти к основной смене.";
         public const string TutorialChoiceYes = "ПРОЙТИ УРОК";
-        public const string TutorialChoiceNo = "СРАЗУ К СМЕНЕ";
+        public const string TutorialChoiceNo = "НАЧАТЬ СМЕНУ";
         public const string TutorialChoiceFooter = "СТРЕЛКА ВВЕРХ / ВНИЗ — ВЫБОР\nENTER — ПОДТВЕРДИТЬ";
 
-        // Interactive tutorial
+        // ---------------- interactive tutorial ----------------
+
         public const string TutorialRoomName = "УЧЕБНЫЙ ЦЕХ";
-        public const string TutorialStep1Header = "1. ВЫБОР СИСТЕМЫ";
-        public const string TutorialStep1Body =
-            "Инженер чинит ремонтные пульты (красные панели). Если он завершит\n" +
-            "все ремонты — цех стабилизирован, это победа инженера.\n" +
-            "Стрелками выберите систему. Нажмите ENTER, чтобы активировать её.";
-        public const string TutorialStep1Done = "СИСТЕМА АКТИВИРОВАНА";
-        public const string TutorialStep2Header = "2. НЕ ТРАТЬТЕ СИСТЕМЫ ВПУСТУЮ";
-        public const string TutorialStep2Body =
-            "У инженера есть РЕШИМОСТЬ: удары и опасности снижают её.\n" +
-            "Упадёт до нуля — инженер отступит, и цех останется заводу.\n" +
-            "Дождитесь, пока инженер войдёт в зону, и только затем активируйте манипулятор.";
-        public const string TutorialStep2Early = "ЦЕЛЬ ВНЕ ЗОНЫ — ПОДОЖДИТЕ";
+        public const string TutorialStepLabel = "ШАГ {0} / {1}";
+        public const string TutorialFooterAck = "ENTER — ДАЛЕЕ";
+        public const string TutorialFooterAction = "ВЫПОЛНИТЕ ДЕЙСТВИЕ";
+        public const string TutorialWrongMachine = "ЭТА СИСТЕМА НЕ НУЖНА НА ЭТОМ ШАГЕ";
         public const string TutorialRetry = "СИТУАЦИЯ ПОВТОРЯЕТСЯ — ПОПРОБУЙТЕ ЕЩЁ РАЗ";
-        public const string TutorialStep3Header = "3. ПОДГОТОВЬТЕ ЛОВУШКУ";
-        public const string TutorialStep3Body =
-            "Закройте ворота — инженеру придётся идти в обход через конвейер.\n" +
-            "Пока инженер на ленте, смените направление конвейера —\n" +
-            "лента собьёт его и унесёт в опасную зону.";
-        public const string TutorialStep3Hint = "СНАЧАЛА — ВОРОТА. ЗАТЕМ — КОНВЕЙЕР.";
-        public const string TutorialStep3Reset = "ПОРЯДОК НАРУШЕН — ПОПРОБУЙТЕ СНОВА";
-        public const string TutorialStep4Header = "4. РЕСУРС УПРАВЛЕНИЯ";
-        public const string TutorialStep4Body =
-            "«РЕСУРС УПРАВЛЕНИЯ» — энергия завода: каждая активация тратит заряд.\n" +
-            "Заряды восстанавливаются сами, быстрее — после точных действий.\n" +
-            "Не включайте всё сразу — выбирайте подходящий момент.";
+
+        // Step 1 — engineer
+        public const string TutStep1Header = "ИНЖЕНЕР";
+        public const string TutStep1Body =
+            "Это дежурный инженер.\n\n" +
+            "Он пытается восстановить ручное управление.\n" +
+            "Следите за его маршрутом и состоянием.\n\n" +
+            "Если он завершит ремонт всех пультов,\n" +
+            "цех будет стабилизирован.";
+
+        // Step 2 — repair console
+        public const string TutStep2Header = "РЕМОНТНЫЙ ПУЛЬТ";
+        public const string TutStep2Body =
+            "Инженер ремонтирует эти пульты.\n\n" +
+            "Шкала рядом с пультом показывает\n" +
+            "текущий прогресс ремонта.\n\n" +
+            "Не дайте инженеру завершить работу.";
+
+        // Step 3 — system list
+        public const string TutStep3Header = "СИСТЕМЫ ЗАВОДА";
+        public const string TutStep3Body =
+            "Здесь находятся доступные системы цеха.\n\n" +
+            "Стрелками вверх и вниз выберите оборудование.\n" +
+            "Нажмите ENTER, чтобы активировать выбранную систему.";
+
+        // Step 4 — machine information panel
+        public const string TutStep4Header = "НАЗНАЧЕНИЕ СИСТЕМЫ";
+        public const string TutStep4Body =
+            "Здесь указано, что делает выбранная система.\n\n" +
+            "Проверяйте её зону воздействия.\n" +
+            "Не каждая система полезна в любой момент.";
+
+        // Step 5 — control resource
+        public const string TutStep5Header = "РЕСУРС УПРАВЛЕНИЯ";
+        public const string TutStep5Body =
+            "Активация систем расходует ресурс управления.\n\n" +
+            "Не включайте всё подряд.\n" +
+            "Точное воздействие восстанавливает ресурс быстрее.";
+
+        // Step 6 — engineer resolve
+        public const string TutStep6Header = "РЕШИМОСТЬ ИНЖЕНЕРА";
+        public const string TutStep6Body =
+            "Эффективные действия снижают решимость инженера.\n\n" +
+            "Когда решимость иссякнет,\n" +
+            "он отступит к выходу.";
+
+        // Step 7 — effective zone
+        public const string TutStep7Header = "ЗОНА ВОЗДЕЙСТВИЯ";
+        public const string TutStep7Body =
+            "Система сильнее, когда инженер находится в её зоне.\n\n" +
+            "Дождитесь подходящего момента.\n" +
+            "Если цель вне зоны, воздействие будет слабым.";
+
+        // Step 8 — first activation
+        public const string TutStep8Header = "АКТИВАЦИЯ СИСТЕМЫ";
+        public const string TutStep8Body =
+            "Выберите подсвеченную систему.\n\n" +
+            "Нажмите ENTER, когда инженер окажется\n" +
+            "в зоне воздействия.";
+        public const string TutWaitOutOfZone = "ЦЕЛЬ ВНЕ ЗОНЫ — ПОДОЖДИТЕ";
+        public const string TutGoodMoment = "ПОДХОДЯЩИЙ МОМЕНТ";
+        public const string TutEarlyActivation = "ЦЕЛЬ ВНЕ ЗОНЫ. ДОЖДИТЕСЬ ПОДХОДЯЩЕГО МОМЕНТА.";
+
+        // Step 9 — simple machine combination
+        public const string TutStep9Header = "КОМБИНАЦИЯ СИСТЕМ";
+        public const string TutStep9Body =
+            "Системы эффективнее работают вместе.\n\n" +
+            "Сначала перекройте маршрут воротами.\n" +
+            "Затем направьте инженера конвейером\n" +
+            "в рабочую зону манипулятора.";
+        public const string TutComboGateHeader = "СИСТЕМА: ВОРОТА";
+        public const string TutComboGateBody = "ПЕРЕКРЫВАЕТ МАРШРУТ И ЗАСТАВЛЯЕТ ИНЖЕНЕРА ИСКАТЬ ОБХОД.";
+        public const string TutComboConveyorHeader = "СИСТЕМА: КОНВЕЙЕР";
+        public const string TutComboConveyorBody = "СМЕЩАЕТ ИНЖЕНЕРА ПО ЛИНИИ.";
+        public const string TutComboArmHeader = "СИСТЕМА: МАНИПУЛЯТОР";
+        public const string TutComboArmBody = "ПРЕРЫВАЕТ РЕМОНТ, КОГДА ИНЖЕНЕР В ЗОНЕ ДОСТУПА.";
+        public const string TutSequenceReset = "ПОСЛЕДОВАТЕЛЬНОСТЬ СБРОШЕНА. ПОВТОРИТЕ ТЕКУЩИЙ ШАГ.";
+
+        // Step 10 — completion
         public const string TutorialDoneHeader = "УПРАВЛЕНИЕ ОСВОЕНО";
         public const string TutorialDoneBody =
-            "Сломите РЕШИМОСТЬ инженера — он отступит, и цех останется заводу.\n" +
-            "Не дайте ему завершить все ремонты — это победа инженера.\n" +
-            "Наблюдайте, создавайте ситуации, действуйте в нужный момент.";
+            "Наблюдайте за инженером.\n" +
+            "Перекрывайте маршруты.\n" +
+            "Создавайте комбинации.\n" +
+            "Активируйте системы в подходящий момент.";
         public const string TutorialStartShift = "НАЧАТЬ СМЕНУ";
         public const string TutorialRepeat = "ПОВТОРИТЬ УРОК";
-        public const string TutorialWrongMachine = "ЭТА СИСТЕМА НЕ НУЖНА НА ЭТОМ ШАГЕ";
-        public const string TutorialStepLabel = "ШАГ {0} / 4";
-
-        // Tutorial pointer plaques — comic speech bubbles with a tail toward the
-        // explained object; each disappears once the required action is done.
-        public const string TutPlaquePanel = "ЭТО РЕМОНТНЫЙ ПУЛЬТ\nИнженер пытается его починить.\nПочинит все пульты — победа инженера.";
-        public const string TutPlaqueTerminal = "ЭТО СПИСОК ОБОРУДОВАНИЯ\nВыбор — стрелки ↑/↓, активация — ENTER.\nНа этом шаге можно включить любую систему.";
-        public const string TutPlaqueArm = "ЭТО МАНИПУЛЯТОР\nОглушает инженера в радиусе действия.";
-        public const string TutPlaqueResolve = "РЕШИМОСТЬ ИНЖЕНЕРА УМЕНЬШИЛАСЬ";
-        public const string TutPlaqueDoor = "УСПЕЙТЕ ЗАКРЫТЬ ВОРОТА,\nпока инженер не прошёл";
-        public const string TutPlaqueConveyor = "ТЕПЕРЬ СМЕНИТЕ\nНАПРАВЛЕНИЕ КОНВЕЙЕРА";
-        public const string TutPlaqueResource = "ЭТО РЕСУРС УПРАВЛЕНИЯ\nКаждая активация тратит заряд.\nЗаряды восстанавливаются со временем.";
     }
 }

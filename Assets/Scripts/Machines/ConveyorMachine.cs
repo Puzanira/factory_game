@@ -51,6 +51,17 @@ namespace LastShift.Machines
             }
         }
 
+        /// <summary>Rectangular, strip-like directional zone: the belt surface.</summary>
+        public override Rect EffectiveZoneRect
+        {
+            get
+            {
+                Rect r = area;
+                r.xMin -= 0.5f; r.xMax += 0.5f; r.yMin -= 0.5f; r.yMax += 0.5f;
+                return r;
+            }
+        }
+
         public static Vector2 TotalPushAt(Vector2 p)
         {
             Vector2 total = Vector2.zero;

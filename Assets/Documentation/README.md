@@ -1,5 +1,18 @@
 # LAST SHIFT / ПОСЛЕДНЯЯ СМЕНА — Vertical Slice
 
+> **Pass 9 (2026-07-26): onboarding, HUD, tutorial and result screens redesigned.**
+> Boot flow is now **Title Card → three mandatory instruction pages → «ВВОДНЫЙ УРОК»
+> choice → lesson or Level 1** (see «ПОСЛЕДОВАТЕЛЬНОСТЬ ЗАПУСКА»). The permanent top
+> HUD strip is gone: «РЕСУРС УПРАВЛЕНИЯ» and «РЕШИМОСТЬ ИНЖЕНЕРА» moved into the
+> lower-left detail panel, repair progress moved to a local «РЕМОНТ» plate at the
+> console being repaired, and the room title only flashes at room start
+> (see «ИНТЕРФЕЙС»). The interactive lesson is now **10 steps, one target at a time**:
+> everything else dims, the callout is an opaque industrial terminal card (no speech
+> bubbles, no cartoon arrows), rectangular targets get rectangular frames, and each
+> informational step waits for Enter (see «ВВОДНЫЙ УРОК»). Result screens are fully
+> opaque, and a factory victory plays a short industrial animation before the menu
+> accepts input (see «ПОБЕДА И ПОРАЖЕНИЕ»).
+
 > **Pass 8.1 (2026-07-19): Room Pressure removed.** Playtest verdict: давление и
 > аварийный режим (машины, стреляющие сами) убраны совсем. Цех решается только
 > РЕШИМОСТЬЮ против ремонтов; HUD показывает одну широкую полосу решимости;
@@ -121,13 +134,13 @@ the end-of-room menu after a defeat or the final victory.
 | **Enter**    | Confirm entry; in «НАСТРОЙКИ ЗВУКА» cycles the selected volume 0→25→50→75→100% |
 | **Escape**   | Back (sound settings → pause menu → resume game)   |
 
-### Title card & intro briefing (Boot)
+### Title card, instructions & tutorial choice (Boot)
 
 | Key          | Action                                             |
 |--------------|----------------------------------------------------|
-| **Up / Down** | Move selection in the title menu, the «ПЕРВЫЙ ЗАПУСК» tutorial choice and ДА/НЕТ modals |
-| **Enter**    | Confirm / next briefing page / start the shift     |
-| **Escape**   | «ВЫЙТИ ИЗ ИГРЫ?» on the title, back to the title from the tutorial choice, «ПРОПУСТИТЬ ИНСТРУКТАЖ?» in the briefing |
+| **Enter**    | Title → instruction 1 → 2 → 3 → «ВВОДНЫЙ УРОК» choice → confirm the choice |
+| **Up / Down** | Move selection on the tutorial choice and in ДА/НЕТ modals (never needed on the instruction pages) |
+| **Escape**   | «ВЫЙТИ ИЗ ИГРЫ?» on the title; one instruction page back; from the choice back to instruction 3 |
 
 ### End-of-room screens
 
@@ -136,6 +149,9 @@ the end-of-room menu after a defeat or the final victory.
 | **Enter**    | Next room (after «ИНЖЕНЕР ОТСТУПИЛ»)               |
 | **Up / Down / Enter** | Navigate/confirm the «ПОВТОРИТЬ ЦЕХ / ВЫЙТИ ИЗ ИГРЫ» menu (after «ЦЕХ СТАБИЛИЗИРОВАН» and on the final «ЗАВОД ПОБЕДИЛ» screen) |
 | **Escape**   | In that menu: jump straight to «ВЫЙТИ ИЗ ИГРЫ»     |
+
+Every victory first plays a short industrial animation (~3.5 s); result input only
+wakes up once it has finished and the opaque result panel is up.
 
 ## УПРАВЛЕНИЕ
 
@@ -210,28 +226,126 @@ Arduino Nano:
 настраиваются в `TacticsData` (Assets ▸ Create ▸ Last Shift ▸ Tactics Data,
 положить в `Resources/TacticsData`; без ассета действуют значения по умолчанию).
 
+## ПОСЛЕДОВАТЕЛЬНОСТЬ ЗАПУСКА
+
+Каждый новый запуск игры проходит один и тот же путь:
+
+```
+Boot
+  → Титульный экран            «ПОСЛЕДНЯЯ СМЕНА» + ENTER — ПРОДОЛЖИТЬ
+  → Инструкция 1 / 3           «ПОСЛЕДНЯЯ СМЕНА» — обстановка и роль игрока
+  → Инструкция 2 / 3           «ЦЕЛЬ СМЕНЫ» — что делает инженер и что делает завод
+  → Инструкция 3 / 3           «УПРАВЛЕНИЕ» — клавиатура и Arduino
+  → Выбор вводного урока       «ВВОДНЫЙ УРОК»
+      → «ПРОЙТИ УРОК»   → Вводный урок → Level_01_RawMilkIntake
+      → «НАЧАТЬ СМЕНУ»  → Level_01_RawMilkIntake
+  → Основная игра
+```
+
+- Три страницы инструкции **обязательны** и показываются при каждом новом запуске.
+- Выбор урока появляется **только после всех трёх страниц** и никогда раньше.
+- Урок **необязателен**, но выбор нельзя пропустить молча — игрок решает сам.
+- Настройка нигде не сохраняется (никакого PlayerPrefs): экран выбора появляется
+  при каждом новом запуске.
+- На страницах инструкции достаточно ENTER; стрелки там не нужны.
+
 ## ВВОДНЫЙ УРОК
 
-После титульного экрана и перед обычным инструктажем появляется выбор
-«ПЕРВЫЙ ЗАПУСК» — «Нужен вводный урок по управлению заводом?»:
+- Урок является опциональным.
+- Он предлагается только после инструкции, на отдельном экране «ВВОДНЫЙ УРОК».
+- «ПРОЙТИ УРОК» (выбран по умолчанию) запускает интерактивный урок в спокойном
+  «УЧЕБНОМ ЦЕХЕ»: один инженер, один ремонтный пульт, ворота, конвейер и
+  манипулятор — всё на настоящих машинах, настоящем ИИ инженера и настоящем
+  интерфейсе.
+- «НАЧАТЬ СМЕНУ» сразу открывает первый основной цех (инструкция не повторяется).
+- В уроке элементы интерфейса объясняются **по одному**: подсвечивается ровно одна
+  цель, остальная игра затемняется.
+- Enter подтверждает ознакомление с текущим шагом; следующий шаг появляется только
+  после подтверждения. Ничего не листается по таймеру.
+- На информационных шагах цех остановлен, а системы завода не реагируют на Enter:
+  одно нажатие не может одновременно подтвердить текст и запустить машину
+  (короткая блокировка ввода после каждого подтверждения).
 
-- **«ПРОЙТИ УРОК»** (выбран по умолчанию) — интерактивный урок в отдельном
-  спокойном «УЧЕБНОМ ЦЕХЕ»: один инженер, одна цель ремонта, ворота, конвейер
-  и манипулятор. Четыре шага (2–4 минуты): 1. ВЫБОР СИСТЕМЫ, 2. НЕ ТРАТЬТЕ
-  СИСТЕМЫ ВПУСТУЮ (дождаться цель в зоне), 3. ПОДГОТОВЬТЕ ЛОВУШКУ (ворота →
-  конвейер), 4. РЕСУРС УПРАВЛЕНИЯ. Ошибки не наказываются: пока целевое
-  действие шага не выполнено, ситуация повторяется — после промаха (например,
-  манипулятор сработал, а инженер увернулся) и по таймауту бездействия инженер
-  возвращается на исходную позицию и снова идёт к цели («СИТУАЦИЯ ПОВТОРЯЕТСЯ —
-  ПОПРОБУЙТЕ ЕЩЁ РАЗ»). В конце — экран
-  «УПРАВЛЕНИЕ ОСВОЕНО» с меню «НАЧАТЬ СМЕНУ» / «ПОВТОРИТЬ УРОК»; «НАЧАТЬ
-  СМЕНУ» ведёт в обычный инструктаж и первый цех.
-- **«СРАЗУ К СМЕНЕ»** — пропустить урок и перейти к обычному инструктажу и
-  первому цеху.
+Порядок шагов (ШАГ N / 10):
 
-Урок использует те же органы управления, что и игра: стрелки вверх/вниз и
-Enter на клавиатуре, джойстик и кнопки Arduino. Выбор не сохраняется — экран
-показывается при каждом новом запуске.
+| Шаг | Цель подсветки | Заголовок |
+|-----|----------------|-----------|
+| 1  | инженер (рамка-уголки)                    | «ИНЖЕНЕР» |
+| 2  | ремонтный пульт (прямоугольная рамка)     | «РЕМОНТНЫЙ ПУЛЬТ» |
+| 3  | список систем слева                       | «СИСТЕМЫ ЗАВОДА» |
+| 4  | нижняя левая информационная панель         | «НАЗНАЧЕНИЕ СИСТЕМЫ» |
+| 5  | строка ресурса в этой панели               | «РЕСУРС УПРАВЛЕНИЯ» |
+| 6  | строка решимости в этой панели             | «РЕШИМОСТЬ ИНЖЕНЕРА» |
+| 7  | реальная зона воздействия манипулятора      | «ЗОНА ВОЗДЕЙСТВИЯ» |
+| 8  | практика: активация в подходящий момент     | «АКТИВАЦИЯ СИСТЕМЫ» |
+| 9  | практика: ворота → конвейер → манипулятор   | «КОМБИНАЦИЯ СИСТЕМ» |
+| 10 | итоговый экран                              | «УПРАВЛЕНИЕ ОСВОЕНО» |
+
+Урок нельзя провалить:
+
+- Ранняя активация (цель вне зоны) показывает «ЦЕЛЬ ВНЕ ЗОНЫ. ДОЖДИТЕСЬ
+  ПОДХОДЯЩЕГО МОМЕНТА.», инженер возвращается на подход, и шаг повторяется.
+- Ошибка в комбинации сбрасывает **только эту последовательность**
+  («ПОСЛЕДОВАТЕЛЬНОСТЬ СБРОШЕНА. ПОВТОРИТЕ ТЕКУЩИЙ ШАГ.»), а не весь урок.
+- Инженер никогда не может закончить учебный ремонт: прогресс сбрасывается.
+- «УПРАВЛЕНИЕ ОСВОЕНО» → ENTER → Level_01_RawMilkIntake.
+
+Урок использует те же органы управления, что и игра: стрелки вверх/вниз и Enter
+на клавиатуре, джойстик и обе кнопки Arduino. Отдельного EventSystem и отдельного
+ввода у урока нет.
+
+## ИНТЕРФЕЙС
+
+- **Верхняя постоянная HUD-шапка удалена.** Убраны верхняя полоса с названием
+  цеха, верхняя шкала «РЕШИМОСТЬ ИНЖЕНЕРА», глобальная шкала ремонта и строка
+  задачи. Верх экрана теперь принадлежит цеху.
+- **Название цеха** коротко появляется в начале цеха и плавно исчезает.
+- **Шкала ремонта отображается у ремонтного пульта** — компактная плашка
+  «РЕМОНТ» с процентом прямо над пультом, и только пока этот пульт действительно
+  чинят. Глобальной шкалы ремонта больше нет.
+- **Ресурс управления находится в нижней левой информационной панели.**
+- **Решимость инженера находится в нижней левой информационной панели.**
+- Порядок в нижней левой панели: `[ENTER] СИСТЕМА — ДЕЙСТВИЕ` → назначение
+  системы → тактический статус → «РЕСУРС УПРАВЛЕНИЯ ● ● ●» → «РЕШИМОСТЬ
+  ИНЖЕНЕРА» со сжатой шкалой.
+- Слева сохраняются заголовок «СИСТЕМЫ ЗАВОДА», список систем, текущий выбор,
+  перезарядка и метки «ГОТОВО» / «ПОДХОДЯЩИЙ МОМЕНТ» / «СЕЙЧАС НЕЭФФЕКТИВНО».
+  Высота строк подстраивается под панель; если систем слишком много (как в цехе
+  «УПАКОВОЧНАЯ ЛИНИЯ»), список прокручивается вслед за выбором, а сверху и снизу
+  появляются метки ▲ / ▼. Прокрутка идёт от тех же стрелок — отдельного ввода нет.
+- **Состояние инженера** («РЕМОНТИРУЕТ», «ИЩЕТ ОБХОД», «ОГЛУШЁН», «ОТСТУПАЕТ»)
+  остаётся подписью рядом с самим инженером.
+- **Прямоугольные объекты выделяются прямоугольными рамками.** Это относится и к
+  подсветке выбранной системы в цехе: конвейер получает длинную рамку по форме
+  ленты, а не жёлтый круг вокруг себя. Конвейеры, пульты, ворота, панели
+  интерфейса — прямоугольная рамка с техническими уголками; инженер и
+  манипулятор в уроке — только уголки; круглая рамка применяется лишь к
+  действительно круглым элементам. Вспышка при активации системы использует ту же
+  прямоугольную форму.
+
+## ПОБЕДА И ПОРАЖЕНИЕ
+
+- Результаты показываются на **непрозрачной терминальной панели**: игра за ней
+  не видна и не читается.
+- Поражение — «ЦЕХ СТАБИЛИЗИРОВАН»: «Инженер восстановил ручное управление.
+  Завод проиграл.»
+- Победа завода — «ЗАВОД ПОБЕДИЛ»: «Инженер покинул предприятие. Автономный
+  режим сохранён.»
+- После результата доступны:
+
+```
+> ПОВТОРИТЬ ЦЕХ
+  ВЫЙТИ ИЗ ИГРЫ
+```
+
+- **Победа завода сопровождается промышленной анимацией** (~3.5 с): инженер
+  уходит за границу выхода и растворяется, красный аварийный свет гаснет, цех
+  переходит в стабильный зелёно-янтарный режим, одна-две машины возвращаются в
+  спокойный автономный холостой ход, терминал построчно печатает «ИНЖЕНЕР
+  ПОКИНУЛ ПРЕДПРИЯТИЕ» и «АВТОНОМНЫЙ РЕЖИМ СОХРАНЁН», затем появляется крупный
+  заголовок «ЗАВОД ПОБЕДИЛ». Звук сдержанный: щелчок реле, промышленный тон
+  подтверждения — без фанфар. Меню результата принимает ввод только после
+  окончания анимации.
 
 ## ПОДКЛЮЧЕНИЕ ARDUINO-КОНТРОЛЛЕРА
 
@@ -312,11 +426,14 @@ Escape        — пауза / назад
 
 ## How to test
 
-0. Flow: **Boot → Title Card → Tutorial Choice «ПЕРВЫЙ ЗАПУСК» («ПРОЙТИ УРОК» /
-   «СРАЗУ К СМЕНЕ») → [Interactive Tutorial «УЧЕБНЫЙ ЦЕХ» →] Intro Briefing
-   (4 pages, Enter/Esc) → Level 1**. The tutorial runs inside the Level 1 scene
-   (flag on GameManager), so no extra scene assets exist.
-   Smoke variants: default drives «СРАЗУ К СМЕНЕ»; `-smokeTutorial` takes the lesson.
+0. Flow: **Boot → Title Card → Instruction 1/3 → 2/3 → 3/3 → Tutorial Choice
+   «ВВОДНЫЙ УРОК» («ПРОЙТИ УРОК» / «НАЧАТЬ СМЕНУ») → [Interactive Tutorial
+   «УЧЕБНЫЙ ЦЕХ» →] Level 1**. Enter advances every screen; the instruction pages
+   are mandatory on every new game and the choice never appears before them. The
+   tutorial runs inside the Level 1 scene (flag on GameManager), so no extra scene
+   assets exist; finishing it loads Level 1 directly (instructions are not repeated).
+   Smoke variants: default drives «НАЧАТЬ СМЕНУ»; `-smokeTutorial` takes the lesson
+   and acknowledges its informational steps through UnifiedGameInput.
 1. Open the project in Unity **6000.3.19f1**.
 2. If scenes/prefabs are missing (first checkout), run **Tools ▸ Last Shift ▸ Build All** —
    it regenerates all scenes, prefabs, ScriptableObjects and Build Settings.
@@ -324,12 +441,37 @@ Escape        — пауза / назад
 4. Press **Play**. The title card loads Level 1 automatically.
 5. Use **Up/Down/Enter** to drive the factory terminal on the left.
    - Selected machine gets a bright ring in the room, plus an effect/route preview.
-   - Watch **ENGINEER RESOLVE** in the top HUD (Room Pressure was removed in
-     Pass 8.1 — machinery only ever fires on the player's command).
+   - Watch **«РЕШИМОСТЬ ИНЖЕНЕРА»** in the lower-left detail panel — since Pass 9
+     there is no top HUD strip at all (Room Pressure was removed in Pass 8.1 —
+     machinery only ever fires on the player's command).
+   - Repair progress appears as a local «РЕМОНТ» plate above the console the
+     engineer is actually working on; there is no global repair bar.
    - When Resolve hits 0 the exit unlocks and the engineer retreats; when he reaches
-     the exit you get **ENGINEER RETREATED → ENTER — NEXT ROOM**.
-6. If the engineer completes all repairs, you lose the room: **ROOM STABILIZED**,
-   with the «ПОВТОРИТЬ ЦЕХ / ВЫЙТИ ИЗ ИГРЫ» menu below the result text.
+     the exit the industrial victory animation plays, then
+     **ИНЖЕНЕР ОТСТУПИЛ → ENTER — СЛЕДУЮЩИЙ ЦЕХ**.
+6. If the engineer completes all repairs, you lose the room: **ЦЕХ СТАБИЛИЗИРОВАН**
+   on an opaque terminal panel, with the «ПОВТОРИТЬ ЦЕХ / ВЫЙТИ ИЗ ИГРЫ» menu.
+7. Play Mode smoke tests (batch Unity, exits nonzero on runtime errors):
+
+   ```bash
+   UNITY="/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity"
+   "$UNITY" -batchmode -projectPath <path> \
+     -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -logFile smoke.log
+   # Variants:
+   #   -smokeScene Level_02_PackagingLine              regression on another room
+   #   -smokeTutorial                                   takes «ПРОЙТИ УРОК», walks the
+   #                                                    lesson and checks callout layout
+   #   -smokeScene Level_03_ColdStorage -smokeFinal     final «ЗАВОД ПОБЕДИЛ» + victory
+   #                                                    animation gating (needs the FINAL room)
+   #   -smokeScene Level_01_RawMilkIntake -smokeDefeat  restart/quit menu end-to-end
+   #   -smokeSeconds 110                                longer play window; with
+   #                                                    -smokeTutorial it walks the whole
+   #                                                    lesson (default window is 35 s)
+   # Grep the log for SMOKE_RESULT / SMOKE_ERR / SMOKE_FAIL.
+   ```
+
+   `-smokeFinal` and `-smokeDefeat` drive a room directly and do not walk the Boot
+   flow, so they must be given a `-smokeScene`.
 
 Each level scene can also be played directly (Play from any `Level_*` scene) —
 managers bootstrap themselves.

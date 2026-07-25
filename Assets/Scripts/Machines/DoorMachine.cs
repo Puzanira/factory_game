@@ -54,6 +54,11 @@ namespace LastShift.Machines
             }
         }
 
+        /// <summary>The doorway itself — the piece of route this gate blocks.</summary>
+        public override Rect EffectiveZoneRect => spec != null
+            ? Viz.RectAt(spec.pos, spec.size + new Vector2(0.6f, 0.6f))
+            : Viz.RectAt(transform.position, new Vector2(1.5f, 1.5f));
+
         protected override void OnConfigure(MachineSpec s)
         {
             closed = s.startsClosed;
