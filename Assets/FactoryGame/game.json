@@ -1,0 +1,7 @@
+{
+  "name": "Последняя смена (Factory)",
+  "version": "0.1.0",
+  "entryScene": "Assets/FactoryGame/Scenes/Boot.unity",
+  "controls": ["Joystick", "GreenButton", "RedButton", "MenuButton"],
+  "launcherRain": null
+}

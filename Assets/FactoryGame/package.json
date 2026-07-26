@@ -1,0 +1,13 @@
+{
+  "name": "com.aigamestudio.game-factory",
+  "version": "0.1.0",
+  "displayName": "Последняя смена (Factory)",
+  "description": "Последняя смена — заводская стелс-аркада (Last Shift). Инженер пробирается через смены цеха. Аркадный кабинет AI Game Studio; собственный ввод (новый Input System), возврат в меню — жест MenuButton.",
+  "unity": "6000.5",
+  "author": { "name": "AI Game Studio" },
+  "dependencies": {
+    "com.unity.inputsystem": "1.19.0",
+    "com.unity.render-pipelines.universal": "17.6.0",
+    "com.unity.ugui": "2.5.0"
+  }
+}
