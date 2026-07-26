@@ -36,7 +36,9 @@ namespace LastShift.UI
         public bool HasMenu => menuTexts.Count > 0 && menuRoot != null && menuRoot.gameObject.activeSelf;
 
         RectTransform menuRoot;
+        RectTransform card;
         Coroutine calmRoutine;
+        FinalVictoryScreen finalArt;
 
         static readonly Color Amber = new Color(0.95f, 0.85f, 0.45f);
         static readonly Color Border = new Color(0.34f, 0.7f, 0.45f, 0.85f);
@@ -59,7 +61,7 @@ namespace LastShift.UI
             greenWash.raycastTarget = false;
 
             // Terminal card with a thin border and corner brackets.
-            RectTransform card = UIBuilder.Panel(rt, "Card", new Vector2(0.16f, 0.12f), new Vector2(0.84f, 0.88f),
+            card = UIBuilder.Panel(rt, "Card", new Vector2(0.16f, 0.12f), new Vector2(0.84f, 0.88f),
                 new Color(0.012f, 0.032f, 0.024f, 1f));
             Frame(card, Border, 2.5f);
             Brackets(card, Amber);
@@ -185,13 +187,26 @@ namespace LastShift.UI
             OpenMenu();
         }
 
-        /// <summary>Final screen: «ЗАВОД ПОБЕДИЛ» — cold, controlled, slightly unsettling.</summary>
+        /// <summary>
+        /// Final screen after the last room: a perimeter-camera picture of the plant
+        /// running itself, with «ЗАВОД ПОБЕДИЛ» and the menu underneath. Cold,
+        /// controlled, slightly unsettling — never celebratory.
+        /// </summary>
         public void ShowSliceComplete()
         {
             LastShift.Audio.AudioManager.OnFinalVictory();
             Show(Loc.FactoryWon, Loc.FactoryWonSub, "");
             smallLine.text = Loc.FactoryWonSmall;
             title.color = new Color(0.78f, 1f, 0.62f); // stable amber-green
+
+            // The picture takes the upper two thirds; text and menu move below it.
+            if (finalArt == null)
+                finalArt = FinalVictoryScreen.Create(card, new Vector2(0.04f, 0.42f), new Vector2(0.96f, 0.95f));
+            title.fontSize = 52;
+            SetRect(title.rectTransform, new Vector2(0f, 0.30f), new Vector2(1f, 0.40f));
+            SetRect(subtitle.rectTransform, new Vector2(0.06f, 0.205f), new Vector2(0.94f, 0.30f));
+            SetRect(smallLine.rectTransform, new Vector2(0f, 0.175f), new Vector2(1f, 0.208f));
+            SetRect(menuRoot, new Vector2(0.24f, 0.035f), new Vector2(0.76f, 0.165f));
             OpenMenu();
             if (calmRoutine != null) StopCoroutine(calmRoutine);
             calmRoutine = StartCoroutine(CalmDown());

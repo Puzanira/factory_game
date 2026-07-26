@@ -41,11 +41,11 @@ namespace LastShift.Core
         float repairWatch;
         const float StepRetrySeconds = 26f;
 
-        // Step 9 sub-sequence.
-        enum ComboPhase { None, GateInfo, GateAct, BeltInfo, BeltAct, ArmInfo, ArmAct }
+        // Step 9 sub-sequence: gate, then conveyor. The lesson ends there — the arm
+        // was already taught (and practised) in steps 7-8.
+        enum ComboPhase { None, GateInfo, GateAct, BeltInfo, BeltAct }
         ComboPhase combo = ComboPhase.None;
         float gateClosedAt = -999f;
-        float beltActivatedAt = -999f;
 
         // Completion panel.
         GameObject donePanel;
@@ -101,7 +101,6 @@ namespace LastShift.Core
             combo = ComboPhase.None;
             armCycleSeen = false;
             gateClosedAt = -999f;
-            beltActivatedAt = -999f;
             situationResetAt = Time.time;
             repairWatch = 0f;
 
@@ -244,25 +243,6 @@ namespace LastShift.Core
                     steps.ShowPractical(9, TotalSteps, Loc.TutComboConveyorHeader, Loc.TutComboConveyorBody,
                         conveyor != null ? ZoneTarget(conveyor) : null, TutorialHighlightShape.Rect);
                     break;
-
-                case ComboPhase.ArmInfo:
-                    SetGate(m => false);
-                    steps.ShowInfo(9, TotalSteps, Loc.TutComboArmHeader, Loc.TutComboArmBody,
-                        arm != null ? ZoneTarget(arm) : null, TutorialHighlightShape.Rect,
-                        () => EnterComboPhase(ComboPhase.ArmAct));
-                    break;
-
-                case ComboPhase.ArmAct:
-                    SetGate(m => m == arm);
-                    armCycleSeen = false;
-                    // The gate already played its part in the first two phases. From
-                    // here only the arm may be activated, so the route MUST be open —
-                    // otherwise the closed gate dead-ends the step with no way to fix
-                    // it (the player cannot re-open a system this phase forbids).
-                    OpenRouteThroughArm();
-                    steps.ShowPractical(9, TotalSteps, Loc.TutComboArmHeader, Loc.TutComboArmBody,
-                        arm != null ? ZoneTarget(arm) : null, TutorialHighlightShape.Rect);
-                    break;
             }
         }
 
@@ -272,7 +252,6 @@ namespace LastShift.Core
             if (advancing) return;
             lm.ShowToast(Loc.TutSequenceReset, 2.8f, warning: true);
             gateClosedAt = -999f;
-            beltActivatedAt = -999f;
             ResetSituation(null); // re-opens the route as well
             EnterComboPhase(ComboPhase.GateAct);
         }
@@ -312,18 +291,14 @@ namespace LastShift.Core
                     {
                         if (gateClosedAt > 0f)
                         {
-                            beltActivatedAt = Time.time;
-                            EnterComboPhase(ComboPhase.ArmInfo);
+                            // Gate then belt: that is the combination. «ПЕРЕНАПРАВЛЕНИЕ»
+                            // is announced by the real combination tracker when it
+                            // genuinely lands, so no toast is duplicated here.
+                            steps.SetHighlightColor(TutorialHighlightTarget.Green);
+                            steps.SetStatus(effective ? Loc.ComboRedirect : Loc.EffectiveActivation, false);
+                            Advance(10, 2.4f);
                         }
                         else ResetCombo();
-                    }
-                    break;
-
-                case ComboPhase.ArmAct:
-                    if (machine == arm && !effective)
-                    {
-                        steps.SetStatus(Loc.TutEarlyActivation, true);
-                        lm.ShowToast(Loc.TutEarlyActivation, 2.6f, warning: true);
                     }
                     break;
             }
@@ -347,13 +322,6 @@ namespace LastShift.Core
                 steps.SetHighlightColor(TutorialHighlightTarget.Green);
                 steps.SetStatus(Loc.EffectiveActivation, false);
                 Advance(9, 2.4f);
-            }
-            else if (step == 9 && combo == ComboPhase.ArmAct)
-            {
-                steps.SetHighlightColor(TutorialHighlightTarget.Green);
-                steps.SetStatus(Loc.ComboLineGrab, false);
-                lm.ShowToast(Loc.ComboLineGrab, 3f);
-                Advance(10, 2.6f);
             }
         }
 
@@ -424,16 +392,7 @@ namespace LastShift.Core
 
         void UpdateCombination()
         {
-            if (combo == ComboPhase.ArmAct && arm != null)
-            {
-                OpenRouteThroughArm(); // idempotent: the route stays open this phase
-                bool inZone = arm.EngineerInEffectiveZone;
-                steps.SetStatus(inZone ? Loc.TutGoodMoment : Loc.TutWaitOutOfZone, false);
-                steps.SetHighlightColor(inZone ? TutorialHighlightTarget.Green : TutorialHighlightTarget.Amber);
-                if (arm.State == MachineState.Active) armCycleSeen = true;
-                else if (armCycleSeen) { armCycleSeen = false; ResetSituation(Loc.TutorialRetry); }
-            }
-            else if (combo == ComboPhase.BeltAct && conveyor != null)
+            if (combo == ComboPhase.BeltAct && conveyor != null)
             {
                 bool onBelt = conveyor.EngineerInEffectiveZone;
                 steps.SetStatus(onBelt ? Loc.TutGoodMoment : Loc.TutWaitOutOfZone, false);
@@ -442,7 +401,7 @@ namespace LastShift.Core
 
             // Slipping through to the panel means the trap failed: reset this
             // sequence (and only it) after he visibly repairs for a moment.
-            if (combo == ComboPhase.GateAct || combo == ComboPhase.BeltAct || combo == ComboPhase.ArmAct)
+            if (combo == ComboPhase.GateAct || combo == ComboPhase.BeltAct)
             {
                 var e = lm.Engineer;
                 bool repairing = e != null && e.Fsm != null &&
@@ -595,19 +554,17 @@ namespace LastShift.Core
                 {
                     case ComboPhase.GateAct: return door;
                     case ComboPhase.BeltAct: return conveyor;
-                    case ComboPhase.ArmAct: return arm;
                     default: return null;
                 }
             }
         }
 
         /// <summary>
-        /// Smoke-test guard: during the arm phase only the arm may be activated, so a
-        /// closed gate there would dead-end the lesson with no way for the player to
-        /// re-open it. Must always be false.
+        /// Smoke-test guard: a practical step must never require a system the player
+        /// is not allowed to activate. Must always be false.
         /// </summary>
         public bool DevRouteBlocked =>
-            step == 9 && combo == ComboPhase.ArmAct && door != null && door.IsClosed;
+            step == 8 && door != null && door.IsClosed;
         /// <summary>Smoke-test introspection: the step presenter (layout checks).</summary>
         public TutorialStepController DevSteps => steps;
     }

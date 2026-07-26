@@ -59,6 +59,11 @@ namespace LastShift.Data
         public const string MenuRepeatRoom = "ПОВТОРИТЬ ЦЕХ";
         public const string MenuQuitGame = "ВЫЙТИ ИЗ ИГРЫ";
 
+        // Final victory picture (perimeter-camera frame behind «ЗАВОД ПОБЕДИЛ»)
+        public const string FinalCameraLabel = "КАМЕРА 01 · ПЕРИМЕТР";
+        public const string FinalRecLabel = "ЗАПИСЬ";
+        public const string FinalStatusAutonomous = "АВТОНОМНЫЙ РЕЖИМ · ВСЕ ЦЕХА ПОД КОНТРОЛЕМ ЗАВОДА";
+
         // Victory animation (terminal lines typed out before the result panel)
         public const string VictoryLineEngineerLeft = "ИНЖЕНЕР ПОКИНУЛ ПРЕДПРИЯТИЕ";
         public const string VictoryLineAutonomous = "АВТОНОМНЫЙ РЕЖИМ СОХРАНЁН";
@@ -302,14 +307,12 @@ namespace LastShift.Data
         public const string TutStep9Body =
             "Системы эффективнее работают вместе.\n\n" +
             "Сначала перекройте маршрут воротами.\n" +
-            "Затем направьте инженера конвейером\n" +
-            "в рабочую зону манипулятора.";
+            "Затем, когда инженер выйдет на ленту,\n" +
+            "смените направление конвейера.";
         public const string TutComboGateHeader = "СИСТЕМА: ВОРОТА";
         public const string TutComboGateBody = "ПЕРЕКРЫВАЕТ МАРШРУТ И ЗАСТАВЛЯЕТ ИНЖЕНЕРА ИСКАТЬ ОБХОД.";
         public const string TutComboConveyorHeader = "СИСТЕМА: КОНВЕЙЕР";
         public const string TutComboConveyorBody = "СМЕЩАЕТ ИНЖЕНЕРА ПО ЛИНИИ.";
-        public const string TutComboArmHeader = "СИСТЕМА: МАНИПУЛЯТОР";
-        public const string TutComboArmBody = "ПРЕРЫВАЕТ РЕМОНТ, КОГДА ИНЖЕНЕР В ЗОНЕ ДОСТУПА.";
         public const string TutSequenceReset = "ПОСЛЕДОВАТЕЛЬНОСТЬ СБРОШЕНА. ПОВТОРИТЕ ТЕКУЩИЙ ШАГ.";
 
         // Step 10 — completion

@@ -22,6 +22,7 @@ namespace LastShift.EditorTools
         static double lastActivation;
         static double lastTutorialSubmit;
         static double lastTutorialAct;
+        static int maxTutorialStep;
         static double victoryForcedAt;
         static bool victoryAnimChecked;
         static int errorCount;
@@ -84,6 +85,7 @@ namespace LastShift.EditorTools
             lastActivation = 0;
             lastTutorialSubmit = 0;
             lastTutorialAct = 0;
+            maxTutorialStep = 0;
             victoryForcedAt = 0;
             victoryAnimChecked = false;
             errorCount = 0;
@@ -164,6 +166,7 @@ namespace LastShift.EditorTools
             if (tutorialRun && LevelManager.Instance != null && elapsed > 6.0)
             {
                 var tf = LevelManager.Instance.GetComponent<TutorialFlowController>();
+                if (tf != null) maxTutorialStep = Mathf.Max(maxTutorialStep, tf.DevStep);
                 if (tf != null && tf.DevRouteBlocked)
                 {
                     errorCount++;
@@ -280,16 +283,18 @@ namespace LastShift.EditorTools
             if (SessionState.GetBool(TutorialKey, false))
             {
                 var flow = level != null ? level.GetComponent<TutorialFlowController>() : null;
-                int reached = flow != null ? flow.DevStep : 0;
-                // The lesson must have advanced past step 1 through the shared input
-                // funnel: informational steps really wait for (and accept) Submit.
-                // Within the default 35 s window the lesson gets through its text
-                // steps; step > 1 proves they really wait for (and accept) Submit one
-                // at a time. Use «-smokeSeconds 110» to walk it up to the combination.
-                tutorialOk = level != null && level.TutorialMode &&
-                             level.RoomName == LastShift.Data.Loc.TutorialRoomName &&
-                             reached > 1;
-                Debug.Log("SMOKE_TUTORIAL_OK=" + tutorialOk + " step=" + reached);
+                if (flow != null) maxTutorialStep = Mathf.Max(maxTutorialStep, flow.DevStep);
+                // Finishing the lesson loads Level 1, so at the end of the run the room
+                // is either the training hall (still learning) or the first real room
+                // (lesson completed) — both are fine. What must hold is that the lesson
+                // really walked its steps up to the combination.
+                bool finished = level != null && !level.TutorialMode &&
+                                level.RoomName != LastShift.Data.Loc.TutorialRoomName;
+                bool stillLearning = level != null && level.TutorialMode &&
+                                     level.RoomName == LastShift.Data.Loc.TutorialRoomName;
+                tutorialOk = (stillLearning || finished) && maxTutorialStep >= 9;
+                Debug.Log("SMOKE_TUTORIAL_OK=" + tutorialOk + " maxStep=" + maxTutorialStep
+                    + " finishedIntoRoom=" + (finished && level != null ? level.RoomName : "-"));
             }
             bool pass = errorCount == 0 && sceneOk && russianOk && tutorialOk;
             Debug.Log(pass ? "SMOKE_RESULT: PASS" : "SMOKE_RESULT: FAIL errors=" + errorCount);
