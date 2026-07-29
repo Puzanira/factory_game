@@ -13,9 +13,10 @@ namespace LastShift.UI
     /// Boot-scene onboarding flow, in this exact order on every new game:
     /// title card «ПОСЛЕДНЯЯ СМЕНА» → three mandatory Russian instruction pages →
     /// «ВВОДНЫЙ УРОК» choice → interactive tutorial or Level 1.
-    /// Keyboard/Arduino only (Up/Down/Enter + Esc) through the shared GameInput
-    /// funnel — no EventSystem, no mouse, no PlayerPrefs. DevAdvance() lets the
-    /// headless smoke test drive the flow.
+    /// Arcade controls only (joystick up/down = navigate, Red = confirm; no
+    /// back/cancel action) through the shared GameInput funnel — no EventSystem,
+    /// no mouse, no PlayerPrefs. DevAdvance() lets the headless smoke test drive
+    /// the flow.
     /// </summary>
     public class IntroFlowUI : MonoBehaviour
     {

@@ -106,74 +106,62 @@ When he evacuates the third room alive, the vertical slice is complete —
 > Engineer renders on the **Characters** sorting layer (fog/decals can never hide him);
 > state label on **WorldUI**. Sorting layers Floor…ScreenUI are created by ProjectBuilder.
 
-## Controls (keyboard + optional Arduino controller — no mouse needed)
+## Controls (arcade cabinet — joystick + Red button, no mouse needed)
 
-Every screen is driven by the same small set of logical actions; the mouse is never
-used. All input polling is centralized in `Scripts/Utilities/GameInput.cs`, which
-merges the keyboard with the optional Arduino controller (see the Russian section
-«ПОДКЛЮЧЕНИЕ ARDUINO-КОНТРОЛЛЕРА» below). The keyboard is always fully functional,
-with or without the controller.
+Every screen is driven by the same two logical actions; the mouse is never used.
+Input comes from the shared **arcade-controls** package (`ArcadeInput`): the
+`ArcadeInputBridge` publishes it into `Scripts/Input/UnifiedGameInput.cs`, and all
+polling is centralized in `Scripts/Utilities/GameInput.cs`. In a standalone build
+the package's keyboard backend simulates the cabinet (joystick = arrow keys, Red
+button = **Quote/Э**). There is **no pause** and no back/cancel action; the
+cabinet's Menu button is reserved for the launcher and never read by the game.
 
 ### Gameplay (factory terminal)
 
-| Key          | Action                                             |
+| Control      | Action                                             |
 |--------------|----------------------------------------------------|
-| **Up Arrow** | Select previous ready factory command (wraps, skips cooldowns) |
-| **Down Arrow** | Select next ready factory command                |
-| **Enter** (incl. numpad) | Activate the selected command          |
-| **Escape**   | Open the pause menu                                |
+| **Joystick up / left** | Select previous ready factory command (wraps, skips cooldowns) |
+| **Joystick down / right** | Select next ready factory command       |
+| **Red button** | Activate the selected command                    |
 
-Room restart is available through the pause menu («ПОВТОРИТЬ ЦЕХ») and through
-the end-of-room menu after a defeat or the final victory.
-
-### Pause menu
-
-| Key          | Action                                             |
-|--------------|----------------------------------------------------|
-| **Up / Down** | Select entry (ПРОДОЛЖИТЬ / НАСТРОЙКИ ЗВУКА / ПОВТОРИТЬ ЦЕХ / ВЫЙТИ ИЗ ИГРЫ) |
-| **Enter**    | Confirm entry; in «НАСТРОЙКИ ЗВУКА» cycles the selected volume 0→25→50→75→100% |
-| **Escape**   | Back (sound settings → pause menu → resume game)   |
+Room restart is available through the end-of-room menu after a defeat or the
+final victory.
 
 ### Title card, instructions & tutorial choice (Boot)
 
-| Key          | Action                                             |
+| Control      | Action                                             |
 |--------------|----------------------------------------------------|
-| **Enter**    | Title → instruction 1 → 2 → 3 → «ВВОДНЫЙ УРОК» choice → confirm the choice |
-| **Up / Down** | Move selection on the tutorial choice and in ДА/НЕТ modals (never needed on the instruction pages) |
-| **Escape**   | «ВЫЙТИ ИЗ ИГРЫ?» on the title; one instruction page back; from the choice back to instruction 3 |
+| **Red button** | Title → instruction 1 → 2 → 3 → «ВВОДНЫЙ УРОК» choice → confirm the choice |
+| **Joystick up / down** | Move selection on the tutorial choice and in ДА/НЕТ modals (never needed on the instruction pages) |
 
 ### End-of-room screens
 
-| Key          | Action                                             |
+| Control      | Action                                             |
 |--------------|----------------------------------------------------|
-| **Enter**    | Next room (after «ИНЖЕНЕР ОТСТУПИЛ»)               |
-| **Up / Down / Enter** | Navigate/confirm the «ПОВТОРИТЬ ЦЕХ / ВЫЙТИ ИЗ ИГРЫ» menu (after «ЦЕХ СТАБИЛИЗИРОВАН» and on the final «ЗАВОД ПОБЕДИЛ» screen) |
-| **Escape**   | In that menu: jump straight to «ВЫЙТИ ИЗ ИГРЫ»     |
+| **Red button** | Next room (after «ИНЖЕНЕР ОТСТУПИЛ»)             |
+| **Joystick + Red** | Navigate/confirm the «ПОВТОРИТЬ ЦЕХ / ВЫЙТИ ИЗ ИГРЫ» menu (after «ЦЕХ СТАБИЛИЗИРОВАН» and on the final «ЗАВОД ПОБЕДИЛ» screen) |
 
 Every victory first plays a short industrial animation (~3.5 s); result input only
 wakes up once it has finished and the opaque result panel is up.
 
 ## УПРАВЛЕНИЕ
 
-Вся игра управляется тремя действиями: **предыдущий / следующий / подтвердить**
-(плюс Escape — пауза и «назад»).
+Вся игра управляется тремя действиями: **предыдущий / следующий / подтвердить**.
+Паузы и действия «назад» нет — это игра для аркадного автомата.
 
-Клавиатура:
-- Стрелка вверх — предыдущая система / пункт меню
-- Стрелка вниз — следующая система / пункт меню
-- Enter — подтвердить / активировать
-
-Arduino Nano:
+Автомат (слой arcade-controls):
 - Джойстик вверх или влево — предыдущая система / пункт меню
 - Джойстик вниз или вправо — следующая система / пункт меню
-- Кнопка на джойстике — подтвердить / активировать
-- Отдельная кнопка — подтвердить / активировать
+- Красная кнопка — подтвердить / активировать
+
+Клавиатурная симуляция автомата (standalone-сборка, раскладка пакета
+arcade-controls): стрелки — джойстик, **Quote/Э** — красная кнопка.
 
 ### МЕНЮ ПОСЛЕ ЗАВЕРШЕНИЯ ЦЕХА
 
 После поражения («ЦЕХ СТАБИЛИЗИРОВАН») и на финальном экране («ЗАВОД ПОБЕДИЛ»)
-под текстом результата появляется меню из двух пунктов (стрелки/джойстик — выбор
-с закольцовкой, Enter/кнопка — подтвердить; по умолчанию выбран первый пункт):
+под текстом результата появляется меню из двух пунктов (джойстик — выбор
+с закольцовкой, красная кнопка — подтвердить; по умолчанию выбран первый пункт):
 
 ```
 > ПОВТОРИТЬ ЦЕХ
@@ -182,8 +170,6 @@ Arduino Nano:
 
 - «ПОВТОРИТЬ ЦЕХ» — начать текущий цех заново.
 - «ВЫЙТИ ИЗ ИГРЫ» — завершить работу игры.
-
-Тот же перезапуск и выход доступны в меню паузы (Escape во время игры).
 
 > Изменение схемы управления: **потенциометр, а также клавиши Q и R удалены из
 > схемы управления.** **Клавиши Q и R не используются.**
@@ -247,7 +233,7 @@ Boot
 - Урок **необязателен**, но выбор нельзя пропустить молча — игрок решает сам.
 - Настройка нигде не сохраняется (никакого PlayerPrefs): экран выбора появляется
   при каждом новом запуске.
-- На страницах инструкции достаточно ENTER; стрелки там не нужны.
+- На страницах инструкции достаточно красной кнопки; джойстик там не нужен.
 
 ## ВВОДНЫЙ УРОК
 
@@ -290,8 +276,8 @@ Boot
 - Инженер никогда не может закончить учебный ремонт: прогресс сбрасывается.
 - «УПРАВЛЕНИЕ ОСВОЕНО» → ENTER → Level_01_RawMilkIntake.
 
-Урок использует те же органы управления, что и игра: стрелки вверх/вниз и Enter
-на клавиатуре, джойстик и обе кнопки Arduino. Отдельного EventSystem и отдельного
+Урок использует те же органы управления, что и игра: джойстик вверх/вниз и
+красная кнопка (слой arcade-controls). Отдельного EventSystem и отдельного
 ввода у урока нет.
 
 ## ИНТЕРФЕЙС
@@ -354,88 +340,30 @@ Boot
   подтверждения — без фанфар. Меню результата принимает ввод только после
   окончания анимации.
 
-## ПОДКЛЮЧЕНИЕ ARDUINO-КОНТРОЛЛЕРА
+## ВВОД: СЛОЙ ARCADE-CONTROLS
 
-Игра поддерживает самодельный контроллер на **Arduino Nano** как *дополнительный*
-способ управления. Клавиатура работает всегда: без контроллера, при неверном COM-порте
-и даже если контроллер выдернули прямо во время игры.
+Игра читает ввод только через пакет **com.aigamestudio.arcade-controls**
+(зависимость в `Packages/manifest.json`, git-URL). Прямых обращений к
+клавиатуре/мыши в коде игры нет.
 
-### Где что лежит
-
-- Скетч Arduino: `my_ardruino_sketch/sketch_game_jul15a.ino`
-- Референс подключения Unity ↔ Arduino: `for_claude_example_unity_grabber/`
-- Скрипты интеграции: `Assets/Scripts/Input/`
-- Настройки (порт, пороги, инверсия осей): `Assets/Resources/ArduinoSerialSettings.asset`
-  (создаётся автоматически; можно пересоздать через меню **LastShift ▸ Create Arduino Serial Settings**)
-
-### Железо и протокол (из скетча)
-
-- Плата: **Arduino Nano** (при проблемах с прошивкой: Tools ▸ Processor ▸ **ATmega328P (Old Bootloader)**)
-- Скорость: **115200 бод** (`Serial.begin(115200)`)
-- Пины: джойстик X — **A6**, джойстик Y — **A5**, кнопка джойстика — **D2**,
-  отдельная кнопка — **D6** (все кнопки на `INPUT_PULLUP`)
-- Протокол (CSV, строки только при изменении значений, ~33 Гц максимум):
-  `JOY,x,y` · `JOY,DOWN` / `JOY,UP,мс` · `BTN,DOWN` / `BTN,UP,мс` / `BTN,HELD,мс`
-- Дебаунс кнопок (25 мс) и пороги дребезга уже реализованы в скетче.
-- Если на плате осталась старая прошивка с сообщениями `POT,…`, игра их безопасно
-  игнорирует и один раз пишет предупреждение в консоль — перепрошейте плату актуальным
-  скетчем.
-
-### Как запустить
-
-1. **Прошивка**: открыть `my_ardruino_sketch/sketch_game_jul15a.ino` в Arduino IDE,
-   выбрать Tools ▸ Board ▸ **Arduino Nano**, нужный порт, нажать **Upload**.
-   (Библиотеки не нужны. На macOS для клона CH340 может понадобиться драйвер —
-   `for_claude_example_unity_grabber/CH341SER_MAC.ZIP`.)
-2. **Подключение**: воткнуть Nano в USB. Закрыть Serial Monitor в Arduino IDE —
-   порт может быть открыт только одной программой!
-3. **COM-порт**: по умолчанию игра ищет контроллер **автоматически** по всем
-   USB-serial портам. Чтобы задать порт вручную, впишите его в поле **Port Name**
-   ассета `Assets/Resources/ArduinoSerialSettings.asset`
-   (Windows: `COM5`; macOS: `/dev/cu.usbserial-110`). Пустое поле = автопоиск.
-4. **Запуск Unity**: открыть `Assets/Scenes/Boot.unity` → нажать **Play**.
-   В консоли появится `[Arduino] Controller connected on <порт> @ 115200 baud`.
-
-### Раскладка контроллера
-
-```
-ДЖОЙСТИК ВВЕРХ / ВЛЕВО — предыдущая система
-ДЖОЙСТИК ВНИЗ / ВПРАВО — следующая система
-КНОПКА НА ДЖОЙСТИКЕ ИЛИ ВНЕШНЯЯ КНОПКА — активировать
-
-Клавиша Up    — предыдущая система / пункт меню
-Клавиша Down  — следующая система / пункт меню
-Клавиша Enter — подтвердить / активировать
-Escape        — пауза / назад
-```
-
-Поведение: удержание джойстика повторяет шаг (задержка 0.40 с, далее каждые 0.15 с);
-диагональ даёт ровно одно действие (при равном отклонении приоритет у вертикали).
-Удержание кнопок не повторяет Enter; обе кнопки, нажатые одновременно, дают один Enter.
-Если направления джойстика перепутаны из-за монтажа — включите
-`Invert X / Invert Y` в настройках.
-
-### Если не работает
-
-- **Контроллер не найден**: проверьте кабель (нужен data-кабель, не «только зарядка»),
-  закройте Serial Monitor/Plotter, перезапустите Play. Игра продолжает искать порт
-  каждую секунду — можно втыкать контроллер прямо во время игры.
-- **Неверный COM-порт**: очистите поле Port Name (автопоиск) или впишите правильный.
-  Список портов: Arduino IDE ▸ Tools ▸ Port.
-- **Порт занят** («could not open», «busy»): порт держит другая программа
-  (Serial Monitor, второй Unity). Закройте её; игра сама переподключится.
-- **Клавиатура**: работает всегда, ничего включать не нужно. При отключении
-  контроллера меню не блокируются, исключений нет.
-- **Отладка**: нажмите **F9** в игре — оверлей покажет
-  «ARDUINO: ПОДКЛЮЧЕН» / «ARDUINO: НЕ НАЙДЕН — КЛАВИАТУРА АКТИВНА», порт, скорость,
-  последнее сообщение, направление джойстика и состояние кнопок.
-  (Или включите Debug Overlay в `ArduinoSerialSettings.asset`.)
+- Мост: `Scripts/Input/ArcadeInputBridge.cs` — синглтон, каждый кадр публикует
+  джойстик/красную кнопку из `ArcadeInput` в `UnifiedGameInput` (порядок
+  исполнения −100, раньше всех потребителей). В standalone-сборке мост сам
+  поднимает клавиатурный бэкенд пакета; внутри аркадного лаунчера бэкендом
+  владеет лаунчер, мост его только читает.
+- Кнопка Menu автомата игрой не читается — возврат в лаунчер делает сам лаунчер.
+- Green/Bang/Height/Crank из контракта автомата игрой не используются.
+- Клавиатурная симуляция (раскладка пакета): стрелки — джойстик,
+  **Quote/Э** — красная кнопка. Клавиши **Q и R не используются**.
+- Удержание джойстика повторяет шаг (задержка 0.40 с, далее каждые 0.15 с);
+  диагональ даёт ровно одно действие (приоритет у вертикали).
 
 ## How to test
 
 0. Flow: **Boot → Title Card → Instruction 1/3 → 2/3 → 3/3 → Tutorial Choice
    «ВВОДНЫЙ УРОК» («ПРОЙТИ УРОК» / «НАЧАТЬ СМЕНУ») → [Interactive Tutorial
-   «УЧЕБНЫЙ ЦЕХ» →] Level 1**. Enter advances every screen; the instruction pages
+   «УЧЕБНЫЙ ЦЕХ» →] Level 1**. The Red button (Quote/Э on a keyboard) advances
+   every screen; the instruction pages
    are mandatory on every new game and the choice never appears before them. The
    tutorial runs inside the Level 1 scene (flag on GameManager), so no extra scene
    assets exist; finishing it loads Level 1 directly (instructions are not repeated).
@@ -511,14 +439,13 @@ Assets/
     Hazards/    HazardZone (+factory), SteamHazard, ColdHazard, SlipperyFloor
     Objectives/ ObjectiveNode, RepairObjective, ExitDoor
     UI/         UIBuilder, HUDController, CommandTerminalUI, CommandListItemUI,
-                PauseMenuUI, EndRoomPanel
+                EndRoomPanel
     Data/       LayoutTypes, LevelLayouts, LevelData, MachineData, EngineerData,
                 EscalationData, PrefabLibrary
-    Input/      ArduinoControllerReader (serial, background thread), ArduinoInputParser,
-                ArduinoInputBridge, UnifiedGameInput, InputRepeatController,
-                SerialConnectionSettings, ArduinoDebugStatus
+    Input/      ArcadeInputBridge (arcade-controls package -> logical actions),
+                UnifiedGameInput, InputRepeatController
     Utilities/  GameInput, SpriteFactory, PlaceholderVisual, PathGrid, GridBlocker
-    Editor/     ProjectBuilder (project generator), ArduinoSetup (settings asset)
+    Editor/     ProjectBuilder (project generator)
 ```
 
 ## Architecture decisions
@@ -538,11 +465,10 @@ Assets/
   prefab entry has a code-factory fallback, so a missing reference degrades gracefully
   instead of breaking.
 - **Input**: one shared logical-action flow (`GameInput`: NavigatePrevious/NavigateNext/
-  Submit/Back/Restart). Physical sources — keyboard (new Input System, `Keyboard.current`)
-  and the optional Arduino controller (`Scripts/Input/`, serial port read on a background
-  thread, lines parsed and published as frame-stamped actions before consumers poll).
-  At most one navigation action per frame and one Submit per shared debounce window;
-  keyboard is the permanent fallback and is never disabled.
+  Submit). The only physical source is the arcade-controls package (`ArcadeInput`),
+  bridged by `ArcadeInputBridge` into frame-stamped `UnifiedGameInput` actions before
+  consumers poll. At most one navigation action per frame; Submit fires on the Red
+  button's press edge. No game code reads the keyboard or mouse directly.
 - **Events**: C# events throughout (machine `Activated`, stats `ResolveChanged`/
   `ResolveEmpty`, objective `CompletedEvent`, grid `GridChanged`).
 

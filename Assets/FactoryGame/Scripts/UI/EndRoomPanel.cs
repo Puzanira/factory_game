@@ -12,7 +12,8 @@ namespace LastShift.UI
     /// room shows through. Room won («ИНЖЕНЕР ОТСТУПИЛ» → next room), room lost
     /// («ЦЕХ СТАБИЛИЗИРОВАН») and the final victory («ЗАВОД ПОБЕДИЛ»). Defeat and
     /// final share one two-option menu («ПОВТОРИТЬ ЦЕХ» / «ВЫЙТИ ИЗ ИГРЫ»,
-    /// Up/Down/Enter/Esc). Input routing lives in LevelManager; this is pure view.
+    /// joystick up/down + Red to confirm). Input routing lives in LevelManager;
+    /// this is pure view.
     /// </summary>
     public class EndRoomPanel : MonoBehaviour
     {
@@ -238,15 +239,6 @@ namespace LastShift.UI
             if (!HasMenu) return;
             SelectedIndex = (SelectedIndex + delta + menuTexts.Count) % menuTexts.Count;
             LastShift.Audio.UiSfx.PauseMove();
-            RefreshMenu();
-        }
-
-        /// <summary>Escape jumps straight to «ВЫЙТИ ИЗ ИГРЫ».</summary>
-        public void SelectQuit()
-        {
-            if (!HasMenu) return;
-            if (SelectedIndex != menuTexts.Count - 1) LastShift.Audio.UiSfx.PauseMove();
-            SelectedIndex = menuTexts.Count - 1;
             RefreshMenu();
         }
 
