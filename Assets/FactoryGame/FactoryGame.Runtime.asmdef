@@ -2,6 +2,7 @@
     "name": "FactoryGame.Runtime",
     "rootNamespace": "LastShift",
     "references": [
+        "AiGameStudio.ArcadeControls",
         "Unity.InputSystem",
         "Unity.RenderPipelines.Universal.Runtime",
         "Unity.RenderPipelines.Universal.2D.Runtime",
