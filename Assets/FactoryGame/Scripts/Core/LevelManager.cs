@@ -30,11 +30,9 @@ namespace LastShift.Core
 
         RoomLayout layout;
         RoomRefs refs;
-        bool paused;
         bool roomComplete;
         bool roomFailed;
 
-        PauseMenuUI pauseMenu;
         EndRoomPanel endPanel;
         HUDController hud;
         VictorySequenceController victory;
@@ -42,12 +40,13 @@ namespace LastShift.Core
         public string RoomName => layout != null ? layout.roomName : "";
         public bool Escalated => Escalation != null && Escalation.Escalated;
         public bool RoomEnded => roomComplete || roomFailed;
-        public bool InputLocked => paused || roomComplete || roomFailed || TutorialOverlayLock;
+        public bool InputLocked => roomComplete || roomFailed || TutorialOverlayLock;
 
         /// <summary>True while this scene runs the interactive tutorial room.</summary>
         public bool TutorialMode { get; private set; }
-        /// <summary>Pause state (read-only for helpers like the tutorial controller).</summary>
-        public bool IsPaused => paused;
+        /// <summary>The arcade cabinet has no pause; kept always-false so tutorial
+        /// helpers that guarded against pausing keep compiling and behave normally.</summary>
+        public bool IsPaused => false;
         /// <summary>Set by the tutorial while its completion panel owns the input.</summary>
         public bool TutorialOverlayLock { get; set; }
 
@@ -309,8 +308,6 @@ namespace LastShift.Core
             uiRoot.GetComponent<CommandTerminalUI>().Bind(Terminal, this, canvas);
             hud = uiRoot.GetComponent<HUDController>();
             hud.Bind(this, canvas);
-            pauseMenu = uiRoot.GetComponent<PauseMenuUI>();
-            pauseMenu.Build(canvas);
             endPanel = uiRoot.GetComponent<EndRoomPanel>();
             endPanel.Build(canvas);
         }
@@ -408,55 +405,26 @@ namespace LastShift.Core
                 return;
             }
 
-            if (paused)
-            {
-                // Keyboard menu navigation (incl. Russian sound settings) lives in the menu.
-                var action = pauseMenu != null ? pauseMenu.HandleInput() : PauseMenuUI.PauseAction.Resume;
-                switch (action)
-                {
-                    case PauseMenuUI.PauseAction.Resume: SetPaused(false); break;
-                    case PauseMenuUI.PauseAction.Restart: SceneLoader.Reload(); break;
-                    case PauseMenuUI.PauseAction.Quit: SceneLoader.Quit(); break;
-                }
-                return;
-            }
-
-            if (GameInput.EscapePressed) { SetPaused(true); return; }
-
-            // Editor-only fast-forward; does nothing in released builds. While an
-            // informational tutorial step is up, the lesson owns the clock.
-            if (!TutorialTimeFreeze) Time.timeScale = GameInput.SpeedHeld ? 3f : 1f;
+            // The arcade cabinet has no pause: play runs at normal speed. While an
+            // informational tutorial step is up, the lesson owns the clock instead.
+            if (!TutorialTimeFreeze) Time.timeScale = 1f;
         }
 
         /// <summary>
         /// Shared «ПОВТОРИТЬ ЦЕХ» / «ВЫЙТИ ИЗ ИГРЫ» menu on the defeat and final
-        /// victory screens: Up/Down select (wrapping), Enter confirms, Esc jumps
-        /// to quit. Restart always reloads the *current* room.
+        /// victory screens: Up/Down select (wrapping), Red confirms. Restart always
+        /// reloads the *current* room.
         /// </summary>
         void HandleEndMenu()
         {
             if (endPanel == null || !endPanel.HasMenu) return;
             if (GameInput.UpPressed) endPanel.MoveSelection(-1);
             if (GameInput.DownPressed) endPanel.MoveSelection(+1);
-            if (GameInput.EscapePressed) endPanel.SelectQuit();
             if (GameInput.ConfirmPressed)
             {
                 UiSfx.Confirm();
                 if (endPanel.SelectedIndex == EndRoomPanel.OptionQuit) SceneLoader.Quit();
                 else SceneLoader.Reload();
-            }
-        }
-
-        void SetPaused(bool value)
-        {
-            paused = value;
-            Time.timeScale = value ? 0f : 1f;
-            AudioManager.SetGamePaused(value);
-            UiSfx.PauseConfirm();
-            if (pauseMenu != null)
-            {
-                if (value) pauseMenu.Show();
-                else pauseMenu.Hide();
             }
         }
     }

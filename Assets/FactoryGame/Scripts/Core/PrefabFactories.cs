@@ -75,7 +75,6 @@ namespace LastShift.Core
             go.AddComponent<FactoryCommandTerminal>();
             go.AddComponent<CommandTerminalUI>();
             go.AddComponent<HUDController>();
-            go.AddComponent<PauseMenuUI>();
             go.AddComponent<EndRoomPanel>();
             return go;
         }

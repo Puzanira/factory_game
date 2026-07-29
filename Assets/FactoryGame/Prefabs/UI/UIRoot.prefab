@@ -12,7 +12,6 @@ GameObject:
   - component: {fileID: 7001572632173515060}
   - component: {fileID: 8797292125699755195}
   - component: {fileID: 4330892317242300443}
-  - component: {fileID: 1871494529775709387}
   - component: {fileID: 1871235879906068219}
   m_Layer: 0
   m_Name: UIRoot
@@ -72,18 +71,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c1d973cd5305d43cd9b4fbd36b8bed8a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LastShift.UI.HUDController
---- !u!114 &1871494529775709387
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5806319120408317473}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 162a6c3f293d741dabc43fe3a348678a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LastShift.UI.PauseMenuUI
 --- !u!114 &1871235879906068219
 MonoBehaviour:
   m_ObjectHideFlags: 0

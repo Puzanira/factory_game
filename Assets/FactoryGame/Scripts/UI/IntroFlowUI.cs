@@ -527,18 +527,11 @@ namespace LastShift.UI
             {
                 case Screen.Title:
                     if (GameInput.ConfirmPressed) Confirm();
-                    if (GameInput.EscapePressed) { UiSfx.PauseMove(); ShowScreen(Screen.ConfirmQuit); }
                     break;
 
                 case Screen.Instructions:
-                    // Enter only: no Up/Down needed on the instruction pages.
+                    // Red only: no Up/Down needed on the instruction pages.
                     if (GameInput.ConfirmPressed) Confirm();
-                    if (GameInput.EscapePressed)
-                    {
-                        UiSfx.PauseMove();
-                        if (pageIndex == 0) ShowScreen(Screen.Title);
-                        else { pageIndex--; ApplyPage(); }
-                    }
                     break;
 
                 case Screen.TutorialChoice:
@@ -549,19 +542,11 @@ namespace LastShift.UI
                         RefreshChoiceMenu();
                     }
                     if (GameInput.ConfirmPressed) Confirm();
-                    if (GameInput.EscapePressed)
-                    {
-                        UiSfx.PauseMove();
-                        pageIndex = Loc.InstructionHeaders.Length - 1;
-                        ShowScreen(Screen.Instructions);
-                        ApplyPage();
-                    }
                     break;
 
                 case Screen.ConfirmQuit:
                     if (GameInput.UpPressed || GameInput.DownPressed) { modalIndex = 1 - modalIndex; UiSfx.TerminalMove(); RefreshModal(); }
                     if (GameInput.ConfirmPressed) Confirm();
-                    if (GameInput.EscapePressed) { UiSfx.PauseMove(); ShowScreen(Screen.Title); }
                     break;
             }
         }
