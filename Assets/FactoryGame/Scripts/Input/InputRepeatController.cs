@@ -4,18 +4,20 @@ namespace LastShift.Input
     /// One shared repeat state for joystick navigation (never one per axis):
     /// entering a direction fires immediately, holding waits the initial delay,
     /// then repeats at a fixed interval; returning to neutral resets everything.
-    /// Runs on unscaled time so it behaves identically in pause menus.
+    /// Runs on unscaled time so held navigation feels consistent everywhere.
     /// </summary>
     public sealed class InputRepeatController
     {
-        readonly SerialConnectionSettings settings;
+        readonly float initialDelay;
+        readonly float interval;
 
         int heldAction;      // -1 previous, +1 next, 0 neutral
         float nextRepeatAt;
 
-        public InputRepeatController(SerialConnectionSettings settings)
+        public InputRepeatController(float initialDelay, float interval)
         {
-            this.settings = settings;
+            this.initialDelay = initialDelay;
+            this.interval = interval;
         }
 
         /// <summary>
@@ -34,13 +36,13 @@ namespace LastShift.Input
             {
                 // New direction (from neutral or a sweep): one immediate action.
                 heldAction = desiredAction;
-                nextRepeatAt = now + settings.repeatInitialDelay;
+                nextRepeatAt = now + initialDelay;
                 return desiredAction;
             }
 
             if (now >= nextRepeatAt)
             {
-                nextRepeatAt = now + settings.repeatInterval;
+                nextRepeatAt = now + interval;
                 return desiredAction;
             }
 

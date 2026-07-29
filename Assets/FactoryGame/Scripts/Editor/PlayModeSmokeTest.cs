@@ -453,11 +453,11 @@ namespace LastShift.EditorTools
                         if (lm.RoomEnded) Fail("room state not reset after restart");
                         if (Mathf.Abs(Time.timeScale - 1f) > 0.01f) Fail("timeScale is " + Time.timeScale + " after restart");
                         int gm = Object.FindObjectsByType<GameManager>(FindObjectsInactive.Exclude).Length;
-                        int bridges = Object.FindObjectsByType<LastShift.Input.ArduinoInputBridge>(FindObjectsInactive.Exclude).Length;
+                        int bridges = Object.FindObjectsByType<LastShift.Input.ArcadeInputBridge>(FindObjectsInactive.Exclude).Length;
                         int audio = Object.FindObjectsByType<LastShift.Audio.AudioManager>(FindObjectsInactive.Exclude).Length;
                         int panels = Object.FindObjectsByType<LastShift.UI.EndRoomPanel>(FindObjectsInactive.Include).Length;
                         if (gm > 1) Fail("duplicate GameManager after restart: " + gm);
-                        if (bridges > 1) Fail("duplicate ArduinoInputBridge after restart: " + bridges);
+                        if (bridges > 1) Fail("duplicate ArcadeInputBridge after restart: " + bridges);
                         if (audio > 1) Fail("duplicate AudioManager after restart: " + audio);
                         if (panels > 1) Fail("duplicate EndRoomPanel after restart: " + panels);
                         Debug.Log("SMOKE_RESTART_OK room=" + lm.RoomName + " gm=" + gm + " bridges=" + bridges
@@ -501,9 +501,9 @@ namespace LastShift.EditorTools
 
         /// <summary>
         /// Publishes queued logical actions from inside the player loop (execution
-        /// order -200, before ArduinoInputBridge and every consumer), so the
+        /// order -200, before ArcadeInputBridge and every consumer), so the
         /// frame-stamped UnifiedGameInput flags are seen the same frame — exactly
-        /// the path the Arduino controller uses.
+        /// the path the arcade input bridge uses.
         /// </summary>
         [DefaultExecutionOrder(-200)]
         class SmokeInputDriver : MonoBehaviour
