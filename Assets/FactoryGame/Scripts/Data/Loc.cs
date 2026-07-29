@@ -24,17 +24,9 @@ namespace LastShift.Data
         public const string AllSystemsCooldown = "ВСЕ СИСТЕМЫ НА ПЕРЕЗАРЯДКЕ";
         public const string SystemBusy = "СИСТЕМА ЗАНЯТА";
         public const string NoSystemsOnline = "НЕТ ДОСТУПНЫХ СИСТЕМ";
-        public const string EnterExecute = "[ENTER] ";
+        public const string EnterExecute = "[КРАСНАЯ КНОПКА] ";
         public const string EngineerLabel = "ИНЖЕНЕР: ";
         public const string ObjectiveReachExit = "ДОБРАТЬСЯ ДО ВЫХОДА";
-        public const string BottomHints = "ESC — ПАУЗА";
-
-        // Pause
-        public const string Paused = "ПАУЗА";
-        public const string PauseResume = "ПРОДОЛЖИТЬ";
-        public const string PauseRestart = "ПОВТОРИТЬ ЦЕХ";
-        public const string PauseQuit = "ВЫЙТИ ИЗ ИГРЫ";
-        public const string PauseHint = "↑/↓ — ВЫБОР      ENTER — ПОДТВЕРДИТЬ      ESC — НАЗАД";
 
         // Sound settings
         public const string SoundSettings = "НАСТРОЙКИ ЗВУКА";
@@ -48,7 +40,7 @@ namespace LastShift.Data
         // Room results
         public const string EngineerRetreated = "ИНЖЕНЕР ОТСТУПИЛ";
         public const string RoomIsYours = "Цех под контролем завода.";
-        public const string NextRoomPrompt = "ENTER — СЛЕДУЮЩИЙ ЦЕХ";
+        public const string NextRoomPrompt = "КРАСНАЯ КНОПКА — СЛЕДУЮЩИЙ ЦЕХ";
         public const string RoomStabilized = "ЦЕХ СТАБИЛИЗИРОВАН";
         public const string RoomStabilizedSub = "Инженер восстановил ручное управление.\nЗавод проиграл.";
 
@@ -75,9 +67,9 @@ namespace LastShift.Data
         public const string ConfirmQuit = "ВЫЙТИ ИЗ ИГРЫ?";
         public const string Yes = "ДА";
         public const string No = "НЕТ";
-        public const string FooterNext = "ENTER — ДАЛЕЕ";
-        public const string FooterContinue = "ENTER — ПРОДОЛЖИТЬ";
-        public const string MenuHint = "↑/↓ — ВЫБОР      ENTER — ПОДТВЕРДИТЬ";
+        public const string FooterNext = "КРАСНАЯ КНОПКА — ДАЛЕЕ";
+        public const string FooterContinue = "КРАСНАЯ КНОПКА — ПРОДОЛЖИТЬ";
+        public const string MenuHint = "ДЖОЙСТИК — ВЫБОР      КРАСНАЯ КНОПКА — ПОДТВЕРДИТЬ";
 
         // ---------------- mandatory instruction pages (3, every new game) ----------------
 
@@ -112,14 +104,9 @@ namespace LastShift.Data
             "и используйте системы в подходящий момент.\n\n" +
             "Если инженер покинет цех — завод победит.",
 
-            "КЛАВИАТУРА\n" +
-            "СТРЕЛКА ВВЕРХ — предыдущая система\n" +
-            "СТРЕЛКА ВНИЗ — следующая система\n" +
-            "ENTER — активировать выбранную систему\n\n" +
-            "АРКАДНЫЙ АВТОМАТ\n" +
             "ДЖОЙСТИК ВВЕРХ / ВЛЕВО — предыдущая система\n" +
             "ДЖОЙСТИК ВНИЗ / ВПРАВО — следующая система\n" +
-            "КНОПКА НА ДЖОЙСТИКЕ ИЛИ ВНЕШНЯЯ КНОПКА — активировать",
+            "КРАСНАЯ КНОПКА — задействовать выбранную систему",
         };
 
         // Page 2 schematic labels
@@ -157,8 +144,8 @@ namespace LastShift.Data
         public const string ExitUnlockedToast = "РЕШИМОСТЬ СЛОМЛЕНА — ИНЖЕНЕР ОТСТУПАЕТ";
 
         // Level 1 tutorial hints
-        public const string HintSelect = "СТРЕЛКИ ВВЕРХ/ВНИЗ — ВЫБРАТЬ СИСТЕМУ";
-        public const string HintActivate = "ENTER — АКТИВИРОВАТЬ СИСТЕМУ";
+        public const string HintSelect = "ДЖОЙСТИК ВВЕРХ/ВНИЗ — ВЫБРАТЬ СИСТЕМУ";
+        public const string HintActivate = "КРАСНАЯ КНОПКА — АКТИВИРОВАТЬ СИСТЕМУ";
         public const string HintHighlight = "ВЫБРАННАЯ СИСТЕМА ПОДСВЕЧЕНА НА КАРТЕ";
         public const string HintGoal = "ЦЕЛЬ: СЛОМИТЬ РЕШИМОСТЬ ИНЖЕНЕРА И ВЫДАВИТЬ ЕГО ИЗ ЦЕХА";
 
@@ -229,13 +216,13 @@ namespace LastShift.Data
             "или сразу перейти к основной смене.";
         public const string TutorialChoiceYes = "ПРОЙТИ УРОК";
         public const string TutorialChoiceNo = "НАЧАТЬ СМЕНУ";
-        public const string TutorialChoiceFooter = "СТРЕЛКА ВВЕРХ / ВНИЗ — ВЫБОР\nENTER — ПОДТВЕРДИТЬ";
+        public const string TutorialChoiceFooter = "ДЖОЙСТИК ВВЕРХ / ВНИЗ — ВЫБОР\nКРАСНАЯ КНОПКА — ПОДТВЕРДИТЬ";
 
         // ---------------- interactive tutorial ----------------
 
         public const string TutorialRoomName = "УЧЕБНЫЙ ЦЕХ";
         public const string TutorialStepLabel = "ШАГ {0} / {1}";
-        public const string TutorialFooterAck = "ENTER — ДАЛЕЕ";
+        public const string TutorialFooterAck = "КРАСНАЯ КНОПКА — ДАЛЕЕ";
         public const string TutorialFooterAction = "ВЫПОЛНИТЕ ДЕЙСТВИЕ";
         public const string TutorialWrongMachine = "ЭТА СИСТЕМА НЕ НУЖНА НА ЭТОМ ШАГЕ";
         public const string TutorialRetry = "СИТУАЦИЯ ПОВТОРЯЕТСЯ — ПОПРОБУЙТЕ ЕЩЁ РАЗ";
@@ -261,8 +248,8 @@ namespace LastShift.Data
         public const string TutStep3Header = "СИСТЕМЫ ЗАВОДА";
         public const string TutStep3Body =
             "Здесь находятся доступные системы цеха.\n\n" +
-            "Стрелками вверх и вниз выберите оборудование.\n" +
-            "Нажмите ENTER, чтобы активировать выбранную систему.";
+            "Джойстиком вверх и вниз выберите оборудование.\n" +
+            "Нажмите красную кнопку, чтобы задействовать выбранную систему.";
 
         // Step 4 — machine information panel
         public const string TutStep4Header = "НАЗНАЧЕНИЕ СИСТЕМЫ";
@@ -296,7 +283,7 @@ namespace LastShift.Data
         public const string TutStep8Header = "АКТИВАЦИЯ СИСТЕМЫ";
         public const string TutStep8Body =
             "Выберите манипулятор.\n\n" +
-            "Нажмите ENTER, когда инженер окажется\n" +
+            "Нажмите красную кнопку, когда инженер окажется\n" +
             "в зоне воздействия.";
         public const string TutWaitOutOfZone = "ЦЕЛЬ ВНЕ ЗОНЫ — ПОДОЖДИТЕ";
         public const string TutGoodMoment = "ПОДХОДЯЩИЙ МОМЕНТ";

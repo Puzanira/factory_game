@@ -55,14 +55,7 @@ namespace LastShift.UI
             toastStack = UIBuilder.Panel(root, "ToastStack",
                 new Vector2(0.34f, 0.6f), new Vector2(0.96f, 0.87f), new Color(0f, 0f, 0f, 0f));
             toastStack.GetComponent<Image>().raycastTarget = false;
-
-            // Minimal corner hint — no permanent information strip.
-            RectTransform bottom = UIBuilder.Panel(root, "BottomHints",
-                new Vector2(0.78f, 0f), new Vector2(1f, 0.038f), new Color(0f, 0f, 0f, 0f));
-            var hints = UIBuilder.Label(bottom, "Hints", Loc.BottomHints, 15,
-                new Color(0.5f, 0.6f, 0.52f), TextAnchor.MiddleRight);
-            hints.raycastTarget = false;
-            SetOffsets(hints.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, new Vector2(-16f, 0f));
+            // No corner hint strip: the cabinet has no pause and nothing to announce here.
         }
 
         Image Panel(Transform root, string name, Color color)

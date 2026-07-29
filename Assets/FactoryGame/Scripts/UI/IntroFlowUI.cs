@@ -207,8 +207,6 @@ namespace LastShift.UI
 
             var footer = UIBuilder.Label(rt, "Footer", Loc.FooterContinue, 26, Amber, TextAnchor.MiddleCenter);
             SetRect(footer.rectTransform, new Vector2(0f, 0.16f), new Vector2(1f, 0.22f));
-            var hint = UIBuilder.Label(rt, "Hint", "ESC — ВЫХОД", 15, new Color(0.4f, 0.55f, 0.45f), TextAnchor.MiddleCenter);
-            SetRect(hint.rectTransform, new Vector2(0f, 0.09f), new Vector2(1f, 0.13f));
         }
 
         // ================= instruction pages =================
@@ -333,47 +331,30 @@ namespace LastShift.UI
             return rt.gameObject;
         }
 
-        /// <summary>Page 3 diagram: arrow-key cluster, joystick and the two buttons.</summary>
+        /// <summary>Page 3 diagram: the cabinet's joystick and the red button.</summary>
         GameObject BuildDiagramControls(Transform area)
         {
             RectTransform rt = UIBuilder.Panel(area, "DiagramControls", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0f));
             var line = new Color(0.4f, 0.85f, 0.58f, 0.55f);
-
-            var kb = UIBuilder.Label(rt, "KbTitle", "КЛАВИАТУРА", 13, Amber, TextAnchor.MiddleCenter);
-            SetRect(kb.rectTransform, new Vector2(0f, 0.9f), new Vector2(1f, 0.97f));
-            Box(rt, new Vector2(0.38f, 0.78f), new Vector2(0.62f, 0.88f), line);
-            var up = UIBuilder.Label(rt, "KeyUp", "▲", 20, Phosphor, TextAnchor.MiddleCenter);
-            SetRect(up.rectTransform, new Vector2(0.38f, 0.78f), new Vector2(0.62f, 0.88f));
-            Box(rt, new Vector2(0.38f, 0.66f), new Vector2(0.62f, 0.76f), line);
-            var dn = UIBuilder.Label(rt, "KeyDown", "▼", 20, Phosphor, TextAnchor.MiddleCenter);
-            SetRect(dn.rectTransform, new Vector2(0.38f, 0.66f), new Vector2(0.62f, 0.76f));
-            Box(rt, new Vector2(0.64f, 0.66f), new Vector2(0.96f, 0.76f), line);
-            var en = UIBuilder.Label(rt, "KeyEnter", "ENTER", 14, Phosphor, TextAnchor.MiddleCenter);
-            SetRect(en.rectTransform, new Vector2(0.64f, 0.66f), new Vector2(0.96f, 0.76f));
-
-            UIBuilder.Panel(rt, "Split", new Vector2(0.06f, 0.605f), new Vector2(0.94f, 0.6075f),
-                new Color(0.35f, 0.7f, 0.45f, 0.4f));
-
-            var ar = UIBuilder.Label(rt, "ArdTitle", "ARDUINO", 13, Amber, TextAnchor.MiddleCenter);
-            SetRect(ar.rectTransform, new Vector2(0f, 0.52f), new Vector2(1f, 0.59f));
+            var red = new Color(0.85f, 0.28f, 0.22f);
 
             // Joystick: gate ring with four direction stubs.
-            var ring = UIBuilder.Panel(rt, "JoyRing", new Vector2(0.3f, 0.26f), new Vector2(0.56f, 0.48f),
+            var ring = UIBuilder.Panel(rt, "JoyRing", new Vector2(0.3f, 0.5f), new Vector2(0.56f, 0.72f),
                 new Color(0.4f, 0.85f, 0.58f, 0.22f));
             ring.GetComponent<Image>().sprite = SpriteFactory.Get(PlaceholderShape.Ring);
-            var knob = UIBuilder.Panel(rt, "JoyKnob", new Vector2(0.39f, 0.33f), new Vector2(0.47f, 0.41f), Amber);
+            var knob = UIBuilder.Panel(rt, "JoyKnob", new Vector2(0.39f, 0.57f), new Vector2(0.47f, 0.65f), Amber);
             knob.GetComponent<Image>().sprite = TextureFactory.SoftCircle();
-            UIBuilder.Panel(rt, "JoyUp", new Vector2(0.42f, 0.48f), new Vector2(0.44f, 0.52f), line);
-            UIBuilder.Panel(rt, "JoyDn", new Vector2(0.42f, 0.22f), new Vector2(0.44f, 0.26f), line);
-            UIBuilder.Panel(rt, "JoyL", new Vector2(0.26f, 0.36f), new Vector2(0.3f, 0.38f), line);
-            UIBuilder.Panel(rt, "JoyR", new Vector2(0.56f, 0.36f), new Vector2(0.6f, 0.38f), line);
+            UIBuilder.Panel(rt, "JoyUp", new Vector2(0.42f, 0.72f), new Vector2(0.44f, 0.76f), line);
+            UIBuilder.Panel(rt, "JoyDn", new Vector2(0.42f, 0.46f), new Vector2(0.44f, 0.5f), line);
+            UIBuilder.Panel(rt, "JoyL", new Vector2(0.26f, 0.6f), new Vector2(0.3f, 0.62f), line);
+            UIBuilder.Panel(rt, "JoyR", new Vector2(0.56f, 0.6f), new Vector2(0.6f, 0.62f), line);
             var jl = UIBuilder.Label(rt, "JoyLabel", "ДЖОЙСТИК", 11, PhosphorDim, TextAnchor.MiddleCenter);
-            SetRect(jl.rectTransform, new Vector2(0.24f, 0.15f), new Vector2(0.62f, 0.22f));
+            SetRect(jl.rectTransform, new Vector2(0.24f, 0.39f), new Vector2(0.62f, 0.46f));
 
-            var btn = UIBuilder.Panel(rt, "Button", new Vector2(0.7f, 0.3f), new Vector2(0.9f, 0.44f), Amber);
+            var btn = UIBuilder.Panel(rt, "Button", new Vector2(0.7f, 0.54f), new Vector2(0.9f, 0.68f), red);
             btn.GetComponent<Image>().sprite = TextureFactory.SoftCircle();
-            var bl = UIBuilder.Label(rt, "BtnLabel", "КНОПКА", 11, PhosphorDim, TextAnchor.MiddleCenter);
-            SetRect(bl.rectTransform, new Vector2(0.64f, 0.15f), new Vector2(0.96f, 0.22f));
+            var bl = UIBuilder.Label(rt, "BtnLabel", "КРАСНАЯ КНОПКА", 11, PhosphorDim, TextAnchor.MiddleCenter);
+            SetRect(bl.rectTransform, new Vector2(0.6f, 0.39f), new Vector2(1f, 0.46f));
 
             var note = UIBuilder.Label(rt, "Note", Loc.InstructionTacticalNote, 14, Phosphor, TextAnchor.UpperCenter);
             SetRect(note.rectTransform, new Vector2(0.04f, 0.01f), new Vector2(0.96f, 0.13f));
