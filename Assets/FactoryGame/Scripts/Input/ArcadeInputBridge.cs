@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using AiGameStudio.ArcadeControls;
 
 namespace LastShift.Input
@@ -37,14 +38,51 @@ namespace LastShift.Input
         // backend) nor pump it twice.
         bool ownsBackend;
 
+        // Create the bridge PER FACTORY-SCENE LOAD, not once at app start. Standalone this is
+        // functionally the same (the first scene IS a factory scene, so the bridge appears
+        // immediately and — being DontDestroyOnLoad — survives Boot→level transitions).
+        //
+        // In the arcade-hub it is the essential difference: the hub launches Factory in-process
+        // and, on every menu entry, its DDOL "janitor" sweeps foreign DontDestroyOnLoad roots
+        // (this bridge is namespace LastShift.Input — foreign to the hub). A once-only
+        // AfterSceneLoad bootstrap spawned the bridge in the HUB MENU at startup, where the
+        // janitor immediately swept it and — being once-only — it never came back, so Factory
+        // launched with NO ArcadeInput→UnifiedGameInput bridge and the cabinet RedButton
+        // ("КРАСНАЯ КНОПКА — ДАЛЕЕ") did nothing. Rebuilding on each factory-scene load makes
+        // the sweep harmless: the next Factory launch re-creates the bridge in its own scene.
+        // Gated to factory scenes so it never spawns in the hub menu / another game's scene.
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Bootstrap()
         {
+            SceneManager.sceneLoaded += (scene, mode) => EnsureForScene(scene);
+            // The active scene at startup already fired its load before this callback was
+            // attached (standalone Boot, or a directly-played factory scene) — cover it now.
+            EnsureForScene(SceneManager.GetActiveScene());
+        }
+
+        static void EnsureForScene(Scene scene)
+        {
             if (Instance != null) return;
+            if (!IsFactoryScene(scene)) return;
             if (FindAnyObjectByType<ArcadeInputBridge>() != null) return;
 
             var go = new GameObject("ArcadeInput");
             go.AddComponent<ArcadeInputBridge>();
+        }
+
+        // True for Factory's own scenes, in BOTH layouts: the standalone build
+        // ("Assets/FactoryGame/…") and the arcade-hub package path
+        // ("Packages/com.aigamestudio.game-factory/…"). Matched by explicit path
+        // prefixes/segments — NOT a bare "factory" substring, which could false-positive
+        // on an unrelated scene that merely contains the word (e.g. another game's
+        // "ToyFactory" level parked in the same build).
+        static bool IsFactoryScene(Scene scene)
+        {
+            string path = scene.path;
+            if (string.IsNullOrEmpty(path)) return false;
+            string p = path.ToLowerInvariant();
+            return p.StartsWith("assets/factorygame/")
+                || p.Contains("/com.aigamestudio.game-factory/");
         }
 
         void Awake()
@@ -68,6 +106,22 @@ namespace LastShift.Input
                 ArcadeInput.Initialize(new KeyboardBackend(map));
             }
             repeat = new InputRepeatController(RepeatInitialDelay, RepeatInterval);
+
+            // Prime the Submit edge-detector with the CURRENT red state (the hub's Prime()
+            // pattern): launching Factory from the hub is a ~5s RED hold, so the bridge is
+            // (re)created while the button is still physically down. Starting redWasHeld at
+            // false would read that stale hold as a rising edge on the very first Update and
+            // auto-advance the first «КРАСНАЯ КНОПКА — ДАЛЕЕ» screen. Priming means the first
+            // Submit fires only after a seen release + a fresh press. Standalone this is a
+            // no-op (nothing is held at startup).
+            redWasHeld = ArcadeInput.RedButton.IsHeld;
+        }
+
+        void OnDestroy()
+        {
+            // Clear the static handle when we're torn down (e.g. the hub's DDOL janitor sweeps
+            // us on menu entry) so EnsureForScene builds a fresh bridge on the next factory load.
+            if (Instance == this) Instance = null;
         }
 
         void Update()
