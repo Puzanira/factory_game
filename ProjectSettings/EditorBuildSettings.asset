@@ -18,4 +18,4 @@ EditorBuildSettings:
     path: Assets/FactoryGame/Scenes/Level_03_ColdStorage.unity
     guid: 03f244179b88a48ea98e38a51cb7d78a
   m_configObjects:
-    com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+    com.unity.input.settings.actions: {fileID: -944628639613478452, guid: a351218b19b74000b41aebf93c3a5c41, type: 3}
