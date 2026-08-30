@@ -88,6 +88,22 @@ namespace LastShift.Utilities
 
         // ---------------- particles ----------------
 
+        /// <summary>
+        /// Emission rate for an area effect, budgeted by fill rate rather than by area.
+        /// A soft particle costs its whole quad every frame, so the price of a plume is
+        /// (live particles x particle area) — i.e. how many translucent layers pile up
+        /// over the zone. `layers` is that stack depth; density lost to a lower rate is
+        /// paid back with per-particle alpha, which is free to draw.
+        /// </summary>
+        static float RateForCoverage(Vector2 areaSize, float avgParticleSize, float avgLifetime,
+            float layers, float minRate, float maxRate)
+        {
+            float zone = Mathf.Max(1f, areaSize.x * areaSize.y);
+            float particleArea = avgParticleSize * avgParticleSize;
+            float rate = zone * layers / (particleArea * avgLifetime);
+            return Mathf.Clamp(rate, minRate, maxRate);
+        }
+
         static ParticleSystem BaseParticles(Transform parent, string name, int order)
         {
             var go = new GameObject(name);
@@ -112,8 +128,11 @@ namespace LastShift.Utilities
             main.startSize = new ParticleSystem.MinMaxCurve(0.5f, 1.2f);
             main.startLifetime = new ParticleSystem.MinMaxCurve(0.9f, 1.6f);
             main.startSpeed = new ParticleSystem.MinMaxCurve(0.4f, 0.9f);
+            main.maxParticles = 48;
             var emission = ps.emission;
-            emission.rateOverTime = 10f * Mathf.Max(1f, areaSize.x * areaSize.y / 4f);
+            // ~2.2 layers, which is what the old linear rate already gave the shipped
+            // steam rects — the clamp only guards against an oversized zone.
+            emission.rateOverTime = RateForCoverage(areaSize, 0.85f, 1.25f, 2.2f, 6f, 30f);
             var shape = ps.shape;
             shape.shapeType = ParticleSystemShapeType.Box;
             shape.scale = new Vector3(areaSize.x, areaSize.y, 0.1f);
@@ -135,13 +154,20 @@ namespace LastShift.Utilities
         {
             var ps = BaseParticles(parent, "ColdFogFX", order);
             var main = ps.main;
+            // Alpha raised ~1.8x against the pre-budget values (0.22/0.14) to pay back
+            // the density lost with the lower emission rate below; still low enough
+            // that routes and the engineer read through the fog.
             main.startColor = new ParticleSystem.MinMaxGradient(
-                new Color(0.75f, 0.87f, 1f, 0.22f), new Color(0.85f, 0.95f, 1f, 0.14f));
+                new Color(0.75f, 0.87f, 1f, 0.40f), new Color(0.85f, 0.95f, 1f, 0.25f));
             main.startSize = new ParticleSystem.MinMaxCurve(1.2f, 2.4f);
             main.startLifetime = new ParticleSystem.MinMaxCurve(1.6f, 2.8f);
             main.startSpeed = new ParticleSystem.MinMaxCurve(0.1f, 0.3f);
+            main.maxParticles = 64;
             var emission = ps.emission;
-            emission.rateOverTime = 6f * Mathf.Max(1f, areaSize.x * areaSize.y / 6f);
+            // The cold rooms carry the biggest zones in the game (6 x 7.5 units), where
+            // the old linear rate stacked ~9 layers of 2.4-unit blob — by far the
+            // heaviest fill in any room. 3.5 layers still reads as solid fog.
+            emission.rateOverTime = RateForCoverage(areaSize, 1.8f, 2.2f, 3.5f, 4f, 24f);
             var shape = ps.shape;
             shape.shapeType = ParticleSystemShapeType.Box;
             shape.scale = new Vector3(areaSize.x, areaSize.y, 0.1f);
@@ -166,6 +192,7 @@ namespace LastShift.Utilities
             main.startLifetime = new ParticleSystem.MinMaxCurve(0.25f, 0.5f);
             main.startSpeed = new ParticleSystem.MinMaxCurve(1.2f, 2.6f);
             main.gravityModifier = 1.4f;
+            main.maxParticles = 24; // sparks are tiny, but every objective owns an emitter
             var emission = ps.emission;
             emission.rateOverTime = 14f;
             var shape = ps.shape;
