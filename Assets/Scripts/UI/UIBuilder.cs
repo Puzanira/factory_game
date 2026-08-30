@@ -11,10 +11,28 @@ namespace LastShift.UI
     {
         static Font cachedFont;
 
+        /// <summary>
+        /// The project font, shipped in Resources rather than taken from Unity's
+        /// built-in LegacyRuntime.ttf.
+        ///
+        /// Why: a dynamic font only rasterises glyphs it actually contains, and on
+        /// desktop Unity quietly fills the gaps from the operating system's fonts.
+        /// WebGL has no OS to ask, so every Cyrillic character in the game came out
+        /// blank in the browser build. Inter ships with the editor under the SIL Open
+        /// Font License (license copied next to the .ttf) and was checked to cover all
+        /// 108 distinct characters the game's strings use — Cyrillic plus « » — № ↑ ↓
+        /// and the true minus sign. RobotoMono was rejected: it has no ↑ or ↓, which
+        /// the menu hints need.
+        ///
+        /// The built-in font stays as a last-resort fallback so UI can never come up
+        /// with no font at all.
+        /// </summary>
         public static Font DefaultFont
         {
             get
             {
+                if (cachedFont == null)
+                    cachedFont = Resources.Load<Font>("Fonts/Inter-Regular");
                 if (cachedFont == null)
                     cachedFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
                 return cachedFont;

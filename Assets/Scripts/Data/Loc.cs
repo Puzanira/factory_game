@@ -33,7 +33,6 @@ namespace LastShift.Data
         public const string Paused = "ПАУЗА";
         public const string PauseResume = "ПРОДОЛЖИТЬ";
         public const string PauseRestart = "ПОВТОРИТЬ ЦЕХ";
-        public const string PauseQuit = "ВЫЙТИ ИЗ ИГРЫ";
         public const string PauseHint = "↑/↓ — ВЫБОР      ENTER — ПОДТВЕРДИТЬ      ESC — НАЗАД";
 
         // Sound settings
@@ -58,6 +57,20 @@ namespace LastShift.Data
         public const string FactoryWonSmall = "СИСТЕМЫ ПРОИЗВОДСТВА ПРОДОЛЖАЮТ РАБОТУ.";
         public const string MenuRepeatRoom = "ПОВТОРИТЬ ЦЕХ";
         public const string MenuQuitGame = "ВЫЙТИ ИЗ ИГРЫ";
+        public const string MenuBackToTitle = "В ГЛАВНОЕ МЕНЮ";
+
+        /// <summary>
+        /// Label of the "leave" option shared by the pause menu and the defeat/final
+        /// menus. A web build cannot close its own tab, so there it returns to the
+        /// title screen and says so; every other build quits for real.
+        /// See SceneLoader.Quit(), which makes the same distinction.
+        /// </summary>
+        public static string MenuLeave =>
+#if UNITY_WEBGL && !UNITY_EDITOR
+            MenuBackToTitle;
+#else
+            MenuQuitGame;
+#endif
 
         // Final victory picture (perimeter-camera frame behind «ЗАВОД ПОБЕДИЛ»)
         public const string FinalCameraLabel = "КАМЕРА 01 · ПЕРИМЕТР";
@@ -112,15 +125,28 @@ namespace LastShift.Data
             "и используйте системы в подходящий момент.\n\n" +
             "Если инженер покинет цех — завод победит.",
 
+            ControlsKeyboard + ControlsCabinet,
+        };
+
+        // Page 3 controls. The cabinet half is dropped on the web, where there is no
+        // serial port and so no joystick or buttons — listing hardware the player
+        // cannot have would only confuse them. The keyboard half is identical in both,
+        // and the three logical actions behind it are unchanged either way.
+        const string ControlsKeyboard =
             "КЛАВИАТУРА\n" +
             "СТРЕЛКА ВВЕРХ — предыдущая система\n" +
             "СТРЕЛКА ВНИЗ — следующая система\n" +
-            "ENTER — активировать выбранную систему\n\n" +
-            "АРКАДНЫЙ АВТОМАТ\n" +
+            "ENTER — активировать выбранную систему";
+
+        const string ControlsCabinet =
+#if UNITY_WEBGL && !UNITY_EDITOR
+            "";
+#else
+            "\n\nАРКАДНЫЙ АВТОМАТ\n" +
             "ДЖОЙСТИК ВВЕРХ / ВЛЕВО — предыдущая система\n" +
             "ДЖОЙСТИК ВНИЗ / ВПРАВО — следующая система\n" +
-            "КНОПКА НА ДЖОЙСТИКЕ ИЛИ ВНЕШНЯЯ КНОПКА — активировать",
-        };
+            "КНОПКА НА ДЖОЙСТИКЕ ИЛИ ВНЕШНЯЯ КНОПКА — активировать";
+#endif
 
         // Page 2 schematic labels
         public const string InstructionLabelEngineer = "ИНЖЕНЕР РЕМОНТИРУЕТ ПУЛЬТЫ";

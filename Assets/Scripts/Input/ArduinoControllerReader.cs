@@ -44,8 +44,16 @@ namespace LastShift.Input
 
         public void Initialize(SerialConnectionSettings connectionSettings)
         {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // Belt and braces: the bridge already refuses to build this stack on the
+            // web, but leaving `settings` null also makes Pump() return immediately,
+            // so no native port handle or read thread can be created in a browser
+            // even if the component is placed by hand.
+            return;
+#else
             settings = connectionSettings;
             nextPortScanAt = 0f;
+#endif
         }
 
         /// <summary>

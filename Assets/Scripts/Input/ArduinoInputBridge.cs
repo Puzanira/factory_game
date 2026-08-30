@@ -32,6 +32,14 @@ namespace LastShift.Input
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Bootstrap()
         {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // A browser has no serial ports and no background threads: the reader
+            // relies on both (native port handles plus a read thread), so the whole
+            // controller stack simply never comes up on the web build. The keyboard
+            // path is untouched — GameInput still ORs raw ↑/↓/Enter, so every screen
+            // stays fully playable on the same three logical actions.
+            return;
+#else
             if (Instance != null) return;
             if (FindFirstObjectByType<ArduinoInputBridge>() != null) return;
 
@@ -39,6 +47,7 @@ namespace LastShift.Input
             go.AddComponent<ArduinoControllerReader>();
             go.AddComponent<ArduinoInputBridge>();
             go.AddComponent<ArduinoDebugStatus>();
+#endif
         }
 
         void Awake()

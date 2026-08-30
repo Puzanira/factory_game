@@ -52,7 +52,7 @@ namespace LastShift.UI
             mainRoot.transform.SetParent(rt, false);
             var mainRt = mainRoot.AddComponent<RectTransform>();
             SetRect(mainRt, new Vector2(0.32f, 0.24f), new Vector2(0.68f, 0.62f));
-            string[] mainOptions = { Loc.PauseResume, Loc.SoundSettings, Loc.PauseRestart, Loc.PauseQuit };
+            string[] mainOptions = { Loc.PauseResume, Loc.SoundSettings, Loc.PauseRestart, Loc.MenuLeave };
             BuildRows(mainRt, mainOptions.Length, mainTexts, mainBgs);
 
             // ---- sound settings ----
@@ -193,7 +193,7 @@ namespace LastShift.UI
             mainRoot.SetActive(!settingsOpen);
             settingsRoot.SetActive(settingsOpen);
 
-            string[] mainLabels = { Loc.PauseResume, Loc.SoundSettings, Loc.PauseRestart, Loc.PauseQuit };
+            string[] mainLabels = { Loc.PauseResume, Loc.SoundSettings, Loc.PauseRestart, Loc.MenuLeave };
             for (int i = 0; i < mainTexts.Count; i++)
                 StyleRow(mainTexts[i], mainBgs[i], mainLabels[i], i == mainIndex && !settingsOpen);
 
