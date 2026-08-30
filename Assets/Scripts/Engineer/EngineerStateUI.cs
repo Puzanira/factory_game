@@ -20,10 +20,11 @@ namespace LastShift.Engineer
 
         void BuildLabel()
         {
+            const float canvasScale = 0.02f;
             var canvasGO = new GameObject("StateLabelCanvas");
             canvasGO.transform.SetParent(transform, false);
             canvasGO.transform.localPosition = new Vector3(0f, 0.85f, 0f);
-            canvasGO.transform.localScale = Vector3.one * 0.02f;
+            canvasGO.transform.localScale = Vector3.one * canvasScale;
 
             var canvas = canvasGO.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
@@ -32,6 +33,7 @@ namespace LastShift.Engineer
                 canvas.sortingLayerName = "WorldUI";
             var rt = (RectTransform)canvasGO.transform;
             rt.sizeDelta = new Vector2(200f, 30f);
+            UIBuilder.ApplyWorldCanvasDensity(canvas, canvasScale);
 
             label = UIBuilder.Label(canvasGO.transform, "State", "…", 22,
                 new Color(1f, 0.95f, 0.8f), TextAnchor.MiddleCenter);

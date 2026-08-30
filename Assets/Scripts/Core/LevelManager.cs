@@ -150,6 +150,11 @@ namespace LastShift.Core
             layout = TutorialMode ? LevelLayouts.Tutorial() : LevelLayouts.Get(levelData.levelIndex);
             levelData.roomName = layout.roomName;
 
+            // Before anything is built: world-space canvases size their font rasterisation
+            // from the camera (UIBuilder.ApplyWorldCanvasDensity), and the room's repair
+            // plates and the engineer's label are both created below.
+            SetupCamera();
+
             PathGrid.Create(Vector2.zero, layout.roomSize + new Vector2(1.5f, 1.5f), 0.5f);
             refs = RoomBuilder.Build(layout, prefabLibrary, transform);
             Exit = refs.exit;
@@ -164,7 +169,6 @@ namespace LastShift.Core
 
             SpawnEngineer();
             BuildUI();
-            SetupCamera();
             gameObject.AddComponent<RoomAudioDirector>().Init(this, levelData.levelIndex);
 
             if (refs.objectives.Count > 0) Engineer.SetObjective(refs.objectives[0]);
