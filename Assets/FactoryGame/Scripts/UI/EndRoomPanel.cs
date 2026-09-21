@@ -92,7 +92,7 @@ namespace LastShift.UI
             // Reusable restart/quit menu (defeat screen + final victory).
             menuRoot = UIBuilder.Panel(card, "RestartQuitMenu", new Vector2(0.24f, 0.16f), new Vector2(0.76f, 0.4f),
                 new Color(0f, 0f, 0f, 0f));
-            string[] options = { Loc.MenuRepeatRoom, Loc.MenuQuitGame };
+            string[] options = { Loc.MenuRepeatRoom, Loc.MenuLeave };
             for (int i = 0; i < options.Length; i++)
             {
                 var row = new GameObject("Option" + i);
@@ -258,7 +258,7 @@ namespace LastShift.UI
         }
 
         static string OptionLabel(int i) =>
-            i == OptionRepeatRoom ? Loc.MenuRepeatRoom : Loc.MenuQuitGame;
+            i == OptionRepeatRoom ? Loc.MenuRepeatRoom : Loc.MenuLeave;
 
         void Show(string titleText, string subtitleText, string promptText)
         {

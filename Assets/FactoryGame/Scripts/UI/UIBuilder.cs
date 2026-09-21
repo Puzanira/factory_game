@@ -11,10 +11,28 @@ namespace LastShift.UI
     {
         static Font cachedFont;
 
+        /// <summary>
+        /// The project font, shipped in Resources rather than taken from Unity's
+        /// built-in LegacyRuntime.ttf.
+        ///
+        /// Why: a dynamic font only rasterises glyphs it actually contains, and on
+        /// desktop Unity quietly fills the gaps from the operating system's fonts.
+        /// WebGL has no OS to ask, so every Cyrillic character in the game came out
+        /// blank in the browser build. Inter ships with the editor under the SIL Open
+        /// Font License (license copied next to the .ttf) and was checked to cover all
+        /// 108 distinct characters the game's strings use — Cyrillic plus « » — № ↑ ↓
+        /// and the true minus sign. RobotoMono was rejected: it has no ↑ or ↓, which
+        /// the menu hints need.
+        ///
+        /// The built-in font stays as a last-resort fallback so UI can never come up
+        /// with no font at all.
+        /// </summary>
         public static Font DefaultFont
         {
             get
             {
+                if (cachedFont == null)
+                    cachedFont = Resources.Load<Font>("Fonts/Inter-Regular");
                 if (cachedFont == null)
                     cachedFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
                 return cachedFont;
@@ -32,6 +50,41 @@ namespace LastShift.UI
             scaler.referenceResolution = new Vector2(1920f, 1080f);
             scaler.matchWidthOrHeight = 0.5f;
             return canvas;
+        }
+
+        /// <summary>
+        /// Sets the rasterisation density of a WORLD-SPACE canvas so its dynamic-font
+        /// text is baked at the size it is actually drawn at.
+        ///
+        /// A dynamic font bakes each glyph into an atlas at fontSize * canvas.scaleFactor
+        /// pixels. A world canvas is scaled down to a fraction of a world unit, and the
+        /// camera then blows a world unit up to ~77 screen px at 1080p — so with the
+        /// default scaleFactor of 1 the glyph bitmap ends up magnified and goes blocky
+        /// (the engineer's state label was baked at 22 px and drawn at 34).
+        /// CanvasScaler.dynamicPixelsPerUnit becomes that scaleFactor for a world canvas,
+        /// and uGUI divides the generated glyph geometry back by it, so the text keeps
+        /// its size and only gains resolution.
+        ///
+        /// The density is MATCHED, not overshot: the font atlas carries no mipmaps, so a
+        /// wildly oversized glyph would alias when minified. It is read from the camera's
+        /// current pixel height, which is why this is called after the canvas is placed;
+        /// rooms rebuild their UI on load, so a resolution change is picked up then.
+        /// </summary>
+        public static void ApplyWorldCanvasDensity(Canvas canvas, float canvasLocalScale)
+        {
+            if (canvas == null || canvasLocalScale <= 0f) return;
+
+            // Orthographic height in world units -> screen pixels per world unit.
+            float pxPerWorldUnit = 100f; // fallback if no camera has been set up yet
+            Camera cam = Camera.main;
+            if (cam != null && cam.orthographic && cam.orthographicSize > 0.001f)
+                pxPerWorldUnit = cam.pixelHeight / (2f * cam.orthographicSize);
+
+            var scaler = canvas.GetComponent<CanvasScaler>();
+            if (scaler == null) scaler = canvas.gameObject.AddComponent<CanvasScaler>();
+            // Clamped: never coarser than 1:1, and capped so a freak camera cannot ask
+            // for glyphs big enough to blow up the font atlas.
+            scaler.dynamicPixelsPerUnit = Mathf.Clamp(canvasLocalScale * pxPerWorldUnit, 1f, 8f);
         }
 
         public static RectTransform Panel(Transform parent, string name,

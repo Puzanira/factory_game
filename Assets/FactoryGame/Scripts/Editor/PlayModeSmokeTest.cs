@@ -253,7 +253,7 @@ namespace LastShift.EditorTools
                         if (!t.gameObject.activeInHierarchy) continue;
                         if (t.text == LastShift.Data.Loc.FactoryWon) foundTitle = true;
                         if (t.text.Contains(LastShift.Data.Loc.MenuRepeatRoom)) foundRepeat = true;
-                        if (t.text.Contains(LastShift.Data.Loc.MenuQuitGame)) foundQuit = true;
+                        if (t.text.Contains(LastShift.Data.Loc.MenuLeave)) foundQuit = true;
                     }
                     Debug.Log("SMOKE_FINAL_OK=" + foundTitle + " menuRepeat=" + foundRepeat + " menuQuit=" + foundQuit);
                     bool pass2 = errorCount == 0 && foundTitle && foundRepeat && foundQuit;
@@ -404,7 +404,7 @@ namespace LastShift.EditorTools
                             if (!t.gameObject.activeInHierarchy) continue;
                             if (t.text == LastShift.Data.Loc.RoomStabilized) titleOk = true;
                             if (t.text == "> " + LastShift.Data.Loc.MenuRepeatRoom + " <") selRepeat = true;
-                            if (t.text == LastShift.Data.Loc.MenuQuitGame) quitLabel = true;
+                            if (t.text == LastShift.Data.Loc.MenuLeave) quitLabel = true;
                         }
                         if (!titleOk) Fail("result text «ЦЕХ СТАБИЛИЗИРОВАН» missing");
                         if (!selRepeat) Fail("selected row «> ПОВТОРИТЬ ЦЕХ <» missing");

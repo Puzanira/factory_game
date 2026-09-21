@@ -17,10 +17,18 @@ namespace LastShift.Core
             Load(SceneManager.GetActiveScene().name);
         }
 
+        /// <summary>
+        /// Leaves the current session. A browser tab cannot be closed by the page, so
+        /// Application.Quit() is a silent no-op there — the web build returns to the
+        /// title screen instead, which is the only "leave" that means anything in a
+        /// tab. The menu label follows this (see Loc.MenuLeave).
+        /// </summary>
         public static void Quit()
         {
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
+#elif UNITY_WEBGL
+            Load(GameManager.BootScene);
 #else
             Application.Quit();
 #endif

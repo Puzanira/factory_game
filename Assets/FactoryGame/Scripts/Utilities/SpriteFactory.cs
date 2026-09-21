@@ -124,7 +124,8 @@ namespace LastShift.Utilities
             }
 
             tex.SetPixels32(pixels);
-            tex.Apply(mip);
+            // Nothing reads these back, so drop the CPU copy (makeNoLongerReadable).
+            tex.Apply(mip, true);
             // pixelsPerUnit == texture size -> sprite is exactly 1x1 world units.
             return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
         }

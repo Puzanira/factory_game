@@ -12,6 +12,17 @@ namespace LastShift.Utilities
     {
         static readonly Dictionary<string, Sprite> cache = new Dictionary<string, Sprite>();
 
+        /// <summary>
+        /// Texels per world unit for the tiling world textures. The camera fits a room
+        /// into the screen, which puts a world unit at ~77 px on a 1920x1080 monitor
+        /// (Level 1: ortho 7.03 -> 1080 / 14.06). At the old 64 these textures were
+        /// being magnified ~1.2x — every floor seam, rivet and hazard stripe was
+        /// slightly soft. 128 covers 1080p with headroom and still reads at 1440p.
+        /// Each texture keeps its world size: the pixel count and the pixelsPerUnit
+        /// move together, and pattern periods scale with them.
+        /// </summary>
+        const int Density = 128;
+
         static Sprite Cached(string key, System.Func<Sprite> build)
         {
             if (cache.TryGetValue(key, out var s) && s != null) return s;
@@ -22,7 +33,8 @@ namespace LastShift.Utilities
 
         static Sprite MakeSprite(Texture2D tex, float ppu)
         {
-            tex.Apply();
+            // No mipmaps here, and nothing reads the pixels back: free the CPU copy.
+            tex.Apply(false, true);
             return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height),
                 new Vector2(0.5f, 0.5f), ppu, 0, SpriteMeshType.FullRect);
         }
@@ -50,14 +62,16 @@ namespace LastShift.Utilities
         {
             return Cached("floor" + baseColor + seed, () =>
             {
-                const int S = 128;
+                const int S = Density * 2;          // the tile stays 2x2 world units
+                const int K = S / 128;              // scale of every pattern period
                 var tex = NewTex(S, S, true);
                 var px = new Color32[S * S];
                 for (int y = 0; y < S; y++)
                 {
                     for (int x = 0; x < S; x++)
                     {
-                        float n = Hash(x / 4, y / 4, seed) * 0.5f + Hash(x / 16, y / 16, seed + 3) * 0.5f;
+                        float n = Hash(x / (4 * K), y / (4 * K), seed) * 0.5f
+                                + Hash(x / (16 * K), y / (16 * K), seed + 3) * 0.5f;
                         float v = 0.92f + n * 0.14f; // subtle noise
                         Color c = baseColor * v;
 
@@ -66,30 +80,32 @@ namespace LastShift.Utilities
                         int ey = Mathf.Min(y, S - 1 - y);
                         int mx = Mathf.Abs(x - S / 2);
                         int my = Mathf.Abs(y - S / 2);
-                        if (ex < 2 || ey < 2) c *= 0.62f;
-                        else if (mx < 1 || my < 1) c *= 0.78f;
+                        if (ex < 2 * K || ey < 2 * K) c *= 0.62f;
+                        else if (mx < K || my < K) c *= 0.78f;
 
-                        // Corner bolts on each quarter panel.
+                        // Corner bolts on each quarter panel (radii are squared distances,
+                        // so they scale with K^2).
                         foreach (var b in BoltCenters)
                         {
-                            float dx = x - b.x, dy = y - b.y;
+                            float dx = x - b.x * K, dy = y - b.y * K;
                             float d = dx * dx + dy * dy;
-                            if (d < 6f) c *= 0.55f;
-                            else if (d < 11f) c *= 1.18f;
+                            if (d < 6f * K * K) c *= 0.55f;
+                            else if (d < 11f * K * K) c *= 1.18f;
                         }
 
                         // Sparse stains.
-                        if (Hash(x / 22, y / 22, seed + 9) > 0.87f) c *= 0.88f;
+                        if (Hash(x / (22 * K), y / (22 * K), seed + 9) > 0.87f) c *= 0.88f;
 
                         c.a = 1f;
                         px[y * S + x] = c;
                     }
                 }
                 tex.SetPixels32(px);
-                return MakeSprite(tex, 64f);
+                return MakeSprite(tex, Density);
             });
         }
 
+        /// <summary>Bolt centres in the original 128-px tile space; scaled by K at use.</summary>
         static readonly Vector2Int[] BoltCenters =
         {
             new Vector2Int(10, 10), new Vector2Int(118, 10), new Vector2Int(10, 118), new Vector2Int(118, 118),
@@ -101,16 +117,17 @@ namespace LastShift.Utilities
         {
             return Cached("stripes", () =>
             {
-                const int S = 64;
+                const int S = Density;              // 1x1 world unit, as before
+                const int K = S / 64;               // stripe period scales with the size
                 var tex = NewTex(S, S, true);
                 var px = new Color32[S * S];
                 var yellow = new Color32(212, 172, 60, 255);
                 var black = new Color32(26, 24, 20, 255);
                 for (int y = 0; y < S; y++)
                     for (int x = 0; x < S; x++)
-                        px[y * S + x] = (((x + y) / 12) % 2 == 0) ? yellow : black;
+                        px[y * S + x] = (((x + y) / (12 * K)) % 2 == 0) ? yellow : black;
                 tex.SetPixels32(px);
-                return MakeSprite(tex, 64f);
+                return MakeSprite(tex, Density);
             });
         }
 
@@ -119,25 +136,26 @@ namespace LastShift.Utilities
         {
             return Cached("belt", () =>
             {
-                const int S = 64;
+                const int S = Density;              // 1x1 world unit, as before
+                const int K = S / 64;
                 var tex = NewTex(S, S, true);
                 var px = new Color32[S * S];
                 for (int y = 0; y < S; y++)
                 {
                     for (int x = 0; x < S; x++)
                     {
-                        float n = Hash(x / 3, y / 3, 5) * 0.06f;
+                        float n = Hash(x / (3 * K), y / (3 * K), 5) * 0.06f;
                         float v = 0.16f + n;
-                        // Slats every 16px.
-                        int sx = x % 16;
-                        if (sx < 2) v *= 0.55f;
-                        else if (sx == 2) v *= 1.5f;
+                        // Slats every 16px of the original tile.
+                        int sx = x % (16 * K);
+                        if (sx < 2 * K) v *= 0.55f;
+                        else if (sx < 3 * K) v *= 1.5f;
                         byte g = (byte)(Mathf.Clamp01(v) * 255);
                         px[y * S + x] = new Color32(g, (byte)(g + 2), (byte)(g + 6), 255);
                     }
                 }
                 tex.SetPixels32(px);
-                return MakeSprite(tex, 64f);
+                return MakeSprite(tex, Density);
             });
         }
 
@@ -172,7 +190,7 @@ namespace LastShift.Utilities
         {
             return Cached("puddle" + seed, () =>
             {
-                const int S = 64;
+                const int S = Density;              // 1x1 world unit, as before
                 var tex = NewTex(S, S, false);
                 var px = new Color32[S * S];
                 float half = S * 0.5f;
@@ -188,7 +206,7 @@ namespace LastShift.Utilities
                     }
                 }
                 tex.SetPixels32(px);
-                return MakeSprite(tex, 64f);
+                return MakeSprite(tex, Density);
             });
         }
 
@@ -216,26 +234,28 @@ namespace LastShift.Utilities
         {
             return Cached("wall" + baseColor, () =>
             {
-                const int S = 64;
+                const int S = Density;              // 1x1 world unit, as before
+                const int K = S / 64;
                 var tex = NewTex(S, S, true);
                 var px = new Color32[S * S];
                 for (int y = 0; y < S; y++)
                 {
                     for (int x = 0; x < S; x++)
                     {
-                        float n = Hash(x / 5, y / 5, 21) * 0.10f;
+                        float n = Hash(x / (5 * K), y / (5 * K), 21) * 0.10f;
                         float v = 0.9f + n;
                         Color c = baseColor * v;
-                        if (y > S - 6) c *= 1.35f;          // top edge highlight (pseudo-depth)
-                        else if (y < 5) c *= 0.6f;          // bottom shadow line
-                        if (x % 32 < 1) c *= 0.72f;         // vertical panel seams
-                        if ((x % 32 == 16) && (y % 24 < 2)) c *= 0.5f; // rivets
+                        int sx = x % (32 * K);
+                        if (y > S - 6 * K) c *= 1.35f;      // top edge highlight (pseudo-depth)
+                        else if (y < 5 * K) c *= 0.6f;      // bottom shadow line
+                        if (sx < K) c *= 0.72f;             // vertical panel seams
+                        if (sx >= 16 * K && sx < 17 * K && y % (24 * K) < 2 * K) c *= 0.5f; // rivets
                         c.a = 1f;
                         px[y * S + x] = c;
                     }
                 }
                 tex.SetPixels32(px);
-                return MakeSprite(tex, 64f);
+                return MakeSprite(tex, Density);
             });
         }
     }

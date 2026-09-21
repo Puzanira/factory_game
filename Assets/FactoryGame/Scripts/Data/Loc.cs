@@ -50,6 +50,20 @@ namespace LastShift.Data
         public const string FactoryWonSmall = "СИСТЕМЫ ПРОИЗВОДСТВА ПРОДОЛЖАЮТ РАБОТУ.";
         public const string MenuRepeatRoom = "ПОВТОРИТЬ ЦЕХ";
         public const string MenuQuitGame = "ВЫЙТИ ИЗ ИГРЫ";
+        public const string MenuBackToTitle = "В ГЛАВНОЕ МЕНЮ";
+
+        /// <summary>
+        /// Label of the "leave" option shared by the pause menu and the defeat/final
+        /// menus. A web build cannot close its own tab, so there it returns to the
+        /// title screen and says so; every other build quits for real.
+        /// See SceneLoader.Quit(), which makes the same distinction.
+        /// </summary>
+        public static string MenuLeave =>
+#if UNITY_WEBGL && !UNITY_EDITOR
+            MenuBackToTitle;
+#else
+            MenuQuitGame;
+#endif
 
         // Final victory picture (perimeter-camera frame behind «ЗАВОД ПОБЕДИЛ»)
         public const string FinalCameraLabel = "КАМЕРА 01 · ПЕРИМЕТР";
@@ -104,6 +118,9 @@ namespace LastShift.Data
             "и используйте системы в подходящий момент.\n\n" +
             "Если инженер покинет цех — завод победит.",
 
+            // Cabinet-only wording (arcade branch, cda4b74). Upstream splits this page
+            // into a KEYBOARD half plus a web-conditional ARCADE half; on the cabinet
+            // there is no keyboard to name, so the joystick/red-button text stands alone.
             "ДЖОЙСТИК ВВЕРХ / ВЛЕВО — предыдущая система\n" +
             "ДЖОЙСТИК ВНИЗ / ВПРАВО — следующая система\n" +
             "КРАСНАЯ КНОПКА — задействовать выбранную систему",

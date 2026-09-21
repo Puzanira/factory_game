@@ -34,15 +34,17 @@ namespace LastShift.UI
         {
             objective = target;
 
+            const float canvasScale = 0.014f;
             var canvasGO = new GameObject("Canvas");
             canvasGO.transform.SetParent(transform, false);
-            canvasGO.transform.localScale = Vector3.one * 0.014f;
+            canvasGO.transform.localScale = Vector3.one * canvasScale;
             var canvas = canvasGO.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
             canvas.sortingOrder = 42;
             if (Viz.HasSortingLayer("WorldUI")) canvas.sortingLayerName = "WorldUI";
             var crt = (RectTransform)canvasGO.transform;
             crt.sizeDelta = new Vector2(240f, 62f);
+            UIBuilder.ApplyWorldCanvasDensity(canvas, canvasScale);
 
             group = canvasGO.AddComponent<CanvasGroup>();
             group.alpha = 0f;
