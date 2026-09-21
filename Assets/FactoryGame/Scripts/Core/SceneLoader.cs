@@ -17,21 +17,11 @@ namespace LastShift.Core
             Load(SceneManager.GetActiveScene().name);
         }
 
-        /// <summary>
-        /// Leaves the current session. A browser tab cannot be closed by the page, so
-        /// Application.Quit() is a silent no-op there — the web build returns to the
-        /// title screen instead, which is the only "leave" that means anything in a
-        /// tab. The menu label follows this (see Loc.MenuLeave).
-        /// </summary>
-        public static void Quit()
-        {
-#if UNITY_EDITOR
-            UnityEditor.EditorApplication.isPlaying = false;
-#elif UNITY_WEBGL
-            Load(GameManager.BootScene);
-#else
-            Application.Quit();
-#endif
-        }
+        // There is deliberately no Quit(). On the cabinet this game runs *inside* the
+        // launcher process, so Application.Quit() would take the whole machine down
+        // with it. Leaving is the cabinet's «меню» touch button, which the hub polls
+        // (ArcadeInput.MenuButton) — the game never learns about it and never owns
+        // the process. See ARCADE_INTEGRATION_CONTRACT §5; pinned by
+        // Tests/EditMode/ArcadeContractTests.cs.
     }
 }

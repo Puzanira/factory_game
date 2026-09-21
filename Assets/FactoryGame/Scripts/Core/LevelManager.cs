@@ -415,9 +415,10 @@ namespace LastShift.Core
         }
 
         /// <summary>
-        /// Shared «ПОВТОРИТЬ ЦЕХ» / «ВЫЙТИ ИЗ ИГРЫ» menu on the defeat and final
-        /// victory screens: Up/Down select (wrapping), Red confirms. Restart always
-        /// reloads the *current* room.
+        /// Shared end menu on the defeat and final victory screens: Up/Down select
+        /// (wrapping), Red confirms. «ПОВТОРИТЬ ЦЕХ» is the only option — it reloads
+        /// the *current* room. There is no «выйти»: the cabinet's «меню» button is
+        /// the only way out of the game, and the launcher owns it.
         /// </summary>
         void HandleEndMenu()
         {
@@ -427,8 +428,7 @@ namespace LastShift.Core
             if (GameInput.ConfirmPressed)
             {
                 UiSfx.Confirm();
-                if (endPanel.SelectedIndex == EndRoomPanel.OptionQuit) SceneLoader.Quit();
-                else SceneLoader.Reload();
+                SceneLoader.Reload();
             }
         }
     }

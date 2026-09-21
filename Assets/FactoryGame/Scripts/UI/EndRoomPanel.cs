@@ -11,14 +11,19 @@ namespace LastShift.UI
     /// Result screens on a fully opaque industrial terminal panel: nothing of the
     /// room shows through. Room won («ИНЖЕНЕР ОТСТУПИЛ» → next room), room lost
     /// («ЦЕХ СТАБИЛИЗИРОВАН») and the final victory («ЗАВОД ПОБЕДИЛ»). Defeat and
-    /// final share one two-option menu («ПОВТОРИТЬ ЦЕХ» / «ВЫЙТИ ИЗ ИГРЫ»,
-    /// joystick up/down + Red to confirm). Input routing lives in LevelManager;
-    /// this is pure view.
+    /// final share one menu whose single option is «ПОВТОРИТЬ ЦЕХ» (Red confirms).
+    /// The game offers no «выйти» of its own — on the cabinet it lives inside the
+    /// launcher process and leaving is the «меню» button the hub owns. Input
+    /// routing lives in LevelManager; this is pure view.
     /// </summary>
     public class EndRoomPanel : MonoBehaviour
     {
         public const int OptionRepeatRoom = 0;
-        public const int OptionQuit = 1;
+
+        /// <summary>Menu rows are laid out over at least this many slots, so a
+        /// single option keeps the row height the two-option menu used to have
+        /// instead of stretching over the whole block.</summary>
+        const int MenuSlots = 2;
 
         GameObject panel;
         Text title;
@@ -32,7 +37,7 @@ namespace LastShift.UI
         readonly List<List<Image>> menuEdges = new List<List<Image>>();
 
         public bool Visible => panel != null && panel.activeSelf;
-        /// <summary>Menu: 0 = «ПОВТОРИТЬ ЦЕХ», 1 = «ВЫЙТИ ИЗ ИГРЫ». -1 when no menu.</summary>
+        /// <summary>Menu: 0 = «ПОВТОРИТЬ ЦЕХ». -1 when no menu.</summary>
         public int SelectedIndex { get; private set; } = -1;
         public bool HasMenu => menuTexts.Count > 0 && menuRoot != null && menuRoot.gameObject.activeSelf;
 
@@ -89,17 +94,21 @@ namespace LastShift.UI
             prompt = UIBuilder.Label(card, "Prompt", "", 24, Amber, TextAnchor.MiddleCenter);
             SetRect(prompt.rectTransform, new Vector2(0f, 0.2f), new Vector2(1f, 0.4f));
 
-            // Reusable restart/quit menu (defeat screen + final victory).
-            menuRoot = UIBuilder.Panel(card, "RestartQuitMenu", new Vector2(0.24f, 0.16f), new Vector2(0.76f, 0.4f),
+            // Reusable restart menu (defeat screen + final victory).
+            menuRoot = UIBuilder.Panel(card, "RestartMenu", new Vector2(0.24f, 0.16f), new Vector2(0.76f, 0.4f),
                 new Color(0f, 0f, 0f, 0f));
-            string[] options = { Loc.MenuRepeatRoom, Loc.MenuLeave };
+            string[] options = { Loc.MenuRepeatRoom };
+            // Rows keep their usual height and stay centred in the block whatever
+            // the option count is.
+            int slots = Mathf.Max(options.Length, MenuSlots);
+            float pad = (slots - options.Length) * 0.5f;
             for (int i = 0; i < options.Length; i++)
             {
                 var row = new GameObject("Option" + i);
                 row.transform.SetParent(menuRoot, false);
                 var rowRt = row.AddComponent<RectTransform>();
-                rowRt.anchorMin = new Vector2(0f, 1f - (i + 1f) / options.Length);
-                rowRt.anchorMax = new Vector2(1f, 1f - (float)i / options.Length);
+                rowRt.anchorMin = new Vector2(0f, 1f - (i + pad + 1f) / slots);
+                rowRt.anchorMax = new Vector2(1f, 1f - (i + pad) / slots);
                 rowRt.offsetMin = new Vector2(0f, 6f);
                 rowRt.offsetMax = new Vector2(0f, -6f);
                 var bg = row.AddComponent<Image>();
@@ -213,7 +222,7 @@ namespace LastShift.UI
             calmRoutine = StartCoroutine(CalmDown());
         }
 
-        /// <summary>Shows the restart/quit menu with «ПОВТОРИТЬ ЦЕХ» pre-selected.</summary>
+        /// <summary>Shows the end menu with «ПОВТОРИТЬ ЦЕХ» selected.</summary>
         void OpenMenu()
         {
             menuRoot.gameObject.SetActive(true);
@@ -237,6 +246,9 @@ namespace LastShift.UI
         public void MoveSelection(int delta)
         {
             if (!HasMenu) return;
+            // A single-option menu has nothing to steer: stay put and stay silent
+            // rather than clicking on a selection that cannot change.
+            if (menuTexts.Count < 2) return;
             SelectedIndex = (SelectedIndex + delta + menuTexts.Count) % menuTexts.Count;
             LastShift.Audio.UiSfx.PauseMove();
             RefreshMenu();
@@ -257,8 +269,9 @@ namespace LastShift.UI
             }
         }
 
-        static string OptionLabel(int i) =>
-            i == OptionRepeatRoom ? Loc.MenuRepeatRoom : Loc.MenuLeave;
+        /// <summary>The menu has exactly one row; the index is kept so extra rows
+        /// could be labelled here without touching the rest of the view.</summary>
+        static string OptionLabel(int i) => Loc.MenuRepeatRoom;
 
         void Show(string titleText, string subtitleText, string promptText)
         {

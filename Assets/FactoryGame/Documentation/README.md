@@ -1,5 +1,15 @@
 # LAST SHIFT / ПОСЛЕДНЯЯ СМЕНА — Vertical Slice
 
+> **Pass 10 (2026-09-21): игра больше не выходит из себя сама.** На стойке
+> «Последняя смена» работает ВНУТРИ процесса лаунчера автомата, поэтому
+> `Application.Quit()` гасил весь автомат вместе с хабом. Пункт «ВЫЙТИ ИЗ ИГРЫ»
+> убран из меню финальной комнаты (осталась одна строка — «ПОВТОРИТЬ ЦЕХ»),
+> мёртвое модальное окно «ВЫЙТИ ИЗ ИГРЫ?» убрано из вступления, метод
+> `SceneLoader.Quit()` удалён. Выход из игры один — сенсорная кнопка **«меню»**
+> автомата, её обрабатывает хаб; игра про неё не знает
+> (ARCADE_INTEGRATION_CONTRACT §5). Закреплено тестами
+> `Assets/FactoryGame/Tests/EditMode/ArcadeContractTests.cs`.
+
 > **Pass 9 (2026-07-26): onboarding, HUD, tutorial and result screens redesigned.**
 > Boot flow is now **Title Card → three mandatory instruction pages → «ВВОДНЫЙ УРОК»
 > choice → lesson or Level 1** (see «ПОСЛЕДОВАТЕЛЬНОСТЬ ЗАПУСКА»). The permanent top
@@ -96,8 +106,8 @@ When he evacuates the third room alive, the vertical slice is complete —
 > **Pass 3 (2026-07-12):** Boot flow is now **Title Card «ПОСЛЕДНЯЯ СМЕНА» → 4-page
 > Russian intro briefing → Level 1** (Enter advances pages, Esc opens «ПРОПУСТИТЬ
 > ИНСТРУКТАЖ?», all keyboard-only, shown on every new game). The final Level-3 screen
-> is now **«ЗАВОД ПОБЕДИЛ»** with a Up/Down/Enter menu (since Pass 7:
-> «ПОВТОРИТЬ ЦЕХ / ВЫЙТИ ИЗ ИГРЫ») and a red-to-green calm-down light transition.
+> is now **«ЗАВОД ПОБЕДИЛ»** with a menu (since Pass 10 a single option,
+> «ПОВТОРИТЬ ЦЕХ») and a red-to-green calm-down light transition.
 > The engineer is a readable top-down human worker: helmet with lamp + brim, head,
 > orange jacket with hi-vis stripes (torso larger than head), dark trousers with
 > alternating legs and boots, soft shadow, warm readability rim, helmet point light;
@@ -139,7 +149,7 @@ final victory.
 | Control      | Action                                             |
 |--------------|----------------------------------------------------|
 | **Red button** | Next room (after «ИНЖЕНЕР ОТСТУПИЛ»)             |
-| **Joystick + Red** | Navigate/confirm the «ПОВТОРИТЬ ЦЕХ / ВЫЙТИ ИЗ ИГРЫ» menu (after «ЦЕХ СТАБИЛИЗИРОВАН» and on the final «ЗАВОД ПОБЕДИЛ» screen) |
+| **Red button** | Confirm «ПОВТОРИТЬ ЦЕХ» — the single end-menu option (after «ЦЕХ СТАБИЛИЗИРОВАН» and on the final «ЗАВОД ПОБЕДИЛ» screen). The game has no «выйти»: leaving is the cabinet's «меню» button, owned by the hub |
 
 Every victory first plays a short industrial animation (~3.5 s); result input only
 wakes up once it has finished and the opaque result panel is up.
@@ -160,16 +170,19 @@ arcade-controls): стрелки — джойстик, **Quote/Э** — крас
 ### МЕНЮ ПОСЛЕ ЗАВЕРШЕНИЯ ЦЕХА
 
 После поражения («ЦЕХ СТАБИЛИЗИРОВАН») и на финальном экране («ЗАВОД ПОБЕДИЛ»)
-под текстом результата появляется меню из двух пунктов (джойстик — выбор
-с закольцовкой, красная кнопка — подтвердить; по умолчанию выбран первый пункт):
+под текстом результата появляется меню из одного пункта (красная кнопка —
+подтвердить):
 
 ```
 > ПОВТОРИТЬ ЦЕХ
-  ВЫЙТИ ИЗ ИГРЫ
 ```
 
 - «ПОВТОРИТЬ ЦЕХ» — начать текущий цех заново.
-- «ВЫЙТИ ИЗ ИГРЫ» — завершить работу игры.
+
+Пункта «выйти» в игре нет и быть не должно: на стойке игра живёт внутри процесса
+лаунчера, и завершить себя она не может — это погасило бы весь автомат. Выход
+один — сенсорная кнопка **«меню»** автомата, её обрабатывает хаб
+(`ArcadeInput.MenuButton` → `LauncherReturn`). См. ARCADE_INTEGRATION_CONTRACT §5.
 
 > Изменение схемы управления: **потенциометр, а также клавиши Q и R удалены из
 > схемы управления.** **Клавиши Q и R не используются.**
@@ -317,11 +330,10 @@ Boot
   Завод проиграл.»
 - Победа завода — «ЗАВОД ПОБЕДИЛ»: «Инженер покинул предприятие. Автономный
   режим сохранён.»
-- После результата доступны:
+- После результата доступен один пункт:
 
 ```
 > ПОВТОРИТЬ ЦЕХ
-  ВЫЙТИ ИЗ ИГРЫ
 ```
 
 - **После прохождения всех цехов** финальный экран показывает победную картину:
@@ -385,7 +397,7 @@ Boot
      the exit the industrial victory animation plays, then
      **ИНЖЕНЕР ОТСТУПИЛ → ENTER — СЛЕДУЮЩИЙ ЦЕХ**.
 6. If the engineer completes all repairs, you lose the room: **ЦЕХ СТАБИЛИЗИРОВАН**
-   on an opaque terminal panel, with the «ПОВТОРИТЬ ЦЕХ / ВЫЙТИ ИЗ ИГРЫ» menu.
+   on an opaque terminal panel, with the single-option «ПОВТОРИТЬ ЦЕХ» menu.
 7. Play Mode smoke tests (batch Unity, exits nonzero on runtime errors):
 
    ```bash

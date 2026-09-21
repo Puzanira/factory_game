@@ -37,7 +37,7 @@ UNITY="/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity
 
 If the user's Unity editor has the project open (`Temp/UnityLockfile` exists), batch mode can't run on the same path — rsync `Assets Packages ProjectSettings Library UserSettings` to a scratch copy and run there (Library copy keeps import fast).
 
-In-editor tools: **Tools ▸ Last Shift ▸ Build All** regenerates all scenes, prefabs, ScriptableObjects and Build Settings (`ProjectBuilder`); **Tools ▸ Last Shift ▸ Build Audio** regenerates WAVs/mixer/AudioLibrary. There is no NUnit test suite.
+In-editor tools: **Tools ▸ Last Shift ▸ Build All** regenerates all scenes, prefabs, ScriptableObjects and Build Settings (`ProjectBuilder`); **Tools ▸ Last Shift ▸ Build Audio** regenerates WAVs/mixer/AudioLibrary. EditMode tests live in `Assets/FactoryGame/Tests/EditMode` (`ArcadeContractTests` guards contract §5 — no `Application.Quit`, no self-exit menu item); run them with `-runTests -testPlatform EditMode`.
 
 ## Architecture
 
@@ -48,9 +48,9 @@ In-editor tools: **Tools ▸ Last Shift ▸ Build All** regenerates all scenes, 
 - `ArduinoInputBridge` (persistent, execution order −100, auto-bootstraps, never duplicates) reads the serial controller on a background thread and publishes into `UnifiedGameInput` before consumers poll. A shared debounce covers both hardware buttons *and* keyboard Enter, so a Submit can never double-fire.
 - Anything that publishes into `UnifiedGameInput` must do it from the player loop *before* consumers run (see `SmokeInputDriver` in `PlayModeSmokeTest.cs`).
 
-**Per-room flow**: `LevelManager` (one per level scene) builds the room, spawns the engineer, owns pause/end-of-room state, and routes all input in `Update()` — menus like `PauseMenuUI`/`EndRoomPanel` are pure views whose selection is driven by LevelManager polling `GameInput`. `GameManager` (persistent) holds scene-name constants; `SceneLoader.Reload()` restarts the current room (always resets `Time.timeScale`); `SceneLoader.Quit()` wraps `Application.Quit` / editor-stop behind `#if UNITY_EDITOR`.
+**Per-room flow**: `LevelManager` (one per level scene) builds the room, spawns the engineer, owns pause/end-of-room state, and routes all input in `Update()` — menus like `PauseMenuUI`/`EndRoomPanel` are pure views whose selection is driven by LevelManager polling `GameInput`. `GameManager` (persistent) holds scene-name constants; `SceneLoader.Reload()` restarts the current room (always resets `Time.timeScale`). `SceneLoader` has **no** `Quit()`: on the cabinet the game runs inside the launcher's process, so it must never end it — leaving is the cabinet's «меню» touch button, which the hub owns (ARCADE_INTEGRATION_CONTRACT §5).
 
-**End screens**: `EndRoomPanel` shows win («ИНЖЕНЕР ОТСТУПИЛ», Enter → next room), defeat («ЦЕХ СТАБИЛИЗИРОВАН») and final victory («ЗАВОД ПОБЕДИЛ») on a *fully opaque* terminal panel. Defeat and final share one two-option menu — «ПОВТОРИТЬ ЦЕХ» (reload current room) / «ВЫЙТИ ИЗ ИГРЫ» — handled by `LevelManager.HandleEndMenu()`; initial selection is always «ПОВТОРИТЬ ЦЕХ», navigation wraps, Esc jumps to quit. The pause menu (Esc) reuses the same labels. Every factory win first runs `VictorySequenceController` (~3.5 s); result input is gated behind `LevelManager.VictoryPlaying`.
+**End screens**: `EndRoomPanel` shows win («ИНЖЕНЕР ОТСТУПИЛ», Enter → next room), defeat («ЦЕХ СТАБИЛИЗИРОВАН») and final victory («ЗАВОД ПОБЕДИЛ») on a *fully opaque* terminal panel. Defeat and final share one menu whose single option is «ПОВТОРИТЬ ЦЕХ» (reload current room), handled by `LevelManager.HandleEndMenu()`. **Never add a «выйти» option**: the game does not own the process (see `SceneLoader` above). Every factory win first runs `VictorySequenceController` (~3.5 s); result input is gated behind `LevelManager.VictoryPlaying`.
 
 **Onboarding**: `IntroFlowUI` runs Title → three mandatory instruction pages → «ВВОДНЫЙ УРОК» choice → tutorial or Level 1, on every new game, with no PlayerPrefs. The choice must never appear before all three pages.
 

@@ -49,21 +49,8 @@ namespace LastShift.Data
         public const string FactoryWonSub = "Инженер покинул предприятие.\nАвтономный режим сохранён.";
         public const string FactoryWonSmall = "СИСТЕМЫ ПРОИЗВОДСТВА ПРОДОЛЖАЮТ РАБОТУ.";
         public const string MenuRepeatRoom = "ПОВТОРИТЬ ЦЕХ";
-        public const string MenuQuitGame = "ВЫЙТИ ИЗ ИГРЫ";
-        public const string MenuBackToTitle = "В ГЛАВНОЕ МЕНЮ";
-
-        /// <summary>
-        /// Label of the "leave" option shared by the pause menu and the defeat/final
-        /// menus. A web build cannot close its own tab, so there it returns to the
-        /// title screen and says so; every other build quits for real.
-        /// See SceneLoader.Quit(), which makes the same distinction.
-        /// </summary>
-        public static string MenuLeave =>
-#if UNITY_WEBGL && !UNITY_EDITOR
-            MenuBackToTitle;
-#else
-            MenuQuitGame;
-#endif
+        // No "leave the game" label exists on purpose: on the cabinet the only way
+        // out is the «меню» touch button, which the launcher owns (contract §5).
 
         // Final victory picture (perimeter-camera frame behind «ЗАВОД ПОБЕДИЛ»)
         public const string FinalCameraLabel = "КАМЕРА 01 · ПЕРИМЕТР";
@@ -77,13 +64,12 @@ namespace LastShift.Data
         // Title card
         public const string TitleSubtitle = "АВТОНОМНЫЙ ПРОМЫШЛЕННЫЙ ПРОТОКОЛ";
         public const string MenuStartShift = "НАЧАТЬ СМЕНУ";
-        public const string MenuExit = "ВЫЙТИ";
-        public const string ConfirmQuit = "ВЫЙТИ ИЗ ИГРЫ?";
-        public const string Yes = "ДА";
-        public const string No = "НЕТ";
         public const string FooterNext = "КРАСНАЯ КНОПКА — ДАЛЕЕ";
         public const string FooterContinue = "КРАСНАЯ КНОПКА — ПРОДОЛЖИТЬ";
-        public const string MenuHint = "ДЖОЙСТИК — ВЫБОР      КРАСНАЯ КНОПКА — ПОДТВЕРДИТЬ";
+        /// <summary>Hint under the end-room menu. It names only the Red button:
+        /// the menu has a single option, so there is nothing to steer with the
+        /// joystick.</summary>
+        public const string MenuHint = "КРАСНАЯ КНОПКА — ПОДТВЕРДИТЬ";
 
         // ---------------- mandatory instruction pages (3, every new game) ----------------
 

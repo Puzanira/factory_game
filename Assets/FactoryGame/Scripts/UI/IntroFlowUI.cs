@@ -22,23 +22,22 @@ namespace LastShift.UI
     {
         public static IntroFlowUI Instance { get; private set; }
 
-        enum Screen { Title, Instructions, TutorialChoice, ConfirmQuit }
+        // No "quit the game" screen exists: on the cabinet this game runs inside
+        // the launcher process, so leaving is the «меню» touch button the hub
+        // owns (ARCADE_INTEGRATION_CONTRACT §5).
+        enum Screen { Title, Instructions, TutorialChoice }
 
         Screen current = Screen.Title;
         int pageIndex;
-        int modalIndex;
         int choiceIndex;
         bool loading;
 
         GameObject titleRoot;
         GameObject choiceRoot;
         GameObject instructionRoot;
-        GameObject modalRoot;
-        Text modalQuestion;
         readonly List<Text> choiceMenu = new List<Text>();
         readonly List<Image> choiceMenuBgs = new List<Image>();
         readonly List<List<Image>> choiceMenuEdges = new List<List<Image>>();
-        readonly List<Text> modalMenu = new List<Text>();
         readonly List<GameObject> pageDiagrams = new List<GameObject>();
         Text pageHeader;
         Text pageSubheader;
@@ -65,7 +64,6 @@ namespace LastShift.UI
             BuildTitle(canvas.transform);
             BuildInstructions(canvas.transform);
             BuildTutorialChoice(canvas.transform);
-            BuildModal(canvas.transform);
 
             ShowScreen(Screen.Title);
 
@@ -401,28 +399,6 @@ namespace LastShift.UI
             SetRect(footer.rectTransform, new Vector2(0f, 0.05f), new Vector2(1f, 0.16f));
         }
 
-        // ================= quit modal =================
-
-        void BuildModal(Transform root)
-        {
-            RectTransform rt = UIBuilder.Panel(root, "Modal", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0.75f));
-            modalRoot = rt.gameObject;
-            RectTransform box = UIBuilder.Panel(rt, "Box", new Vector2(0.34f, 0.38f), new Vector2(0.66f, 0.62f), PanelFill);
-            Frame(box, Border);
-            Brackets(box, Amber);
-
-            modalQuestion = UIBuilder.Label(box, "Question", "", 26, Phosphor, TextAnchor.MiddleCenter);
-            SetRect(modalQuestion.rectTransform, new Vector2(0f, 0.62f), new Vector2(1f, 0.95f));
-
-            string[] options = { Loc.Yes, Loc.No };
-            for (int i = 0; i < 2; i++)
-            {
-                var label = UIBuilder.Label(box, "Opt" + i, options[i], 24, PhosphorDim, TextAnchor.MiddleCenter);
-                SetRect(label.rectTransform, new Vector2(0f, 0.36f - i * 0.26f), new Vector2(1f, 0.58f - i * 0.26f));
-                modalMenu.Add(label);
-            }
-        }
-
         // ================= flow =================
 
         void ShowScreen(Screen screen)
@@ -431,18 +407,11 @@ namespace LastShift.UI
             titleRoot.SetActive(screen == Screen.Title);
             instructionRoot.SetActive(screen == Screen.Instructions);
             choiceRoot.SetActive(screen == Screen.TutorialChoice);
-            modalRoot.SetActive(screen == Screen.ConfirmQuit);
 
             if (screen == Screen.TutorialChoice)
             {
                 choiceIndex = 0; // default: «ПРОЙТИ УРОК»
                 RefreshChoiceMenu();
-            }
-            if (screen == Screen.ConfirmQuit)
-            {
-                modalQuestion.text = Loc.ConfirmQuit;
-                modalIndex = 1; // default to «НЕТ» — safe choice
-                RefreshModal();
             }
         }
 
@@ -525,11 +494,6 @@ namespace LastShift.UI
                     }
                     if (GameInput.ConfirmPressed) Confirm();
                     break;
-
-                case Screen.ConfirmQuit:
-                    if (GameInput.UpPressed || GameInput.DownPressed) { modalIndex = 1 - modalIndex; UiSfx.TerminalMove(); RefreshModal(); }
-                    if (GameInput.ConfirmPressed) Confirm();
-                    break;
             }
         }
 
@@ -561,12 +525,6 @@ namespace LastShift.UI
                     UiSfx.Confirm();
                     // 0 = «ПРОЙТИ УРОК» (interactive lesson first), 1 = «НАЧАТЬ СМЕНУ».
                     LoadLevel1(choiceIndex == 0);
-                    break;
-
-                case Screen.ConfirmQuit:
-                    UiSfx.Confirm();
-                    if (modalIndex == 0) SceneLoader.Quit();
-                    else ShowScreen(Screen.Title);
                     break;
             }
         }
@@ -605,16 +563,5 @@ namespace LastShift.UI
             }
         }
 
-        void RefreshModal()
-        {
-            for (int i = 0; i < modalMenu.Count; i++)
-            {
-                bool sel = i == modalIndex;
-                string baseLabel = i == 0 ? Loc.Yes : Loc.No;
-                modalMenu[i].text = (sel ? "> " : "") + baseLabel + (sel ? " <" : "");
-                modalMenu[i].color = sel ? new Color(0.95f, 1f, 0.7f) : PhosphorDim;
-                modalMenu[i].fontStyle = sel ? FontStyle.Bold : FontStyle.Normal;
-            }
-        }
     }
 }

@@ -38,8 +38,9 @@ namespace LastShift.EditorTools
         {
             // Optional: -smokeScene <SceneName> selects the scene (default Boot);
             // -smokeFinal forces room completion to validate the final victory screen;
-            // -smokeDefeat forces «ЦЕХ СТАБИЛИЗИРОВАН» and drives the restart/quit
-            // menu through UnifiedGameInput (wrap, restart, clean reload, quit).
+            // -smokeDefeat forces «ЦЕХ СТАБИЛИЗИРОВАН» and drives the end menu through
+            // UnifiedGameInput (single-option navigation, restart, clean reload, and
+            // the proof that confirming can never end the session).
             string scene = "Boot";
             bool final = false;
             bool defeat = false;
@@ -108,18 +109,21 @@ namespace LastShift.EditorTools
 
         static void Tick()
         {
-            // The defeat-menu scenario ends by quitting play mode on purpose;
-            // detect that phase before the not-playing early-out below.
+            // The game must never be able to end its own session: inside the cabinet
+            // it lives in the launcher's process, so stopping play mode from game code
+            // means Application.Quit() is back. Catch it before the not-playing
+            // early-out below, while the phase still says the run was under way.
             if (SessionState.GetBool(DefeatKey, false) &&
-                SessionState.GetString(PhaseKey, "") == "quitSent" &&
+                IsDefeatPlayPhase(SessionState.GetString(PhaseKey, "")) &&
                 !EditorApplication.isPlaying)
             {
+                Fail("the game stopped play mode on its own — game code must not own the "
+                     + "process (contract §5: leaving is the cabinet's «меню» button)");
                 EditorApplication.update -= Tick;
                 SessionState.SetBool(RunningKey, false);
-                int fails = SessionState.GetInt(FailKey, 0);
-                Debug.Log("SMOKE_QUIT_STOPPED_PLAYMODE=True");
-                Debug.Log(fails == 0 ? "SMOKE_RESULT: PASS" : "SMOKE_RESULT: FAIL fails=" + fails);
-                EditorApplication.Exit(fails == 0 ? 0 : 1);
+                Debug.Log("SMOKE_SELF_QUIT_DETECTED=True");
+                Debug.Log("SMOKE_RESULT: FAIL fails=" + SessionState.GetInt(FailKey, 0));
+                EditorApplication.Exit(1);
                 return;
             }
 
@@ -247,16 +251,23 @@ namespace LastShift.EditorTools
                 {
                     bool foundTitle = false;
                     bool foundRepeat = false;
-                    bool foundQuit = false;
+                    string leaveRow = null;
                     foreach (var t in Object.FindObjectsByType<UnityEngine.UI.Text>(FindObjectsInactive.Exclude))
                     {
                         if (!t.gameObject.activeInHierarchy) continue;
                         if (t.text == LastShift.Data.Loc.FactoryWon) foundTitle = true;
                         if (t.text.Contains(LastShift.Data.Loc.MenuRepeatRoom)) foundRepeat = true;
-                        if (t.text.Contains(LastShift.Data.Loc.MenuLeave)) foundQuit = true;
+                        // The final room must leave the player a way on («ПОВТОРИТЬ ЦЕХ»)
+                        // and no way to end the session: that is the cabinet's «меню»
+                        // button, owned by the launcher (contract §5).
+                        if (t.text.Contains("ВЫЙТИ") || t.text.Contains("В ГЛАВНОЕ МЕНЮ")) leaveRow = t.text;
                     }
-                    Debug.Log("SMOKE_FINAL_OK=" + foundTitle + " menuRepeat=" + foundRepeat + " menuQuit=" + foundQuit);
-                    bool pass2 = errorCount == 0 && foundTitle && foundRepeat && foundQuit;
+                    if (leaveRow != null)
+                        Debug.Log("SMOKE_FAIL: final screen offers «" + leaveRow + "» — the game must not "
+                                  + "offer a way out of itself (contract §5)");
+                    Debug.Log("SMOKE_FINAL_OK=" + foundTitle + " menuRepeat=" + foundRepeat
+                        + " leaveRow=" + (leaveRow ?? "none"));
+                    bool pass2 = errorCount == 0 && foundTitle && foundRepeat && leaveRow == null;
                     EditorApplication.update -= Tick;
                     SessionState.SetBool(RunningKey, false);
                     Debug.Log(pass2 ? "SMOKE_RESULT: PASS" : "SMOKE_RESULT: FAIL errors=" + errorCount);
@@ -344,6 +355,11 @@ namespace LastShift.EditorTools
             Debug.Log("SMOKE_FAIL: " + what);
         }
 
+        /// <summary>True once the defeat run is actually playing: from then on, play
+        /// mode ending without the test asking for it means the game quit itself.</summary>
+        static bool IsDefeatPlayPhase(string phase) =>
+            !string.IsNullOrEmpty(phase) && phase != "boot";
+
         static void SetPhase(string phase, double elapsed)
         {
             SessionState.SetString(PhaseKey, phase);
@@ -398,42 +414,52 @@ namespace LastShift.EditorTools
                         if (!panel.HasMenu) Fail("menu not visible on defeat screen");
                         if (panel.SelectedIndex != LastShift.UI.EndRoomPanel.OptionRepeatRoom)
                             Fail("initial selection is " + panel.SelectedIndex + ", expected ПОВТОРИТЬ ЦЕХ");
-                        bool titleOk = false, selRepeat = false, quitLabel = false;
+                        bool titleOk = false, selRepeat = false;
+                        string leaveRow = null;
                         foreach (var t in Object.FindObjectsByType<UnityEngine.UI.Text>(FindObjectsInactive.Exclude))
                         {
                             if (!t.gameObject.activeInHierarchy) continue;
                             if (t.text == LastShift.Data.Loc.RoomStabilized) titleOk = true;
                             if (t.text == "> " + LastShift.Data.Loc.MenuRepeatRoom + " <") selRepeat = true;
-                            if (t.text == LastShift.Data.Loc.MenuLeave) quitLabel = true;
+                            // The cabinet has no «выйти»: the launcher owns the
+                            // process, so the game must not show that option at all.
+                            if (t.text.Contains("ВЫЙТИ") || t.text.Contains("В ГЛАВНОЕ МЕНЮ")) leaveRow = t.text;
                         }
                         if (!titleOk) Fail("result text «ЦЕХ СТАБИЛИЗИРОВАН» missing");
                         if (!selRepeat) Fail("selected row «> ПОВТОРИТЬ ЦЕХ <» missing");
-                        if (!quitLabel) Fail("dimmed row «ВЫЙТИ ИЗ ИГРЫ» missing");
-                        Debug.Log("SMOKE_MENU_SHOWN title=" + titleOk + " selRepeat=" + selRepeat + " quit=" + quitLabel);
+                        if (leaveRow != null)
+                            Fail("defeat screen offers a way out of the game: «" + leaveRow + "» — "
+                                 + "only the cabinet's «меню» button may leave (contract §5)");
+                        if (MenuRowCount(panel) != 1)
+                            Fail("defeat menu has " + MenuRowCount(panel) + " rows, expected exactly «ПОВТОРИТЬ ЦЕХ»");
+                        Debug.Log("SMOKE_MENU_SHOWN title=" + titleOk + " selRepeat=" + selRepeat
+                            + " rows=" + MenuRowCount(panel) + " leaveRow=" + (leaveRow ?? "none"));
                         SmokeInputDriver.Get().QueueNavigate(previous: true);
-                        SetPhase("wrapUp", elapsed);
+                        SetPhase("navUp", elapsed);
                     }
                     break;
 
-                case "wrapUp":
-                    if (elapsed - phaseTime < 0.6 || lm == null) break;
-                    {
-                        int idx = PanelOf(lm).SelectedIndex;
-                        if (idx != LastShift.UI.EndRoomPanel.OptionQuit)
-                            Fail("Up on first item wrapped to " + idx + ", expected ВЫЙТИ ИЗ ИГРЫ");
-                        else Debug.Log("SMOKE_WRAP_UP_OK");
-                        SmokeInputDriver.Get().QueueNavigate(previous: false);
-                        SetPhase("wrapDown", elapsed);
-                    }
-                    break;
-
-                case "wrapDown":
+                // A one-row menu must stay put under the joystick: no wrapping onto a
+                // phantom row, no selection that points at nothing.
+                case "navUp":
                     if (elapsed - phaseTime < 0.6 || lm == null) break;
                     {
                         int idx = PanelOf(lm).SelectedIndex;
                         if (idx != LastShift.UI.EndRoomPanel.OptionRepeatRoom)
-                            Fail("Down on last item wrapped to " + idx + ", expected ПОВТОРИТЬ ЦЕХ");
-                        else Debug.Log("SMOKE_WRAP_DOWN_OK");
+                            Fail("Up moved the single-option menu to " + idx + ", expected ПОВТОРИТЬ ЦЕХ");
+                        else Debug.Log("SMOKE_NAV_UP_OK");
+                        SmokeInputDriver.Get().QueueNavigate(previous: false);
+                        SetPhase("navDown", elapsed);
+                    }
+                    break;
+
+                case "navDown":
+                    if (elapsed - phaseTime < 0.6 || lm == null) break;
+                    {
+                        int idx = PanelOf(lm).SelectedIndex;
+                        if (idx != LastShift.UI.EndRoomPanel.OptionRepeatRoom)
+                            Fail("Down moved the single-option menu to " + idx + ", expected ПОВТОРИТЬ ЦЕХ");
+                        else Debug.Log("SMOKE_NAV_DOWN_OK");
                         cachedManager = lm;
                         SmokeInputDriver.Get().QueueSubmit();
                         SetPhase("restartSent", elapsed);
@@ -444,7 +470,7 @@ namespace LastShift.EditorTools
                     if (elapsed - phaseTime > 8.0 && lm == cachedManager)
                     {
                         Fail("Submit on ПОВТОРИТЬ ЦЕХ did not reload the room");
-                        SetPhase("quitMenu", elapsed); // still try the quit branch
+                        SetPhase("noExitMenu", elapsed); // still check the no-exit branch
                         break;
                     }
                     if (lm == null || lm == cachedManager || lm.Terminal == null) break;
@@ -463,40 +489,60 @@ namespace LastShift.EditorTools
                         Debug.Log("SMOKE_RESTART_OK room=" + lm.RoomName + " gm=" + gm + " bridges=" + bridges
                             + " audio=" + audio + " panels=" + panels);
                         ForceStabilized(lm);
-                        SetPhase("quitMenu", elapsed);
+                        SetPhase("noExitMenu", elapsed);
                     }
                     break;
 
-                case "quitMenu":
+                // Second time on the defeat screen, the interesting question is the
+                // opposite of the old one: confirming the menu must NOT be able to end
+                // the session. Submit again and require the room to reload with play
+                // mode still running — on the cabinet the game shares the launcher's
+                // process, so quitting it would take the whole machine down.
+                case "noExitMenu":
                     if (elapsed - phaseTime < 1.0 || lm == null) break;
-                    SmokeInputDriver.Get().QueueNavigate(previous: false);
-                    SetPhase("quitSelected", elapsed);
-                    break;
-
-                case "quitSelected":
-                    if (elapsed - phaseTime < 0.6 || lm == null) break;
                     {
-                        if (PanelOf(lm).SelectedIndex != LastShift.UI.EndRoomPanel.OptionQuit)
-                            Fail("quit option not selected before quit test");
+                        var panel = PanelOf(lm);
+                        if (!panel.HasMenu) Fail("menu not visible on the second defeat screen");
+                        string leaveRow = null;
+                        foreach (var t in Object.FindObjectsByType<UnityEngine.UI.Text>(FindObjectsInactive.Exclude))
+                        {
+                            if (!t.gameObject.activeInHierarchy) continue;
+                            if (t.text.Contains("ВЫЙТИ") || t.text.Contains("В ГЛАВНОЕ МЕНЮ")) leaveRow = t.text;
+                        }
+                        if (leaveRow != null) Fail("a leave-the-game row is back: «" + leaveRow + "»");
+                        cachedManager = lm;
                         SmokeInputDriver.Get().QueueSubmit();
-                        SetPhase("quitSent", elapsed);
+                        SetPhase("noExitSent", elapsed);
                     }
                     break;
 
-                case "quitSent":
-                    // Waiting for SceneLoader.Quit() to stop play mode; the exit
-                    // branch at the top of Tick() finishes the run after the
-                    // domain reload. Nothing to do while still playing.
-                    if (elapsed - phaseTime > 8.0)
+                case "noExitSent":
+                    // If the game were still able to quit, play mode would already be
+                    // gone and the guard at the top of Tick() would have failed the run.
+                    if (elapsed - phaseTime < 4.0) break;
                     {
-                        Fail("Submit on ВЫЙТИ ИЗ ИГРЫ did not stop play mode");
+                        bool stillPlaying = EditorApplication.isPlaying;
+                        bool reloaded = lm != null && lm != cachedManager && lm.Terminal != null;
+                        if (!stillPlaying) Fail("play mode ended after confirming the end menu");
+                        if (!reloaded) Fail("Submit on ПОВТОРИТЬ ЦЕХ did not reload the room the second time");
+                        Debug.Log("SMOKE_NO_EXIT_OK playing=" + stillPlaying + " reloaded=" + reloaded);
                         EditorApplication.update -= Tick;
                         SessionState.SetBool(RunningKey, false);
-                        Debug.Log("SMOKE_RESULT: FAIL fails=" + SessionState.GetInt(FailKey, 0));
-                        EditorApplication.Exit(1);
+                        int fails = SessionState.GetInt(FailKey, 0);
+                        Debug.Log(fails == 0 ? "SMOKE_RESULT: PASS" : "SMOKE_RESULT: FAIL fails=" + fails);
+                        EditorApplication.Exit(fails == 0 ? 0 : 1);
                     }
                     break;
             }
+        }
+
+        /// <summary>Number of rows the end menu actually renders.</summary>
+        static int MenuRowCount(LastShift.UI.EndRoomPanel panel)
+        {
+            var list = typeof(LastShift.UI.EndRoomPanel)
+                .GetField("menuTexts", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                .GetValue(panel) as System.Collections.Generic.List<UnityEngine.UI.Text>;
+            return list != null ? list.Count : -1;
         }
 
         /// <summary>
