@@ -3,6 +3,17 @@ namespace LastShift.Data
     /// <summary>
     /// Centralized player-facing Russian strings. Code identifiers stay English;
     /// everything the player reads comes from here (or from LevelLayouts specs).
+    ///
+    /// CABINET CONTROL VOCABULARY (founder decision after the 2026-09 live playtest).
+    /// Every game on the cabinet must name a control the SAME way, because the
+    /// controls are physically labelled with these words (stickers ordered):
+    ///   крутилка · жёлтая кнопка · зелёная кнопка · красная кнопка ·
+    ///   датчики высоты · джойстик · кнопка меню
+    /// Never write «стрелки», «ENTER», «кнопка на джойстике» or a key name again.
+    /// This game is played with the JOYSTICK (select) and the RED BUTTON (submit)
+    /// only — see ArcadeInputBridge — so no other control may appear in its text.
+    /// «Ручное управление» in the story lines is the engineer taking the factory
+    /// back by hand, NOT the крутилка: do not touch those.
     /// </summary>
     public static class Loc
     {
@@ -124,7 +135,7 @@ namespace LastShift.Data
         public const string ExitUnlockedToast = "РЕШИМОСТЬ СЛОМЛЕНА — ИНЖЕНЕР ОТСТУПАЕТ";
 
         // Level 1 tutorial hints
-        public const string HintSelect = "ДЖОЙСТИК ВВЕРХ/ВНИЗ — ВЫБРАТЬ СИСТЕМУ";
+        public const string HintSelect = "ДЖОЙСТИК ВВЕРХ / ВНИЗ — ВЫБРАТЬ СИСТЕМУ";
         public const string HintActivate = "КРАСНАЯ КНОПКА — АКТИВИРОВАТЬ СИСТЕМУ";
         public const string HintHighlight = "ВЫБРАННАЯ СИСТЕМА ПОДСВЕЧЕНА НА КАРТЕ";
         public const string HintGoal = "ЦЕЛЬ: СЛОМИТЬ РЕШИМОСТЬ ИНЖЕНЕРА И ВЫДАВИТЬ ЕГО ИЗ ЦЕХА";
