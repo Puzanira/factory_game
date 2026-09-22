@@ -28,14 +28,11 @@ namespace LastShift.Data
         public const string EngineerLabel = "ИНЖЕНЕР: ";
         public const string ObjectiveReachExit = "ДОБРАТЬСЯ ДО ВЫХОДА";
 
-        // Sound settings
-        public const string SoundSettings = "НАСТРОЙКИ ЗВУКА";
-        public const string VolumeMaster = "ОБЩАЯ ГРОМКОСТЬ";
-        public const string VolumeMusic = "МУЗЫКА";
-        public const string VolumeSfx = "ЗВУКОВЫЕ ЭФФЕКТЫ";
-        public const string SettingsBack = "НАЗАД";
-        public const string VolumeOn = "ВКЛ";
-        public const string VolumeOff = "ВЫКЛ";
+        // No sound-settings labels exist on purpose: on the cabinet volume belongs to
+        // the launcher, not to the game. The strings of the old settings screen
+        // («НАСТРОЙКИ ЗВУКА», «ОБЩАЯ ГРОМКОСТЬ», «МУЗЫКА», «ЗВУКОВЫЕ ЭФФЕКТЫ»,
+        // «НАЗАД», «ВКЛ», «ВЫКЛ») are archived in system/handoffs/texts-factory.md
+        // of the studio repo.
 
         // Room results
         public const string EngineerRetreated = "ИНЖЕНЕР ОТСТУПИЛ";

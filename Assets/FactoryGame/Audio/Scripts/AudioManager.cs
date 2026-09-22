@@ -11,7 +11,9 @@ namespace LastShift.Audio
     /// Persistent audio hub: routes one-shots and managed loops to AudioMixer groups,
     /// prevents duplicate/stacked loops (keyed by id), fades loops in/out with
     /// unscaled time (so fades finish while paused), rate-limits spammy sounds,
-    /// ducks gameplay audio while paused, and owns the player volume settings.
+    /// and ducks gameplay audio while paused. Volume itself is not the game's to
+    /// own — on the cabinet the launcher sets it, so there are no volume settings
+    /// and nothing is persisted.
     /// Fails safe: a missing library/mixer/clip degrades to synth clips and plain
     /// AudioSource volume scaling — never an exception.
     /// </summary>
@@ -52,7 +54,7 @@ namespace LastShift.Audio
 
         bool gamePaused;
 
-        // ---------------- volume settings ----------------
+        // ---------------- designed bus levels ----------------
 
         static readonly Dictionary<SfxBus, float> BaseDb = new Dictionary<SfxBus, float>
         {
@@ -69,39 +71,10 @@ namespace LastShift.Audio
             { SfxBus.Alerts, "AlertsVolume" },
         };
 
-        static float masterVolume01 = 1f;
-        static float musicVolume01 = 1f;
-        static float sfxVolume01 = 1f;
-
-        public static float MasterVolume01 => masterVolume01;
-        public static float MusicVolume01 => musicVolume01;
-        public static float SfxVolume01 => sfxVolume01;
-
-        public static void SetMasterVolume(float v) { masterVolume01 = Mathf.Clamp01(v); Save(); ApplyVolumesStatic(); }
-        public static void SetMusicVolume(float v) { musicVolume01 = Mathf.Clamp01(v); Save(); ApplyVolumesStatic(); }
-        public static void SetSfxVolume(float v) { sfxVolume01 = Mathf.Clamp01(v); Save(); ApplyVolumesStatic(); }
-
-        static void Save()
-        {
-            try
-            {
-                PlayerPrefs.SetFloat("ls_vol_master", masterVolume01);
-                PlayerPrefs.SetFloat("ls_vol_music", musicVolume01);
-                PlayerPrefs.SetFloat("ls_vol_sfx", sfxVolume01);
-            }
-            catch (System.Exception) { /* PlayerPrefs unavailable: session-only settings */ }
-        }
-
-        static void LoadSettings()
-        {
-            try
-            {
-                masterVolume01 = Mathf.Clamp01(PlayerPrefs.GetFloat("ls_vol_master", 1f));
-                musicVolume01 = Mathf.Clamp01(PlayerPrefs.GetFloat("ls_vol_music", 1f));
-                sfxVolume01 = Mathf.Clamp01(PlayerPrefs.GetFloat("ls_vol_sfx", 1f));
-            }
-            catch (System.Exception) { }
-        }
+        // There are no master/music/sfx settings and no PlayerPrefs behind them.
+        // On the cabinet volume belongs to the launcher, not to the game; the
+        // settings screen that used to drive them was removed with the pause menu,
+        // and the game plays every bus at the designed loudness above.
 
         // ---------------- lifecycle ----------------
 
@@ -124,8 +97,6 @@ namespace LastShift.Audio
             }
             Instance = this;
             DontDestroyOnLoad(gameObject);
-
-            LoadSettings();
 
             library = Resources.Load<AudioLibrary>(AudioLibrary.ResourceName);
             if (library != null)
@@ -180,7 +151,7 @@ namespace LastShift.Audio
                 foreach (var g in found)
                     if (g != null && g.name == bus.ToString()) { groups[bus] = g; break; }
             }
-            mixerParamsOk = mixer.SetFloat("MasterVolume", LinToDb(masterVolume01));
+            mixerParamsOk = mixer.SetFloat("MasterVolume", 0f);
         }
 
         AudioSource CreateSource(string name)
@@ -195,20 +166,14 @@ namespace LastShift.Audio
 
         // ---------------- volumes ----------------
 
-        static float LinToDb(float v) => v <= 0.001f ? -80f : 20f * Mathf.Log10(v);
-
-        static void ApplyVolumesStatic() { if (Instance != null) Instance.ApplyVolumes(); }
-
+        /// <summary>Puts every bus at its designed loudness; master stays at unity gain.</summary>
         void ApplyVolumes()
         {
             if (mixer != null && mixerParamsOk)
             {
-                mixer.SetFloat("MasterVolume", LinToDb(masterVolume01));
+                mixer.SetFloat("MasterVolume", 0f);   // 0 dB — уровень задаёт лаунчер автомата
                 foreach (var kv in ParamNames)
-                {
-                    float setting = kv.Key == SfxBus.Music ? musicVolume01 : sfxVolume01;
-                    mixer.SetFloat(kv.Value, BaseDb[kv.Key] + LinToDb(setting));
-                }
+                    mixer.SetFloat(kv.Value, BaseDb[kv.Key]);
             }
             // Scalar fallback volumes are recomputed continuously in Update (loops)
             // and per-call (one-shots), so nothing else to do here.
@@ -218,8 +183,7 @@ namespace LastShift.Audio
         float ScalarBusGain(SfxBus bus)
         {
             if (mixer != null && mixerParamsOk) return 1f; // mixer handles it
-            float setting = bus == SfxBus.Music ? musicVolume01 : sfxVolume01;
-            return Mathf.Pow(10f, BaseDb[bus] / 20f) * setting * masterVolume01;
+            return Mathf.Pow(10f, BaseDb[bus] / 20f);
         }
 
         float PauseDuck(SfxBus bus)
