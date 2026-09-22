@@ -52,7 +52,7 @@ In-editor tools: **Tools ▸ Last Shift ▸ Build All** regenerates all scenes, 
 
 **End screens**: `EndRoomPanel` shows win («ИНЖЕНЕР ОТСТУПИЛ», Enter → next room), defeat («ЦЕХ СТАБИЛИЗИРОВАН») and final victory («ЗАВОД ПОБЕДИЛ») on a *fully opaque* terminal panel. Defeat and final share one menu whose single option is «ПОВТОРИТЬ ЦЕХ» (reload current room), handled by `LevelManager.HandleEndMenu()`. **Never add a «выйти» option**: the game does not own the process (see `SceneLoader` above). Every factory win first runs `VictorySequenceController` (~3.5 s); result input is gated behind `LevelManager.VictoryPlaying`.
 
-**Onboarding**: `IntroFlowUI` runs Title → three mandatory instruction pages → «ВВОДНЫЙ УРОК» choice → tutorial or Level 1, on every new game, with no PlayerPrefs. The choice must never appear before all three pages.
+**Onboarding**: `IntroFlowUI` runs Title → **one** instruction page («кто вы») → «ВВОДНЫЙ УРОК» choice → tutorial or Level 1, on every new game, with no PlayerPrefs. The «ЦЕЛЬ СМЕНЫ» and «УПРАВЛЕНИЕ» pages were cut after the live-cabinet playtest (players at the machine never got through them); their text is archived in `system/handoffs/texts-factory.md` of the studio repo. Do not grow the intro back: how to play is taught by «ПРОЙТИ УРОК».
 
 **HUD**: there is no permanent top strip. «РЕСУРС УПРАВЛЕНИЯ» and «РЕШИМОСТЬ ИНЖЕНЕРА» live in `TacticalDetailPanelController` (lower-left of the terminal); repair progress is a local `LocalRepairProgressUI` plate at the console being repaired; the room title only flashes at room start. Do not reintroduce a global bar for any of these.
 

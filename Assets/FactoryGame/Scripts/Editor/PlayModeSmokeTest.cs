@@ -142,8 +142,8 @@ namespace LastShift.EditorTools
 
             double elapsed = EditorApplication.timeSinceStartup - startTime;
 
-            // Drive the keyboard-only intro flow (title menu, tutorial choice,
-            // 4 briefing pages) exactly like key presses, until gameplay loads.
+            // Drive the intro flow (title card, briefing page, tutorial choice)
+            // exactly like key presses, until gameplay loads.
             // Default: pick «СРАЗУ К СМЕНЕ» so Level 1 keeps its coverage;
             // -smokeTutorial keeps the default «ПРОЙТИ УРОК» and tests the lesson.
             var intro = LastShift.UI.IntroFlowUI.Instance;

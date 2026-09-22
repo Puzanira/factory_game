@@ -11,8 +11,12 @@ namespace LastShift.UI
 {
     /// <summary>
     /// Boot-scene onboarding flow, in this exact order on every new game:
-    /// title card «ПОСЛЕДНЯЯ СМЕНА» → three mandatory Russian instruction pages →
+    /// title card «ПОСЛЕДНЯЯ СМЕНА» → ONE Russian instruction page («кто вы») →
     /// «ВВОДНЫЙ УРОК» choice → interactive tutorial or Level 1.
+    /// The «ЦЕЛЬ СМЕНЫ» and «УПРАВЛЕНИЕ» pages were cut after the live-cabinet
+    /// playtest: standing at the machine, players did not get through them (their
+    /// text is archived in system/handoffs/texts-factory.md). How to play is
+    /// taught by «ПРОЙТИ УРОК», not by a wall of pages.
     /// Arcade controls only (joystick up/down = navigate, Red = confirm; no
     /// back/cancel action) through the shared GameInput funnel — no EventSystem,
     /// no mouse, no PlayerPrefs. DevAdvance() lets the headless smoke test drive
@@ -230,7 +234,9 @@ namespace LastShift.UI
             UIBuilder.Panel(card, "HeaderLine", new Vector2(0.05f, 0.805f), new Vector2(0.95f, 0.8075f),
                 new Color(0.35f, 0.7f, 0.45f, 0.55f));
 
-            pageBody = UIBuilder.Label(card, "Body", "", 23, Phosphor, TextAnchor.UpperLeft);
+            // One short paragraph now: centred against the diagram instead of
+            // hanging from the top of an otherwise empty column.
+            pageBody = UIBuilder.Label(card, "Body", "", 23, Phosphor, TextAnchor.MiddleLeft);
             SetRect(pageBody.rectTransform, new Vector2(0.05f, 0.2f), new Vector2(0.55f, 0.78f));
 
             // Right-hand technical diagram column (one per page, toggled).
@@ -238,8 +244,6 @@ namespace LastShift.UI
                 new Color(0.01f, 0.03f, 0.022f, 1f));
             Frame(diagramArea, new Color(0.3f, 0.6f, 0.4f, 0.45f), 0.006f);
             pageDiagrams.Add(BuildDiagramRole(diagramArea));
-            pageDiagrams.Add(BuildDiagramGoal(diagramArea));
-            pageDiagrams.Add(BuildDiagramControls(diagramArea));
 
             UIBuilder.Panel(card, "FooterLine", new Vector2(0.05f, 0.135f), new Vector2(0.95f, 0.1375f),
                 new Color(0.35f, 0.7f, 0.45f, 0.5f));
@@ -247,7 +251,7 @@ namespace LastShift.UI
             SetRect(pageFooter.rectTransform, new Vector2(0f, 0.045f), new Vector2(1f, 0.125f));
         }
 
-        /// <summary>Page 1 diagram: factory AI core, pipes/conveyor, engineer silhouette.</summary>
+        /// <summary>Diagram of the only page: factory AI core, equipment bus, engineer.</summary>
         GameObject BuildDiagramRole(Transform area)
         {
             RectTransform rt = UIBuilder.Panel(area, "DiagramRole", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0f));
@@ -286,76 +290,6 @@ namespace LastShift.UI
             UIBuilder.Panel(rt, "LegR", new Vector2(0.508f, 0.08f), new Vector2(0.528f, 0.118f), Warn);
             var eng = UIBuilder.Label(rt, "EngLabel", "ДЕЖУРНЫЙ ИНЖЕНЕР", 12, Warn, TextAnchor.MiddleCenter);
             SetRect(eng.rectTransform, new Vector2(0.02f, 0.0f), new Vector2(0.98f, 0.055f));
-
-            return rt.gameObject;
-        }
-
-        /// <summary>Page 2 diagram: repair console → route → exit, with system symbols.</summary>
-        GameObject BuildDiagramGoal(Transform area)
-        {
-            RectTransform rt = UIBuilder.Panel(area, "DiagramGoal", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0f));
-            var line = new Color(0.4f, 0.85f, 0.58f, 0.5f);
-
-            // Repair console (bottom) with a warning frame.
-            Box(rt, new Vector2(0.08f, 0.12f), new Vector2(0.36f, 0.28f), new Color(0.9f, 0.42f, 0.3f, 0.6f));
-            var cons = UIBuilder.Label(rt, "Console", "ПУЛЬТ", 13, Warn, TextAnchor.MiddleCenter);
-            SetRect(cons.rectTransform, new Vector2(0.08f, 0.12f), new Vector2(0.36f, 0.28f));
-            var lbl1 = UIBuilder.Label(rt, "LabelEngineer", Loc.InstructionLabelEngineer, 12, Warn, TextAnchor.MiddleLeft);
-            SetRect(lbl1.rectTransform, new Vector2(0.06f, 0.03f), new Vector2(0.98f, 0.1f));
-
-            // Exit (top right).
-            Box(rt, new Vector2(0.64f, 0.72f), new Vector2(0.92f, 0.88f), new Color(0.4f, 0.95f, 0.55f, 0.7f));
-            var ex = UIBuilder.Label(rt, "Exit", "ВЫХОД", 13, new Color(0.55f, 1f, 0.7f), TextAnchor.MiddleCenter);
-            SetRect(ex.rectTransform, new Vector2(0.64f, 0.72f), new Vector2(0.92f, 0.88f));
-
-            // Engineer route: console → mid → exit (dashed, with a blocked segment).
-            Dashes(rt, new Vector2(0.22f, 0.3f), new Vector2(0.22f, 0.55f), 5, line);
-            Dashes(rt, new Vector2(0.22f, 0.55f), new Vector2(0.78f, 0.55f), 11, line);
-            Dashes(rt, new Vector2(0.78f, 0.57f), new Vector2(0.78f, 0.7f), 3, line);
-
-            // Factory systems pressing on the route.
-            Box(rt, new Vector2(0.42f, 0.62f), new Vector2(0.6f, 0.72f), Amber);
-            var g = UIBuilder.Label(rt, "Gate", "ВОРОТА", 11, Amber, TextAnchor.MiddleCenter);
-            SetRect(g.rectTransform, new Vector2(0.42f, 0.62f), new Vector2(0.6f, 0.72f));
-            UIBuilder.Panel(rt, "GateDrop", new Vector2(0.505f, 0.56f), new Vector2(0.513f, 0.62f), Amber);
-
-            Box(rt, new Vector2(0.06f, 0.62f), new Vector2(0.28f, 0.72f), Amber);
-            var b = UIBuilder.Label(rt, "Belt", "КОНВЕЙЕР", 11, Amber, TextAnchor.MiddleCenter);
-            SetRect(b.rectTransform, new Vector2(0.06f, 0.62f), new Vector2(0.28f, 0.72f));
-
-            var lbl2 = UIBuilder.Label(rt, "LabelFactory", Loc.InstructionLabelFactory, 12, Amber, TextAnchor.MiddleLeft);
-            SetRect(lbl2.rectTransform, new Vector2(0.06f, 0.9f), new Vector2(0.98f, 0.98f));
-
-            return rt.gameObject;
-        }
-
-        /// <summary>Page 3 diagram: the cabinet's joystick and the red button.</summary>
-        GameObject BuildDiagramControls(Transform area)
-        {
-            RectTransform rt = UIBuilder.Panel(area, "DiagramControls", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0f));
-            var line = new Color(0.4f, 0.85f, 0.58f, 0.55f);
-            var red = new Color(0.85f, 0.28f, 0.22f);
-
-            // Joystick: gate ring with four direction stubs.
-            var ring = UIBuilder.Panel(rt, "JoyRing", new Vector2(0.3f, 0.5f), new Vector2(0.56f, 0.72f),
-                new Color(0.4f, 0.85f, 0.58f, 0.22f));
-            ring.GetComponent<Image>().sprite = SpriteFactory.Get(PlaceholderShape.Ring);
-            var knob = UIBuilder.Panel(rt, "JoyKnob", new Vector2(0.39f, 0.57f), new Vector2(0.47f, 0.65f), Amber);
-            knob.GetComponent<Image>().sprite = TextureFactory.SoftCircle();
-            UIBuilder.Panel(rt, "JoyUp", new Vector2(0.42f, 0.72f), new Vector2(0.44f, 0.76f), line);
-            UIBuilder.Panel(rt, "JoyDn", new Vector2(0.42f, 0.46f), new Vector2(0.44f, 0.5f), line);
-            UIBuilder.Panel(rt, "JoyL", new Vector2(0.26f, 0.6f), new Vector2(0.3f, 0.62f), line);
-            UIBuilder.Panel(rt, "JoyR", new Vector2(0.56f, 0.6f), new Vector2(0.6f, 0.62f), line);
-            var jl = UIBuilder.Label(rt, "JoyLabel", "ДЖОЙСТИК", 11, PhosphorDim, TextAnchor.MiddleCenter);
-            SetRect(jl.rectTransform, new Vector2(0.24f, 0.39f), new Vector2(0.62f, 0.46f));
-
-            var btn = UIBuilder.Panel(rt, "Button", new Vector2(0.7f, 0.54f), new Vector2(0.9f, 0.68f), red);
-            btn.GetComponent<Image>().sprite = TextureFactory.SoftCircle();
-            var bl = UIBuilder.Label(rt, "BtnLabel", "КРАСНАЯ КНОПКА", 11, PhosphorDim, TextAnchor.MiddleCenter);
-            SetRect(bl.rectTransform, new Vector2(0.6f, 0.39f), new Vector2(1f, 0.46f));
-
-            var note = UIBuilder.Label(rt, "Note", Loc.InstructionTacticalNote, 14, Phosphor, TextAnchor.UpperCenter);
-            SetRect(note.rectTransform, new Vector2(0.04f, 0.01f), new Vector2(0.96f, 0.13f));
 
             return rt.gameObject;
         }
@@ -430,7 +364,8 @@ namespace LastShift.UI
             pageSubheader.text = Loc.InstructionSubheaders[pageIndex];
             pageBody.text = Loc.InstructionBodies[pageIndex];
             pageFooter.text = pageIndex == total - 1 ? Loc.FooterContinue : Loc.FooterNext;
-            pageCounter.text = string.Format(Loc.InstructionCounter, pageIndex + 1, total);
+            // «ИНСТРУКЦИЯ 1 / 1» is noise on a single-page briefing.
+            pageCounter.text = total > 1 ? string.Format(Loc.InstructionCounter, pageIndex + 1, total) : "";
             for (int i = 0; i < pageDiagrams.Count; i++)
                 if (pageDiagrams[i] != null) pageDiagrams[i].SetActive(i == pageIndex);
             StartCoroutine(FadePage());
@@ -515,7 +450,7 @@ namespace LastShift.UI
                     }
                     else
                     {
-                        // The tutorial choice always comes after ALL instruction pages.
+                        // The tutorial choice always comes after the instruction page(s).
                         UiSfx.Confirm();
                         ShowScreen(Screen.TutorialChoice);
                     }

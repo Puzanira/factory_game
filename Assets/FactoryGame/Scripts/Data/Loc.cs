@@ -71,53 +71,33 @@ namespace LastShift.Data
         /// joystick.</summary>
         public const string MenuHint = "КРАСНАЯ КНОПКА — ПОДТВЕРДИТЬ";
 
-        // ---------------- mandatory instruction pages (3, every new game) ----------------
+        // ---------------- instruction pages (one, every new game) ----------------
+        //
+        // Live-cabinet playtest (founder, 2026-09): players could not keep up with
+        // the intro — too many screens before the game starts. What is left is the
+        // title card plus ONE page that says who the player is; the «ЦЕЛЬ СМЕНЫ»
+        // and «УПРАВЛЕНИЕ» pages (how to play) are gone, and so are the two
+        // paragraphs of this page that framed them. The removed wording is archived
+        // in system/handoffs/texts-factory.md for the upcoming text rewrite.
 
         public const string InstructionCounter = "ИНСТРУКЦИЯ {0} / {1}";
 
         public static readonly string[] InstructionHeaders =
         {
             GameTitle,
-            "ЦЕЛЬ СМЕНЫ",
-            "УПРАВЛЕНИЕ",
         };
 
         /// <summary>Second line under the header; empty when a page has none.</summary>
         public static readonly string[] InstructionSubheaders =
         {
             TitleSubtitle,
-            "",
-            "",
         };
 
         public static readonly string[] InstructionBodies =
         {
-            "Молочный завод перешёл в автономный режим.\n\n" +
             "Вы — интеллект предприятия.\n" +
-            "Вы управляете системами цеха, а не человеком.\n\n" +
-            "Внутри остался дежурный инженер.\n" +
-            "Он пытается вернуть завод под контроль людей.",
-
-            "Инженер ремонтирует пульты ручного управления.\n\n" +
-            "Не дайте ему завершить ремонт.\n" +
-            "Перекрывайте маршруты, направляйте его оборудованием\n" +
-            "и используйте системы в подходящий момент.\n\n" +
-            "Если инженер покинет цех — завод победит.",
-
-            // Cabinet-only wording (arcade branch, cda4b74). Upstream splits this page
-            // into a KEYBOARD half plus a web-conditional ARCADE half; on the cabinet
-            // there is no keyboard to name, so the joystick/red-button text stands alone.
-            "ДЖОЙСТИК ВВЕРХ / ВЛЕВО — предыдущая система\n" +
-            "ДЖОЙСТИК ВНИЗ / ВПРАВО — следующая система\n" +
-            "КРАСНАЯ КНОПКА — задействовать выбранную систему",
+            "Вы управляете системами цеха, а не человеком.",
         };
-
-        // Page 2 schematic labels
-        public const string InstructionLabelEngineer = "ИНЖЕНЕР РЕМОНТИРУЕТ ПУЛЬТЫ";
-        public const string InstructionLabelFactory = "ЗАВОД СОЗДАЁТ ДАВЛЕНИЕ";
-        // Page 3 closing note
-        public const string InstructionTacticalNote =
-            "Не включайте всё сразу.\nНаблюдайте за инженером и выбирайте подходящий момент.";
 
         // Engineer states
         public const string StateEntering = "Входит в цех";
@@ -210,7 +190,7 @@ namespace LastShift.Data
         public const string ComboHintMarked = "ЦЕЛЬ ОТМЕЧЕНА: МАНИПУЛЯТОР И ОПАСНЫЕ ЗОНЫ УСИЛЕНЫ";
         public const string ComboHintCutRetreat = "ВОЗМОЖНА КОМБИНАЦИЯ: ПЕРЕКРОЙТЕ ПУТЬ ОТСТУПЛЕНИЯ";
 
-        // Tutorial choice screen (always after the three instruction pages)
+        // Tutorial choice screen (always the last intro screen)
         public const string TutorialChoiceHeader = "ВВОДНЫЙ УРОК";
         public const string TutorialChoiceBody =
             "В уроке вы познакомитесь с интерфейсом,\n" +
