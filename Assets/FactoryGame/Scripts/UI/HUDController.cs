@@ -10,12 +10,13 @@ using LastShift.Machines;
 namespace LastShift.UI
 {
     /// <summary>
-    /// Screen effects and transient messages only. The permanent top HUD strip was
-    /// removed: the upper part of the screen belongs to the room. Resolve and the
-    /// control resource live in the terminal's lower-left detail panel, repair
-    /// progress lives at the repair console, and the engineer's state stays above
-    /// the engineer. What is left here: full-screen overlays (escalation, alarm,
-    /// fog), the Russian toast stack, and a room title that fades away at room start.
+    /// Screen effects and transient messages only. Resolve and the control resource
+    /// are a thin permanent strip along the top row of the play area, built by
+    /// CommandTerminalUI (TacticalDetailPanelController); repair progress lives at
+    /// the repair console, and the engineer's state stays above the engineer. What
+    /// is left here: full-screen overlays (escalation, alarm, fog), the Russian
+    /// toast stack, and a room title that fades away at room start — both of them
+    /// kept below that strip so nothing ever overlaps it.
     /// </summary>
     public class HUDController : MonoBehaviour
     {
@@ -43,8 +44,9 @@ namespace LastShift.UI
             escalationOverlay = Panel(root, "EscalationOverlay", new Color(1f, 0.1f, 0.05f, 0f));
 
             // Room title: shown briefly at room start, then gone — never a header.
+            // It sits just under the permanent gauge strip (which owns the top row).
             RectTransform titleRow = UIBuilder.Panel(root, "RoomTitle",
-                new Vector2(0.3f, 0.88f), new Vector2(0.98f, 0.97f), new Color(0f, 0f, 0f, 0f));
+                new Vector2(0.3f, 0.815f), new Vector2(0.98f, 0.895f), new Color(0f, 0f, 0f, 0f));
             roomTitleGroup = titleRow.gameObject.AddComponent<CanvasGroup>();
             roomTitleGroup.alpha = 0f;
             roomTitleGroup.blocksRaycasts = false;
@@ -53,7 +55,7 @@ namespace LastShift.UI
 
             // Toast stack: top of the play area, under the (temporary) room title.
             toastStack = UIBuilder.Panel(root, "ToastStack",
-                new Vector2(0.34f, 0.6f), new Vector2(0.96f, 0.87f), new Color(0f, 0f, 0f, 0f));
+                new Vector2(0.34f, 0.55f), new Vector2(0.96f, 0.805f), new Color(0f, 0f, 0f, 0f));
             toastStack.GetComponent<Image>().raycastTarget = false;
             // No corner hint strip: the cabinet has no pause and nothing to announce here.
         }

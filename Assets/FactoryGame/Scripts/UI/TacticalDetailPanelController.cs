@@ -2,24 +2,26 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using LastShift.Data;
-using LastShift.Machines;
 
 namespace LastShift.UI
 {
     /// <summary>
-    /// The lower-left detail panel of the factory terminal — everything the player
-    /// needs about the *currently selected* system, in one fixed reading order:
-    /// 1) name + activation instruction, 2) purpose, 3) tactical status,
-    /// 4) «РЕСУРС УПРАВЛЕНИЯ», 5) «РЕШИМОСТЬ ИНЖЕНЕРА».
-    /// The last two moved here from the removed top HUD strip. Pure view; built in
-    /// code like the rest of the UI. Exposes its sub-rects so the tutorial can
-    /// highlight one row at a time.
+    /// The two permanent readouts of the factory terminal — «РЕШИМОСТЬ ИНЖЕНЕРА»
+    /// and «РЕСУРС УПРАВЛЕНИЯ» — laid out as one thin strip along the very top of
+    /// the play area, left to right: resolve bar, then the control-resource cells.
+    ///
+    /// They used to sit in a lower-left detail panel together with the selected
+    /// system's name, purpose and zone status. The live-cabinet playtest (founder,
+    /// 2026-09) killed that panel: at the machine it read as noise in the corner of
+    /// the eye and nobody looked at it. The two gauges survived the panel and moved
+    /// up here, where they are in the player's line of sight; the descriptive rows
+    /// went away with it.
+    ///
+    /// Pure view; built in code like the rest of the UI. Exposes its sub-rects so
+    /// the tutorial can highlight one gauge at a time.
     /// </summary>
     public class TacticalDetailPanelController
     {
-        Text enterHint;
-        Text descriptionText;
-        Text zoneStatusText;
         Text resourceLabel;
         RectTransform resolveFill;
         Text resolveLabel;
@@ -30,56 +32,53 @@ namespace LastShift.UI
         RectTransform resourceRow;
         RectTransform resolveRow;
 
-        /// <summary>Whole detail panel (tutorial step «НАЗНАЧЕНИЕ СИСТЕМЫ»).</summary>
+        /// <summary>The whole top strip.</summary>
         public RectTransform PanelRect => panelRect;
         /// <summary>Control-resource row (tutorial step «РЕСУРС УПРАВЛЕНИЯ»).</summary>
         public RectTransform ResourceRect => resourceRow;
         /// <summary>Engineer-resolve row (tutorial step «РЕШИМОСТЬ ИНЖЕНЕРА»).</summary>
         public RectTransform ResolveRect => resolveRow;
 
-        static readonly Color Amber = new Color(0.95f, 0.85f, 0.45f);
-        static readonly Color Phosphor = new Color(0.7f, 0.9f, 0.75f);
-        static readonly Color Separator = new Color(0.32f, 0.62f, 0.42f, 0.4f);
-
-        /// <summary>Builds the panel inside the terminal screen (anchors are screen-relative).</summary>
-        public void Build(Transform screen, Vector2 anchorMin, Vector2 anchorMax)
+        /// <summary>
+        /// Builds the strip on the game canvas (anchors are screen-relative). It is
+        /// kept clear of the terminal frame on the left and of the room title, which
+        /// now flashes just below it.
+        /// </summary>
+        public void Build(Transform canvas, Vector2 anchorMin, Vector2 anchorMax)
         {
-            panelRect = UIBuilder.PanelPx(screen, "DetailPanel", anchorMin, anchorMax,
-                Vector2.zero, Vector2.zero, new Color(0.01f, 0.04f, 0.025f, 1f));
+            panelRect = UIBuilder.PanelPx(canvas, "TopStatusStrip", anchorMin, anchorMax,
+                Vector2.zero, Vector2.zero, new Color(0.01f, 0.04f, 0.025f, 0.88f));
+            panelRect.GetComponent<Image>().raycastTarget = false;
             var outline = panelRect.gameObject.AddComponent<Outline>();
             outline.effectColor = new Color(0.35f, 0.7f, 0.45f, 0.45f);
             outline.effectDistance = new Vector2(1.5f, 1.5f);
 
-            // 1. Selected system + activation instruction.
-            enterHint = UIBuilder.Label(panelRect, "EnterHint", Loc.EnterExecute, 17, Amber, TextAnchor.UpperLeft);
-            SetRect(enterHint.rectTransform, new Vector2(0.04f, 0.79f), new Vector2(0.96f, 0.985f));
+            // Left half: «РЕШИМОСТЬ ИНЖЕНЕРА» + bar, on one line.
+            resolveRow = UIBuilder.Panel(panelRect, "ResolveRow",
+                new Vector2(0.015f, 0.12f), new Vector2(0.62f, 0.88f), new Color(0f, 0f, 0f, 0f));
+            resolveRow.GetComponent<Image>().raycastTarget = false;
+            resolveLabel = UIBuilder.Label(resolveRow, "ResolveLabel", Loc.EngineerResolve, 19,
+                new Color(1f, 0.72f, 0.42f), TextAnchor.MiddleLeft);
+            SetRect(resolveLabel.rectTransform, new Vector2(0f, 0f), new Vector2(0.42f, 1f));
+            resolveFill = UIBuilder.Bar(resolveRow, "ResolveBar", new Vector2(0.44f, 0.26f), new Vector2(1f, 0.74f),
+                Vector2.zero, Vector2.zero, new Color(0.12f, 0.1f, 0.08f), new Color(1f, 0.6f, 0.25f));
 
-            // 2. What the system does.
-            descriptionText = UIBuilder.Label(panelRect, "Description", "", 15, Phosphor, TextAnchor.UpperLeft);
-            SetRect(descriptionText.rectTransform, new Vector2(0.04f, 0.575f), new Vector2(0.96f, 0.785f));
-
-            // 3. Tactical status (in zone / out of zone).
-            zoneStatusText = UIBuilder.Label(panelRect, "ZoneStatus", "", 14,
-                new Color(0.5f, 0.95f, 0.6f), TextAnchor.UpperLeft);
-            SetRect(zoneStatusText.rectTransform, new Vector2(0.04f, 0.44f), new Vector2(0.96f, 0.575f));
-
-            UIBuilder.Panel(panelRect, "Sep1", new Vector2(0.04f, 0.425f), new Vector2(0.96f, 0.4295f), Separator);
-
-            // 4. «РЕСУРС УПРАВЛЕНИЯ ● ● ●» (moved out of the old top area).
+            // Right half: «РЕСУРС УПРАВЛЕНИЯ ■ ■ ■».
             resourceRow = UIBuilder.Panel(panelRect, "ResourceRow",
-                new Vector2(0.03f, 0.255f), new Vector2(0.97f, 0.41f), new Color(0f, 0f, 0f, 0f));
-            resourceLabel = UIBuilder.Label(resourceRow, "ResourceLabel", Loc.ControlResource, 14,
+                new Vector2(0.65f, 0.12f), new Vector2(0.985f, 0.88f), new Color(0f, 0f, 0f, 0f));
+            resourceRow.GetComponent<Image>().raycastTarget = false;
+            resourceLabel = UIBuilder.Label(resourceRow, "ResourceLabel", Loc.ControlResource, 19,
                 new Color(0.6f, 0.9f, 0.68f), TextAnchor.MiddleLeft);
-            SetRect(resourceLabel.rectTransform, new Vector2(0.02f, 0f), new Vector2(0.66f, 1f));
+            SetRect(resourceLabel.rectTransform, new Vector2(0f, 0f), new Vector2(0.70f, 1f));
             int maxCells = TacticsData.Get().resourceMax;
             for (int i = 0; i < maxCells; i++)
             {
                 var cellGO = new GameObject("Cell" + i);
                 cellGO.transform.SetParent(resourceRow, false);
                 var cellRt = cellGO.AddComponent<RectTransform>();
-                float x0 = 0.68f + i * 0.1f;
-                cellRt.anchorMin = new Vector2(x0, 0.26f);
-                cellRt.anchorMax = new Vector2(x0 + 0.075f, 0.74f);
+                float x0 = 0.725f + i * 0.093f;
+                cellRt.anchorMin = new Vector2(x0, 0.24f);
+                cellRt.anchorMax = new Vector2(x0 + 0.072f, 0.76f);
                 cellRt.offsetMin = Vector2.zero;
                 cellRt.offsetMax = Vector2.zero;
                 var img = cellGO.AddComponent<Image>();
@@ -90,17 +89,6 @@ namespace LastShift.UI
                 cellOutline.effectDistance = new Vector2(1f, 1f);
                 resourceCells.Add(img);
             }
-
-            UIBuilder.Panel(panelRect, "Sep2", new Vector2(0.04f, 0.24f), new Vector2(0.96f, 0.2445f), Separator);
-
-            // 5. «РЕШИМОСТЬ ИНЖЕНЕРА» + compact bar (moved out of the removed top HUD).
-            resolveRow = UIBuilder.Panel(panelRect, "ResolveRow",
-                new Vector2(0.03f, 0.03f), new Vector2(0.97f, 0.228f), new Color(0f, 0f, 0f, 0f));
-            resolveLabel = UIBuilder.Label(resolveRow, "ResolveLabel", Loc.EngineerResolve, 14,
-                new Color(1f, 0.72f, 0.42f), TextAnchor.UpperLeft);
-            SetRect(resolveLabel.rectTransform, new Vector2(0.02f, 0.5f), new Vector2(0.98f, 1f));
-            resolveFill = UIBuilder.Bar(resolveRow, "ResolveBar", new Vector2(0.02f, 0.1f), new Vector2(0.98f, 0.46f),
-                Vector2.zero, Vector2.zero, new Color(0.12f, 0.1f, 0.08f), new Color(1f, 0.6f, 0.25f));
         }
 
         static void SetRect(RectTransform rt, Vector2 aMin, Vector2 aMax)
@@ -113,42 +101,8 @@ namespace LastShift.UI
 
         // ---------------- refresh ----------------
 
-        public void Refresh(InteractableMachine selected, LastShift.Engineer.EngineerController engineer)
+        public void Refresh(LastShift.Engineer.EngineerController engineer)
         {
-            if (selected != null)
-            {
-                enterHint.text = selected.IsReady
-                    ? Loc.EnterExecute + selected.CommandLabel.ToUpper()
-                    : Loc.SystemBusy + " — " + selected.displayName.ToUpper();
-
-                string purpose = selected.PurposeLine;
-                if (!string.IsNullOrEmpty(selected.PurposeHint))
-                    purpose += "\n" + selected.PurposeHint;
-                descriptionText.text = string.IsNullOrEmpty(purpose) ? selected.Description : purpose;
-
-                // Zone status: teaches that timing matters (recovery moves stay neutral).
-                if (selected.ActivationAlwaysEffective)
-                {
-                    zoneStatusText.text = "";
-                }
-                else if (selected.EngineerInEffectiveZone)
-                {
-                    zoneStatusText.text = selected is DoorMachine ? Loc.InsightDoorBlock : Loc.TargetInZone;
-                    zoneStatusText.color = new Color(0.5f, 0.95f, 0.6f);
-                }
-                else
-                {
-                    zoneStatusText.text = Loc.TargetOutOfZone;
-                    zoneStatusText.color = new Color(0.85f, 0.7f, 0.4f);
-                }
-            }
-            else
-            {
-                enterHint.text = Loc.NoSystemsOnline;
-                descriptionText.text = "";
-                zoneStatusText.text = "";
-            }
-
             RefreshResourceCells();
             RefreshResolve(engineer);
         }

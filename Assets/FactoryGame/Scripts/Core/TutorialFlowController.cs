@@ -10,7 +10,7 @@ using LastShift.Utilities;
 namespace LastShift.Core
 {
     /// <summary>
-    /// The interactive lesson in «УЧЕБНЫЙ ЦЕХ»: ten steps on the real machines, the
+    /// The interactive lesson in «УЧЕБНЫЙ ЦЕХ»: nine steps on the real machines, the
     /// real engineer AI and the real interface. Each step darkens everything else,
     /// marks exactly one target and waits for Submit; the practical steps hand the
     /// room back and only allow the system the step is about. The lesson can never
@@ -19,7 +19,7 @@ namespace LastShift.Core
     /// </summary>
     public class TutorialFlowController : MonoBehaviour
     {
-        const int TotalSteps = 10;
+        const int TotalSteps = 9;
 
         LevelManager lm;
         RoomRefs refs;
@@ -41,8 +41,8 @@ namespace LastShift.Core
         float repairWatch;
         const float StepRetrySeconds = 26f;
 
-        // Step 9 sub-sequence: gate, then conveyor. The lesson ends there — the arm
-        // was already taught (and practised) in steps 7-8.
+        // Step 8 sub-sequence: gate, then conveyor. The lesson ends there — the arm
+        // was already taught (and practised) in steps 6-7.
         enum ComboPhase { None, GateInfo, GateAct, BeltInfo, BeltAct }
         ComboPhase combo = ComboPhase.None;
         float gateClosedAt = -999f;
@@ -133,51 +133,49 @@ namespace LastShift.Core
                         TutorialHighlightShape.Rect, () => StartStep(4));
                     break;
 
-                case 4: // lower-left detail panel
+                // The step that explained the lower-left detail panel is gone with
+                // the panel itself (live-cabinet playtest): nothing on screen
+                // describes the selected system any more. Its text stays in Loc
+                // (TutStep4*) for the coming rewrite.
+
+                case 4: // control-resource gauge in the top strip
                     SetGate(m => false);
-                    steps.ShowInfo(4, TotalSteps, Loc.TutStep4Header, Loc.TutStep4Body,
-                        terminalUi != null ? UiTarget(terminalUi.Detail.PanelRect) : null,
+                    steps.ShowInfo(4, TotalSteps, Loc.TutStep5Header, Loc.TutStep5Body,
+                        terminalUi != null ? UiTarget(terminalUi.Detail.ResourceRect) : null,
                         TutorialHighlightShape.Rect, () => StartStep(5));
                     break;
 
-                case 5: // control resource row inside the detail panel
+                case 5: // engineer-resolve gauge in the top strip
                     SetGate(m => false);
-                    steps.ShowInfo(5, TotalSteps, Loc.TutStep5Header, Loc.TutStep5Body,
-                        terminalUi != null ? UiTarget(terminalUi.Detail.ResourceRect) : null,
+                    steps.ShowInfo(5, TotalSteps, Loc.TutStep6Header, Loc.TutStep6Body,
+                        terminalUi != null ? UiTarget(terminalUi.Detail.ResolveRect) : null,
                         TutorialHighlightShape.Rect, () => StartStep(6));
                     break;
 
-                case 6: // engineer resolve row inside the detail panel
+                case 6: // the arm's real effective zone in world space
                     SetGate(m => false);
-                    steps.ShowInfo(6, TotalSteps, Loc.TutStep6Header, Loc.TutStep6Body,
-                        terminalUi != null ? UiTarget(terminalUi.Detail.ResolveRect) : null,
+                    OpenRouteThroughArm();
+                    steps.ShowInfo(6, TotalSteps, Loc.TutStep7Header, Loc.TutStep7Body,
+                        arm != null ? ZoneTarget(arm) : null,
                         TutorialHighlightShape.Rect, () => StartStep(7));
                     break;
 
-                case 7: // the arm's real effective zone in world space
-                    SetGate(m => false);
-                    OpenRouteThroughArm();
-                    steps.ShowInfo(7, TotalSteps, Loc.TutStep7Header, Loc.TutStep7Body,
-                        arm != null ? ZoneTarget(arm) : null,
-                        TutorialHighlightShape.Rect, () => StartStep(8));
-                    break;
-
-                case 8: // first activation: only the arm, only at the right moment
+                case 7: // first activation: only the arm, only at the right moment
                     OpenRouteThroughArm();
                     ResetSituation(null);
                     SetGate(m => m == arm);
-                    steps.ShowPractical(8, TotalSteps, Loc.TutStep8Header, Loc.TutStep8Body,
+                    steps.ShowPractical(7, TotalSteps, Loc.TutStep8Header, Loc.TutStep8Body,
                         arm != null ? ZoneTarget(arm) : null, TutorialHighlightShape.Rect);
                     steps.SetStatus(Loc.TutWaitOutOfZone, false);
                     break;
 
-                case 9: // combination: gate → conveyor → arm, one target at a time
+                case 8: // combination: gate → conveyor → arm, one target at a time
                     OpenRouteThroughArm();
                     ResetSituation(null);
                     EnterComboPhase(ComboPhase.GateInfo);
                     break;
 
-                case 10:
+                case 9:
                     ShowDonePanel();
                     break;
             }
@@ -209,7 +207,7 @@ namespace LastShift.Core
             if (door != null && door.IsClosed) door.ForceActivate();
         }
 
-        // ================= step 9: the combination sub-sequence =================
+        // ================= step 8: the combination sub-sequence =================
 
         void EnterComboPhase(ComboPhase phase)
         {
@@ -219,28 +217,28 @@ namespace LastShift.Core
             {
                 case ComboPhase.GateInfo:
                     SetGate(m => false);
-                    steps.ShowInfo(9, TotalSteps, Loc.TutStep9Header, Loc.TutStep9Body,
+                    steps.ShowInfo(8, TotalSteps, Loc.TutStep9Header, Loc.TutStep9Body,
                         door != null ? ZoneTarget(door) : null, TutorialHighlightShape.Rect,
                         () => EnterComboPhase(ComboPhase.GateAct));
                     break;
 
                 case ComboPhase.GateAct:
                     SetGate(m => m == door);
-                    steps.ShowPractical(9, TotalSteps, Loc.TutComboGateHeader, Loc.TutComboGateBody,
+                    steps.ShowPractical(8, TotalSteps, Loc.TutComboGateHeader, Loc.TutComboGateBody,
                         door != null ? ZoneTarget(door) : null, TutorialHighlightShape.Rect);
                     steps.SetStatus(Loc.TutorialFooterAction, false);
                     break;
 
                 case ComboPhase.BeltInfo:
                     SetGate(m => false);
-                    steps.ShowInfo(9, TotalSteps, Loc.TutComboConveyorHeader, Loc.TutComboConveyorBody,
+                    steps.ShowInfo(8, TotalSteps, Loc.TutComboConveyorHeader, Loc.TutComboConveyorBody,
                         conveyor != null ? ZoneTarget(conveyor) : null, TutorialHighlightShape.Rect,
                         () => EnterComboPhase(ComboPhase.BeltAct));
                     break;
 
                 case ComboPhase.BeltAct:
                     SetGate(m => m == conveyor);
-                    steps.ShowPractical(9, TotalSteps, Loc.TutComboConveyorHeader, Loc.TutComboConveyorBody,
+                    steps.ShowPractical(8, TotalSteps, Loc.TutComboConveyorHeader, Loc.TutComboConveyorBody,
                         conveyor != null ? ZoneTarget(conveyor) : null, TutorialHighlightShape.Rect);
                     break;
             }
@@ -262,7 +260,7 @@ namespace LastShift.Core
         {
             if (advancing) return;
 
-            if (step == 8 && machine == arm && !effective)
+            if (step == 7 && machine == arm && !effective)
             {
                 // Fired too early: a warning and a fresh approach, never a failure.
                 steps.SetStatus(Loc.TutEarlyActivation, true);
@@ -272,7 +270,7 @@ namespace LastShift.Core
                 return;
             }
 
-            if (step != 9) return;
+            if (step != 8) return;
 
             switch (combo)
             {
@@ -296,7 +294,7 @@ namespace LastShift.Core
                             // genuinely lands, so no toast is duplicated here.
                             steps.SetHighlightColor(TutorialHighlightTarget.Green);
                             steps.SetStatus(effective ? Loc.ComboRedirect : Loc.EffectiveActivation, false);
-                            Advance(10, 2.4f);
+                            Advance(9, 2.4f);
                         }
                         else ResetCombo();
                     }
@@ -315,13 +313,13 @@ namespace LastShift.Core
         void OnStunned(string source)
         {
             if (advancing) return;
-            if (step == 8)
+            if (step == 7)
             {
                 // «ЭФФЕКТИВНОЕ ВОЗДЕЙСТВИЕ» and «РЕШИМОСТЬ −10» already arrive through
                 // the shared feedback path; the step just confirms and moves on.
                 steps.SetHighlightColor(TutorialHighlightTarget.Green);
                 steps.SetStatus(Loc.EffectiveActivation, false);
-                Advance(9, 2.4f);
+                Advance(8, 2.4f);
             }
         }
 
@@ -370,8 +368,8 @@ namespace LastShift.Core
             if (refs.objectives.Count > 0 && refs.objectives[0].Progress01 > 0.3f)
                 OnObjectiveRepaired();
 
-            if (step == 8) UpdateFirstActivation();
-            else if (step == 9) UpdateCombination();
+            if (step == 7) UpdateFirstActivation();
+            else if (step == 8) UpdateCombination();
         }
 
         void UpdateFirstActivation()
@@ -537,7 +535,7 @@ namespace LastShift.Core
             SceneLoader.Load(GameManager.Level1Scene);
         }
 
-        /// <summary>Smoke-test introspection: current lesson step (1..10).</summary>
+        /// <summary>Smoke-test introspection: current lesson step (1..9).</summary>
         public int DevStep => step;
 
         /// <summary>
@@ -548,8 +546,8 @@ namespace LastShift.Core
         {
             get
             {
-                if (step == 8) return arm;
-                if (step != 9) return null;
+                if (step == 7) return arm;
+                if (step != 8) return null;
                 switch (combo)
                 {
                     case ComboPhase.GateAct: return door;
@@ -564,7 +562,7 @@ namespace LastShift.Core
         /// is not allowed to activate. Must always be false.
         /// </summary>
         public bool DevRouteBlocked =>
-            step == 8 && door != null && door.IsClosed;
+            step == 7 && door != null && door.IsClosed;
         /// <summary>Smoke-test introspection: the step presenter (layout checks).</summary>
         public TutorialStepController DevSteps => steps;
     }

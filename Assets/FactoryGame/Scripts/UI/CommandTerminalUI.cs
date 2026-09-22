@@ -33,7 +33,7 @@ namespace LastShift.UI
 
         /// <summary>Command list container (tutorial step «СИСТЕМЫ ЗАВОДА»).</summary>
         public RectTransform CommandListRect => rowsRt;
-        /// <summary>Lower-left detail panel and its rows (tutorial steps 4-6).</summary>
+        /// <summary>Top status strip and its two gauges (tutorial steps 4-5).</summary>
         public TacticalDetailPanelController Detail => detail;
 
         /// <summary>
@@ -108,11 +108,13 @@ namespace LastShift.UI
                 new Color(0.95f, 0.75f, 0.35f), TextAnchor.MiddleCenter);
             SetRect(statusLine.rectTransform, new Vector2(0f, 0.895f), new Vector2(1f, 0.93f));
 
-            // Command list fills the middle of the panel (the freed top row of the
-            // old resource strip now belongs to the list). It is a clipped viewport:
-            // rows shrink to fit, and if there are too many for a readable height the
-            // list scrolls with the selection instead of running off the panel.
-            const float ListBottom = 0.37f, ListTop = 0.888f;
+            // Command list fills the whole panel below the header: the lower-left
+            // detail panel is gone (live-cabinet playtest), so the list takes back
+            // the bottom third instead of leaving a black hole there. It is a
+            // clipped viewport: rows shrink to fit, and if there are too many for a
+            // readable height the list scrolls with the selection instead of
+            // running off the panel.
+            const float ListBottom = 0.05f, ListTop = 0.888f;
             var rowsGO = new GameObject("Rows");
             rowsGO.transform.SetParent(screen, false);
             rowsRt = rowsGO.AddComponent<RectTransform>();
@@ -146,9 +148,10 @@ namespace LastShift.UI
             scrollUpMark.enabled = false;
             scrollDownMark.enabled = false;
 
-            // Lower-left detail panel: selected system, purpose, tactical status,
-            // control resource and engineer resolve (both moved out of the top HUD).
-            detail.Build(screen, new Vector2(0.03f, 0.02f), new Vector2(0.97f, 0.355f));
+            // The two permanent gauges live on the game canvas, not in this panel:
+            // a thin strip along the top row of the play area, clear of the
+            // terminal frame on the left.
+            detail.Build(root, new Vector2(0.29f, 0.905f), new Vector2(0.995f, 0.99f));
         }
 
         void AddBolt(RectTransform frame, Vector2 anchor)
@@ -202,7 +205,7 @@ namespace LastShift.UI
                 rows[i].Refresh(items[i], i == terminal.SelectedIndex, emergency);
 
             detail.SetEmergency(emergency);
-            detail.Refresh(terminal.Selected, lm != null ? lm.Engineer : null);
+            detail.Refresh(lm != null ? lm.Engineer : null);
 
             UpdateScroll(items.Count);
         }

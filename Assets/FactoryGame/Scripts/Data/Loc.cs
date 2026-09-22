@@ -234,35 +234,37 @@ namespace LastShift.Data
             "Джойстиком вверх и вниз выберите оборудование.\n" +
             "Нажмите красную кнопку, чтобы задействовать выбранную систему.";
 
-        // Step 4 — machine information panel
+        // Step 4 (RETIRED) — the lower-left detail panel it described was removed
+        // after the live-cabinet playtest; the lesson skips straight to the gauges.
+        // Kept for the text rewrite, not shown anywhere today.
         public const string TutStep4Header = "НАЗНАЧЕНИЕ СИСТЕМЫ";
         public const string TutStep4Body =
             "Здесь указано, что делает выбранная система.\n\n" +
             "Проверяйте её зону воздействия.\n" +
             "Не каждая система полезна в любой момент.";
 
-        // Step 5 — control resource
+        // Step 4 — control resource (top strip)
         public const string TutStep5Header = "РЕСУРС УПРАВЛЕНИЯ";
         public const string TutStep5Body =
             "Активация систем расходует ресурс управления.\n\n" +
             "Не включайте всё подряд.\n" +
             "Точное воздействие восстанавливает ресурс быстрее.";
 
-        // Step 6 — engineer resolve
+        // Step 5 — engineer resolve (top strip)
         public const string TutStep6Header = "РЕШИМОСТЬ ИНЖЕНЕРА";
         public const string TutStep6Body =
             "Эффективные действия снижают решимость инженера.\n\n" +
             "Когда решимость иссякнет,\n" +
             "он отступит к выходу.";
 
-        // Step 7 — effective zone
+        // Step 6 — effective zone
         public const string TutStep7Header = "ЗОНА ВОЗДЕЙСТВИЯ";
         public const string TutStep7Body =
             "Оорудование воздействует сильнее, когда инженер находится в его зоне.\n\n" +
             "Дождитесь подходящего момента.\n" +
             "Если цель вне зоны, воздействие будет слабым.";
 
-        // Step 8 — first activation
+        // Step 7 — first activation
         public const string TutStep8Header = "АКТИВАЦИЯ СИСТЕМЫ";
         public const string TutStep8Body =
             "Выберите манипулятор.\n\n" +
@@ -272,7 +274,7 @@ namespace LastShift.Data
         public const string TutGoodMoment = "ПОДХОДЯЩИЙ МОМЕНТ";
         public const string TutEarlyActivation = "ЦЕЛЬ ВНЕ ЗОНЫ. ДОЖДИТЕСЬ ПОДХОДЯЩЕГО МОМЕНТА.";
 
-        // Step 9 — simple machine combination
+        // Step 8 — simple machine combination
         public const string TutStep9Header = "КОМБИНАЦИЯ СИСТЕМ";
         public const string TutStep9Body =
             "Системы эффективнее работают вместе.\n\n" +
@@ -285,7 +287,7 @@ namespace LastShift.Data
         public const string TutComboConveyorBody = "СМЕЩАЕТ ИНЖЕНЕРА ПО ЛИНИИ.";
         public const string TutSequenceReset = "ПОСЛЕДОВАТЕЛЬНОСТЬ СБРОШЕНА. ПОВТОРИТЕ ТЕКУЩИЙ ШАГ.";
 
-        // Step 10 — completion
+        // Step 9 — completion
         public const string TutorialDoneHeader = "УПРАВЛЕНИЕ ОСВОЕНО";
         public const string TutorialDoneBody =
             "Наблюдайте за инженером.\n" +
