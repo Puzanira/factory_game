@@ -32,7 +32,10 @@ UNITY="/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity
 #           default Boot run picks «НАЧАТЬ СМЕНУ»)
 #           -smokeSeconds 110 (longer play window; with -smokeTutorial walks the whole
 #           ten-step lesson — the default 35 s only covers its text steps)
-# Grep the log for SMOKE_RESULT / SMOKE_ERR / SMOKE_FAIL.
+#           -smokeShots <dir> [-smokeShotAt 1,4,13,21] (1920×1080 PNG frames at those
+#           play-time seconds — the only way a headless session can look at the screen
+#           it just changed; run WITHOUT -nographics, see SmokeShots.cs)
+# Grep the log for SMOKE_RESULT / SMOKE_ERR / SMOKE_FAIL / SMOKE_SHOT.
 ```
 
 If the user's Unity editor has the project open (`Temp/UnityLockfile` exists), batch mode can't run on the same path — rsync `Assets Packages ProjectSettings Library UserSettings` to a scratch copy and run there (Library copy keeps import fast).

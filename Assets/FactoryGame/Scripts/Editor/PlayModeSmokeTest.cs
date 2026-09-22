@@ -60,6 +60,9 @@ namespace LastShift.EditorTools
                                    System.Globalization.CultureInfo.InvariantCulture, out float secs))
                     playSeconds = secs;
             }
+            // Optional PNG frames of the run (-smokeShots <dir>) — the only way a
+            // headless session can look at the screen it just changed.
+            SmokeShots.Configure(args);
             SessionState.SetBool(FinalKey, final);
             SessionState.SetBool(DefeatKey, defeat);
             SessionState.SetBool(TutorialKey, tutorial);
@@ -133,6 +136,10 @@ namespace LastShift.EditorTools
                 startTime = EditorApplication.timeSinceStartup;
                 return;
             }
+
+            // Frames first: a capture is a two-tick affair (arm, then read), and it
+            // must get its turn in every scenario, defeat run included.
+            SmokeShots.Tick(EditorApplication.timeSinceStartup - startTime);
 
             if (SessionState.GetBool(DefeatKey, false))
             {
