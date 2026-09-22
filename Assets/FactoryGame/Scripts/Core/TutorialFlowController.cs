@@ -50,6 +50,7 @@ namespace LastShift.Core
         Vector2 spawn;
 
         // Practical-step bookkeeping.
+        bool step1Armed;
         bool armCycleSeen;
         float situationResetAt;
         float repairWatch;
@@ -115,6 +116,7 @@ namespace LastShift.Core
                     SetGate(m => false);
                     // The cursor starts on the belt so that «ДЖОЙСТИК ВВЕРХ» is a
                     // real move to a different row, not a press that changes nothing.
+                    step1Armed = false;
                     if (lm.Terminal != null) lm.Terminal.TutorialPreselect(conveyor);
                     OpenRouteThroughArm();
                     steps.ShowPractical(1, TotalSteps, Loc.TutStep1Header, Loc.TutStep1Body, Loc.TutStep1Footer,
@@ -272,11 +274,28 @@ namespace LastShift.Core
             else if (step == 3) UpdateTheMoment();
         }
 
-        /// <summary>Step 1 ends when the player has actually steered to the gate.</summary>
+        /// <summary>
+        /// Step 1 ends when the player has actually steered to the gate — and not
+        /// before. The terminal parks its own cursor on the first ready command as
+        /// soon as it has one, and that is the gate; if the step started before the
+        /// list existed, our preselect did nothing and the terminal would have
+        /// "chosen" for the player, lifting the dimming a moment after it appeared.
+        /// So the step arms only once the cursor is demonstrably off the gate.
+        /// </summary>
         void UpdateSelection()
         {
-            if (lm.Terminal == null || door == null) return;
-            if (lm.Terminal.Selected == door)
+            var terminal = lm.Terminal;
+            if (terminal == null || door == null) return;
+
+            if (!step1Armed)
+            {
+                if (conveyor == null) { step1Armed = true; return; }     // nothing to park on
+                if (terminal.Selected != null && terminal.Selected != door) step1Armed = true;
+                else terminal.TutorialPreselect(conveyor);
+                return;
+            }
+
+            if (terminal.Selected == door)
             {
                 // Chosen: give the room back to the eye before the next step starts.
                 steps.Undim();
