@@ -4,13 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**LAST SHIFT / ПОСЛЕДНЯЯ СМЕНА** — top-down 2D sabotage game, Unity **6000.3.19f1** (URP 2D). The player *is* the factory, driving machines from a terminal to break the engineer's resolve. All player-facing text is Russian; code identifiers are English. Full design/controls doc: `Assets/Documentation/README.md`; change history: `Assets/Documentation/BuildLog.txt` (append a dated entry per pass).
+**LAST SHIFT / ПОСЛЕДНЯЯ СМЕНА** — top-down 2D sabotage game, Unity **6000.5.3f1** (URP 2D). The player *is* the factory, driving machines from a terminal to break the engineer's resolve. All player-facing text is Russian; code identifiers are English. Full design/controls doc: `Assets/Documentation/README.md`; change history: `Assets/Documentation/BuildLog.txt` (append a dated entry per pass).
 
 ## Hard constraints
 
 - **Q and R must never do anything**: not bound, not polled, not shown in UI or docs. Potentiometer input was removed — do not reintroduce either.
 - The entire game runs on three logical actions — NavigatePrevious / NavigateNext / Submit (keyboard ↑/↓/Enter; Arduino joystick + two buttons) — plus Escape for pause/back. No mouse, no new hotkeys.
-- Every player-facing string lives in `Assets/Scripts/Data/Loc.cs` (or `LevelLayouts.cs` room specs) — never hardcode UI text.
+- Every player-facing string lives in `Assets/FactoryGame/Scripts/Data/Loc.cs` (or `LevelLayouts.cs` room specs) — never hardcode UI text.
+- **The red button has exactly two verbs**: «КРАСНАЯ КНОПКА — ДАЛЕЕ» on a screen (`Loc.FooterNext`), «КРАСНАЯ КНОПКА — ВКЛЮЧИТЬ» in the room (`Loc.TutActFooter`). It used to have five; `OnboardingTextTests` fails the build on a third.
 
 ## Commands
 
@@ -20,18 +21,18 @@ dotnet build Assembly-CSharp.csproj -v q -nologo
 dotnet build Assembly-CSharp-Editor.csproj -v q -nologo
 
 # Play Mode smoke tests (batch Unity; exits nonzero on runtime errors)
-UNITY="/Applications/Unity/Hub/Editor/6000.3.19f1/Unity.app/Contents/MacOS/Unity"
+UNITY="/Applications/Unity/Hub/Editor/6000.5.3f1/Unity.app/Contents/MacOS/Unity"
 "$UNITY" -batchmode -projectPath <path> -executeMethod LastShift.EditorTools.PlayModeSmokeTest.Run -logFile smoke.log
 # Variants: -smokeScene Level_02_PackagingLine
 #           -smokeScene Level_03_ColdStorage -smokeFinal (final «ЗАВОД ПОБЕДИЛ» screen +
 #           victory-animation gating; needs the FINAL room, not Boot/Level 1)
 #           -smokeScene Level_01_RawMilkIntake -smokeDefeat (drives the restart/quit menu
 #           end-to-end via UnifiedGameInput; does not walk the Boot flow)
-#           -smokeTutorial (takes «ПРОЙТИ УРОК» at the choice screen, acknowledges the
-#           lesson's informational steps via Submit and asserts callout layout; the
-#           default Boot run picks «НАЧАТЬ СМЕНУ»)
-#           -smokeSeconds 110 (longer play window; with -smokeTutorial walks the whole
-#           ten-step lesson — the default 35 s only covers its text steps)
+#           -smokeTutorial (walks the three-step lesson: selects the system step 1
+#           asks for, activates what steps 2-3 ask for, asserts callout layout; the
+#           default Boot run sets IntroFlowUI.DevSkipTutorial and goes to Level 1)
+#           -smokeSeconds 110 (longer play window; with -smokeTutorial leaves room for
+#           the engineer to walk into each step's situation)
 #           -smokeShots <dir> [-smokeShotAt 1,4,13,21] (1920×1080 PNG frames at those
 #           play-time seconds — the only way a headless session can look at the screen
 #           it just changed; run WITHOUT -nographics, see SmokeShots.cs)
@@ -55,11 +56,11 @@ In-editor tools: **Tools ▸ Last Shift ▸ Build All** regenerates all scenes, 
 
 **End screens**: `EndRoomPanel` shows win («ИНЖЕНЕР ОТСТУПИЛ», Enter → next room), defeat («ЦЕХ СТАБИЛИЗИРОВАН») and final victory («ЗАВОД ПОБЕДИЛ») on a *fully opaque* terminal panel. Defeat and final share one menu whose single option is «ПОВТОРИТЬ ЦЕХ» (reload current room), handled by `LevelManager.HandleEndMenu()`. **Never add a «выйти» option**: the game does not own the process (see `SceneLoader` above). Every factory win first runs `VictorySequenceController` (~3.5 s); result input is gated behind `LevelManager.VictoryPlaying`.
 
-**Onboarding**: `IntroFlowUI` runs Title → **one** instruction page («кто вы») → «ВВОДНЫЙ УРОК» choice → tutorial or Level 1, on every new game, with no PlayerPrefs. The «ЦЕЛЬ СМЕНЫ» and «УПРАВЛЕНИЕ» pages were cut after the live-cabinet playtest (players at the machine never got through them); their text is archived in `system/handoffs/texts-factory.md` of the studio repo. Do not grow the intro back: how to play is taught by «ПРОЙТИ УРОК».
+**Onboarding**: `IntroFlowUI` is **one title card** — name, three lines of briefing (`Loc.TitleBrief`), red button — and then the lesson, on every new game, with no PlayerPrefs. The instruction pages and the «ВВОДНЫЙ УРОК» choice screen were cut after the live-cabinet playtests: people paged through the text without reading it and then skipped the lesson, which is why nobody understood the game. The lesson is now mandatory (there is no control that refuses it — only `IntroFlowUI.DevSkipTutorial` for the harness). All removed wording is archived in `system/handoffs/texts-factory.md` of the studio repo. Do not grow the intro back: how to play is taught by the lesson, with hands. Guarded by `OnboardingTextTests`.
 
-**HUD**: the only permanent readouts are «РЕШИМОСТЬ ИНЖЕНЕРА» and «РЕСУРС УПРАВЛЕНИЯ», built by `TacticalDetailPanelController` as one thin strip along the **top row** of the play area (right of the terminal frame). The lower-left detail panel that used to hold them — plus the selected system's name, purpose and zone status — was removed after the live-cabinet playtest; nothing describes the selected system on screen any more, and the command list now fills the whole terminal below its header. Repair progress is a local `LocalRepairProgressUI` plate at the console being repaired; the room title only flashes at room start, below the strip. Keep the room title and the toast stack clear of the strip.
+**HUD**: the only permanent readouts are «РЕШИМОСТЬ ИНЖЕНЕРА» and «РЕСУРС УПРАВЛЕНИЯ», built by `TacticalDetailPanelController` as one thin strip along the **top row** of the play area (right of the terminal frame). The lower-left detail panel that used to hold them — plus the selected system's name, purpose and zone status — was removed after the live-cabinet playtest; nothing describes the selected system on screen any more, and the command list now fills the whole terminal below its header. That is deliberate and settled (founder, 2026-09: «наши люди на плейтесте вообще туда не смотрели») — what a system does is said by its command verb instead, so every verb in `LevelLayouts` names the EFFECT on the engineer («Ворота — перекрыть маршрут»), never the mechanism («закрыть»). Repair progress is a local `LocalRepairProgressUI` plate at the console being repaired; the room title only flashes at room start, below the strip. Keep the room title and the toast stack clear of the strip.
 
-**Tutorial**: `TutorialFlowController` (Core) sequences 9 steps (the «НАЗНАЧЕНИЕ СИСТЕМЫ» step died with the detail panel); presentation is `TutorialStepController` + `TutorialFocusOverlay` / `TutorialHighlightTarget` / `TutorialCalloutPanel` / `TutorialInputLock` (UI). Exactly one target is highlighted at a time, everything else dims, and informational steps freeze the room and wait for Submit. `TutorialStepController` runs at execution order −60 (after `ArduinoInputBridge` at −100, before the command terminal at 0), so the acknowledging Enter never reaches the terminal. Highlight shape follows the target: rectangles for rectangular objects/UI, corner brackets for irregular ones, a ring only for genuinely round elements — never a generic circle, never a speech bubble.
+**Tutorial**: `TutorialFlowController` (Core) sequences **3 practical steps** — pick the gate in the list (joystick), switch it on (red button), then fire the arm on «ПОДХОДЯЩИЙ МОМЕНТ». Nothing is explained by a card any more: the control resource, the resolve gauge and combinations were dropped from the lesson and are learnt by playing room 1. Presentation is `TutorialStepController` + `TutorialFocusOverlay` / `TutorialHighlightTarget` / `TutorialCalloutPanel` / `TutorialInputLock` (UI). Exactly one target is highlighted at a time; `ShowPractical` takes the footer per step, and that footer must name the control to press. `ShowInfo` (frozen room, wait for Submit) is still there but no step uses it. `TutorialStepController` runs at execution order −60 (after `ArduinoInputBridge` at −100, before the command terminal at 0), so the acknowledging Enter never reaches the terminal. Highlight shape follows the target: rectangles for rectangular objects/UI, corner brackets for irregular ones, a ring only for genuinely round elements — never a generic circle, never a speech bubble.
 
 **Audio**: persistent `AudioManager` singleton; `OnSceneLoaded` stops all loops and clears the pause duck, so restarts can't leak audio state. Per-room ambience lives in `RoomAudioDirector` (created by LevelManager, dies with the scene).
 

@@ -164,6 +164,9 @@ namespace LastShift.Core
         {
             // Sparse: only when the payoff machine exists and hints are not spamming.
             if (!relevant || Time.time - lastHintAt < 12f) return;
+            // Never during the lesson: combinations are not taught there any more,
+            // and the hint lands on top of the step's own card.
+            if (lm != null && lm.TutorialMode) return;
             lastHintAt = Time.time;
             lm.ShowToast(text, 3.2f);
         }

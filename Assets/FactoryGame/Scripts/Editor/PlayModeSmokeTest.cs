@@ -22,6 +22,7 @@ namespace LastShift.EditorTools
         static double lastActivation;
         static double lastTutorialSubmit;
         static double lastTutorialAct;
+        static double lastCardCheck;
         static int maxTutorialStep;
         static double victoryForcedAt;
         static bool victoryAnimChecked;
@@ -149,23 +150,17 @@ namespace LastShift.EditorTools
 
             double elapsed = EditorApplication.timeSinceStartup - startTime;
 
-            // Drive the intro flow (title card, briefing page, tutorial choice)
-            // exactly like key presses, until gameplay loads.
-            // Default: pick «СРАЗУ К СМЕНЕ» so Level 1 keeps its coverage;
-            // -smokeTutorial keeps the default «ПРОЙТИ УРОК» and tests the lesson.
+            // Drive the intro — one title card now — exactly like a red-button press.
+            // A player always walks the lesson; only the harness may skip it, so that
+            // the default scenario still spends its window inside Level 1.
             var intro = LastShift.UI.IntroFlowUI.Instance;
             if (intro != null && elapsed > 2.0 && elapsed - lastActivation > 1.2)
             {
                 lastActivation = elapsed;
-                if (intro.DevAtTutorialChoice && !SessionState.GetBool(TutorialKey, false) &&
-                    intro.DevTutorialChoiceIndex == 0)
-                {
-                    intro.DevNavigateNext();
-                    Debug.Log("SMOKE_CHOICE_SKIP_TUTORIAL t=" + elapsed.ToString("0.0"));
-                    return;
-                }
+                LastShift.UI.IntroFlowUI.DevSkipTutorial = !SessionState.GetBool(TutorialKey, false);
                 intro.DevAdvance();
-                Debug.Log("SMOKE_INTRO_ADVANCE t=" + elapsed.ToString("0.0"));
+                Debug.Log("SMOKE_INTRO_ADVANCE skipTutorial="
+                    + LastShift.UI.IntroFlowUI.DevSkipTutorial + " t=" + elapsed.ToString("0.0"));
                 return;
             }
 
@@ -183,6 +178,26 @@ namespace LastShift.EditorTools
                     errorCount++;
                     Debug.Log("SMOKE_FAIL: lesson dead-end — the gate blocks the route while "
                               + "only the arm may be activated");
+                }
+
+                if (tf != null && tf.DevStep <= 3 && elapsed - lastCardCheck > 1.5)
+                {
+                    lastCardCheck = elapsed;
+                    CheckTutorialLayout(tf);
+                }
+
+                var pick = tf != null ? tf.DevRequiredSelection : null;
+                if (pick != null)
+                {
+                    var terminal = LevelManager.Instance.Terminal;
+                    if (terminal != null && terminal.Selected != pick && elapsed - lastTutorialAct > 1.0)
+                    {
+                        lastTutorialAct = elapsed;
+                        CheckTutorialLayout(tf);
+                        terminal.TutorialPreselect(pick);
+                        Debug.Log("SMOKE_TUTORIAL_PICK " + pick.displayName + " step=" + tf.DevStep
+                            + " t=" + elapsed.ToString("0.0"));
+                    }
                 }
 
                 var need = tf != null ? tf.DevRequiredMachine : null;
@@ -305,12 +320,12 @@ namespace LastShift.EditorTools
                 // Finishing the lesson loads Level 1, so at the end of the run the room
                 // is either the training hall (still learning) or the first real room
                 // (lesson completed) — both are fine. What must hold is that the lesson
-                // really walked its steps up to the combination.
+                // really walked all three of its actions.
                 bool finished = level != null && !level.TutorialMode &&
                                 level.RoomName != LastShift.Data.Loc.TutorialRoomName;
                 bool stillLearning = level != null && level.TutorialMode &&
                                      level.RoomName == LastShift.Data.Loc.TutorialRoomName;
-                tutorialOk = (stillLearning || finished) && maxTutorialStep >= 9;
+                tutorialOk = (stillLearning || finished) && maxTutorialStep >= 3;
                 Debug.Log("SMOKE_TUTORIAL_OK=" + tutorialOk + " maxStep=" + maxTutorialStep
                     + " finishedIntoRoom=" + (finished && level != null ? level.RoomName : "-"));
             }
@@ -326,7 +341,19 @@ namespace LastShift.EditorTools
         static void CheckTutorialLayout(TutorialFlowController flow)
         {
             var steps = flow != null ? flow.DevSteps : null;
-            if (steps == null || !steps.DevCalloutVisible) return;
+            if (steps == null) return;
+            // A capture frame renders the canvases through the camera; screen-space
+            // checks mean nothing until it is over.
+            if (SmokeShots.Capturing) return;
+            if (flow.DevStep > 3) return;   // the completion card is not a step
+            if (!steps.DevCalloutVisible)
+            {
+                // Every step of the lesson is a card the player must be able to read.
+                // A step whose card is not on screen teaches nothing at all.
+                errorCount++;
+                Debug.Log("SMOKE_FAIL: lesson card not visible on step " + flow.DevStep);
+                return;
+            }
             Rect card = steps.DevCalloutRect;
             float w = UnityEngine.Screen.width, h = UnityEngine.Screen.height;
             bool onScreen = card.xMin >= -1f && card.yMin >= -1f && card.xMax <= w + 1f && card.yMax <= h + 1f;

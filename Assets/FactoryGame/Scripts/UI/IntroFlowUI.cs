@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,17 +9,21 @@ using LastShift.Utilities;
 namespace LastShift.UI
 {
     /// <summary>
-    /// Boot-scene onboarding flow, in this exact order on every new game:
-    /// title card «ПОСЛЕДНЯЯ СМЕНА» → ONE Russian instruction page («кто вы») →
-    /// «ВВОДНЫЙ УРОК» choice → interactive tutorial or Level 1.
-    /// The «ЦЕЛЬ СМЕНЫ» and «УПРАВЛЕНИЕ» pages were cut after the live-cabinet
-    /// playtest: standing at the machine, players did not get through them (their
-    /// text is archived in system/handoffs/texts-factory.md). How to play is
-    /// taught by «ПРОЙТИ УРОК», not by a wall of pages.
-    /// Arcade controls only (joystick up/down = navigate, Red = confirm; no
-    /// back/cancel action) through the shared GameInput funnel — no EventSystem,
-    /// no mouse, no PlayerPrefs. DevAdvance() lets the headless smoke test drive
-    /// the flow.
+    /// Boot-scene onboarding: ONE title card, then the lesson. Nothing else.
+    ///
+    /// It used to be three screens — title, an instruction page, and a «ВВОДНЫЙ
+    /// УРОК» choice. At the live cabinet (founder, 2026-09) people paged through
+    /// all of it without reading, then skipped the lesson at the choice screen and
+    /// stood in front of a game they did not understand. So the page is gone, the
+    /// choice is gone (the lesson is now mandatory and three actions long), and the
+    /// whole briefing is three lines on the title card: who you are, who is against
+    /// you, what you do about it. The removed wording is archived in
+    /// system/handoffs/texts-factory.md of the studio repo. Do not grow this back:
+    /// how to play is taught by the lesson, with hands.
+    ///
+    /// Arcade controls only (red button = confirm; there is nothing to steer here)
+    /// through the shared GameInput funnel — no EventSystem, no mouse, no
+    /// PlayerPrefs. DevAdvance() lets the headless smoke test drive the flow.
     /// </summary>
     public class IntroFlowUI : MonoBehaviour
     {
@@ -29,34 +32,21 @@ namespace LastShift.UI
         // No "quit the game" screen exists: on the cabinet this game runs inside
         // the launcher process, so leaving is the «меню» touch button the hub
         // owns (ARCADE_INTEGRATION_CONTRACT §5).
-        enum Screen { Title, Instructions, TutorialChoice }
 
-        Screen current = Screen.Title;
-        int pageIndex;
-        int choiceIndex;
+        /// <summary>
+        /// Headless-smoke-test switch only: lets a scenario reach Level 1 without
+        /// walking the lesson. A player never skips it — there is no such control.
+        /// </summary>
+        public static bool DevSkipTutorial;
+
         bool loading;
 
         GameObject titleRoot;
-        GameObject choiceRoot;
-        GameObject instructionRoot;
-        readonly List<Text> choiceMenu = new List<Text>();
-        readonly List<Image> choiceMenuBgs = new List<Image>();
-        readonly List<List<Image>> choiceMenuEdges = new List<List<Image>>();
-        readonly List<GameObject> pageDiagrams = new List<GameObject>();
-        Text pageHeader;
-        Text pageSubheader;
-        Text pageBody;
-        Text pageFooter;
-        Text pageCounter;
-        CanvasGroup pageGroup;
         readonly List<Image> leds = new List<Image>();
 
         static readonly Color Phosphor = new Color(0.62f, 1f, 0.72f);
         static readonly Color PhosphorDim = new Color(0.45f, 0.68f, 0.52f);
         static readonly Color Amber = new Color(0.95f, 0.85f, 0.45f);
-        static readonly Color Warn = new Color(0.9f, 0.42f, 0.3f);
-        static readonly Color PanelFill = new Color(0.017f, 0.045f, 0.032f, 1f);
-        static readonly Color Border = new Color(0.35f, 0.7f, 0.45f, 0.75f);
 
         void Awake() => Instance = this;
         void OnDestroy() { if (Instance == this) Instance = null; }
@@ -66,10 +56,7 @@ namespace LastShift.UI
             var canvas = UIBuilder.CreateCanvas("IntroCanvas", 20);
             BuildBackdrop(canvas.transform);
             BuildTitle(canvas.transform);
-            BuildInstructions(canvas.transform);
-            BuildTutorialChoice(canvas.transform);
-
-            ShowScreen(Screen.Title);
+            titleRoot.SetActive(true);
 
             // Title mood: quiet terminal drone with distant machinery, faded in.
             AudioManager.Ensure();
@@ -84,38 +71,6 @@ namespace LastShift.UI
             rt.anchorMax = aMax;
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
-        }
-
-        /// <summary>Thin technical border around a panel (four hairlines, no rounding).</summary>
-        static void Frame(Transform parent, Color color, float t = 0.004f)
-        {
-            UIBuilder.Panel(parent, "EdgeT", new Vector2(0f, 1f - t), new Vector2(1f, 1f), color);
-            UIBuilder.Panel(parent, "EdgeB", new Vector2(0f, 0f), new Vector2(1f, t), color);
-            UIBuilder.Panel(parent, "EdgeL", new Vector2(0f, 0f), new Vector2(t * 0.45f, 1f), color);
-            UIBuilder.Panel(parent, "EdgeR", new Vector2(1f - t * 0.45f, 0f), new Vector2(1f, 1f), color);
-        }
-
-        /// <summary>Terminal corner brackets on a panel (industrial readout look).</summary>
-        static void Brackets(Transform parent, Color color)
-        {
-            const float len = 0.06f, thick = 0.006f, tw = 0.0028f;
-            // bottom-left / bottom-right / top-left / top-right
-            UIBuilder.Panel(parent, "BrBL_h", new Vector2(0f, 0f), new Vector2(len, thick), color);
-            UIBuilder.Panel(parent, "BrBL_v", new Vector2(0f, 0f), new Vector2(tw, len * 1.6f), color);
-            UIBuilder.Panel(parent, "BrBR_h", new Vector2(1f - len, 0f), new Vector2(1f, thick), color);
-            UIBuilder.Panel(parent, "BrBR_v", new Vector2(1f - tw, 0f), new Vector2(1f, len * 1.6f), color);
-            UIBuilder.Panel(parent, "BrTL_h", new Vector2(0f, 1f - thick), new Vector2(len, 1f), color);
-            UIBuilder.Panel(parent, "BrTL_v", new Vector2(0f, 1f - len * 1.6f), new Vector2(tw, 1f), color);
-            UIBuilder.Panel(parent, "BrTR_h", new Vector2(1f - len, 1f - thick), new Vector2(1f, 1f), color);
-            UIBuilder.Panel(parent, "BrTR_v", new Vector2(1f - tw, 1f - len * 1.6f), new Vector2(1f, 1f), color);
-        }
-
-        /// <summary>Selection frame for a menu row; returns the holder whose children are the edges.</summary>
-        static Transform BuildRowFrame(Transform row)
-        {
-            RectTransform holder = UIBuilder.Panel(row, "SelFrame", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0f));
-            Frame(holder, new Color(0f, 0f, 0f, 0f), 0.02f);
-            return holder;
         }
 
         static void Scanlines(Transform parent, float alpha)
@@ -199,192 +154,25 @@ namespace LastShift.UI
             titleRoot = rt.gameObject;
 
             var title = UIBuilder.Label(rt, "Title", Loc.GameTitle, 92, Phosphor, TextAnchor.MiddleCenter);
-            SetRect(title.rectTransform, new Vector2(0f, 0.56f), new Vector2(1f, 0.8f));
+            SetRect(title.rectTransform, new Vector2(0f, 0.63f), new Vector2(1f, 0.85f));
             var latin = UIBuilder.Label(rt, "Latin", Loc.GameTitleLatin, 26, PhosphorDim, TextAnchor.MiddleCenter);
-            SetRect(latin.rectTransform, new Vector2(0f, 0.52f), new Vector2(1f, 0.575f));
+            SetRect(latin.rectTransform, new Vector2(0f, 0.585f), new Vector2(1f, 0.635f));
             var sub = UIBuilder.Label(rt, "Subtitle", Loc.TitleSubtitle, 26, Amber, TextAnchor.MiddleCenter);
-            SetRect(sub.rectTransform, new Vector2(0f, 0.465f), new Vector2(1f, 0.52f));
-            UIBuilder.Panel(rt, "TitleLine", new Vector2(0.3f, 0.458f), new Vector2(0.7f, 0.4605f),
+            SetRect(sub.rectTransform, new Vector2(0f, 0.535f), new Vector2(1f, 0.585f));
+            UIBuilder.Panel(rt, "TitleLine", new Vector2(0.3f, 0.5255f), new Vector2(0.7f, 0.528f),
                 new Color(0.35f, 0.7f, 0.45f, 0.5f));
 
-            var footer = UIBuilder.Label(rt, "Footer", Loc.FooterContinue, 26, Amber, TextAnchor.MiddleCenter);
-            SetRect(footer.rectTransform, new Vector2(0f, 0.16f), new Vector2(1f, 0.22f));
-        }
+            // The whole briefing. Three lines, centred under the rule — a person at
+            // the cabinet reads this standing, in a couple of seconds, or not at all.
+            var brief = UIBuilder.Label(rt, "Brief", Loc.TitleBrief, 32, Phosphor, TextAnchor.MiddleCenter);
+            SetRect(brief.rectTransform, new Vector2(0.08f, 0.31f), new Vector2(0.92f, 0.5f));
+            brief.lineSpacing = 1.45f;
 
-        // ================= instruction pages =================
-
-        void BuildInstructions(Transform root)
-        {
-            RectTransform rt = UIBuilder.Panel(root, "Instructions", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0f));
-            instructionRoot = rt.gameObject;
-
-            // Opaque industrial terminal card: nothing shows through it.
-            RectTransform card = UIBuilder.Panel(rt, "Card", new Vector2(0.1f, 0.1f), new Vector2(0.9f, 0.9f), PanelFill);
-            pageGroup = card.gameObject.AddComponent<CanvasGroup>();
-            Frame(card, Border);
-            Brackets(card, Amber);
-            Scanlines(card, 0.22f);
-
-            pageHeader = UIBuilder.Label(card, "Header", "", 40, Amber, TextAnchor.MiddleLeft);
-            SetRect(pageHeader.rectTransform, new Vector2(0.05f, 0.87f), new Vector2(0.72f, 0.97f));
-            pageSubheader = UIBuilder.Label(card, "Subheader", "", 20, PhosphorDim, TextAnchor.MiddleLeft);
-            SetRect(pageSubheader.rectTransform, new Vector2(0.05f, 0.82f), new Vector2(0.72f, 0.87f));
-            pageCounter = UIBuilder.Label(card, "Counter", "", 17, PhosphorDim, TextAnchor.MiddleRight);
-            SetRect(pageCounter.rectTransform, new Vector2(0.62f, 0.88f), new Vector2(0.95f, 0.96f));
-            UIBuilder.Panel(card, "HeaderLine", new Vector2(0.05f, 0.805f), new Vector2(0.95f, 0.8075f),
-                new Color(0.35f, 0.7f, 0.45f, 0.55f));
-
-            // One short paragraph now: centred against the diagram instead of
-            // hanging from the top of an otherwise empty column.
-            pageBody = UIBuilder.Label(card, "Body", "", 23, Phosphor, TextAnchor.MiddleLeft);
-            SetRect(pageBody.rectTransform, new Vector2(0.05f, 0.2f), new Vector2(0.55f, 0.78f));
-
-            // Right-hand technical diagram column (one per page, toggled).
-            var diagramArea = UIBuilder.Panel(card, "DiagramArea", new Vector2(0.58f, 0.18f), new Vector2(0.95f, 0.78f),
-                new Color(0.01f, 0.03f, 0.022f, 1f));
-            Frame(diagramArea, new Color(0.3f, 0.6f, 0.4f, 0.45f), 0.006f);
-            pageDiagrams.Add(BuildDiagramRole(diagramArea));
-
-            UIBuilder.Panel(card, "FooterLine", new Vector2(0.05f, 0.135f), new Vector2(0.95f, 0.1375f),
-                new Color(0.35f, 0.7f, 0.45f, 0.5f));
-            pageFooter = UIBuilder.Label(card, "Footer", "", 24, Amber, TextAnchor.MiddleCenter);
-            SetRect(pageFooter.rectTransform, new Vector2(0f, 0.045f), new Vector2(1f, 0.125f));
-        }
-
-        /// <summary>Diagram of the only page: factory AI core, equipment bus, engineer.</summary>
-        GameObject BuildDiagramRole(Transform area)
-        {
-            RectTransform rt = UIBuilder.Panel(area, "DiagramRole", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0f));
-            var line = new Color(0.4f, 0.85f, 0.58f, 0.5f);
-
-            // AI core: nested squares with a pulse dot.
-            Box(rt, new Vector2(0.3f, 0.66f), new Vector2(0.7f, 0.92f), line);
-            Box(rt, new Vector2(0.36f, 0.7f), new Vector2(0.64f, 0.88f), new Color(0.4f, 0.85f, 0.58f, 0.28f));
-            var core = UIBuilder.Label(rt, "CoreLabel", "ИНТЕЛЛЕКТ\nЗАВОДА", 15, Amber, TextAnchor.MiddleCenter);
-            SetRect(core.rectTransform, new Vector2(0.3f, 0.66f), new Vector2(0.7f, 0.92f));
-
-            // Bus lines from the core down to the equipment row.
-            Dashes(rt, new Vector2(0.5f, 0.66f), new Vector2(0.5f, 0.5f), 5, line);
-            UIBuilder.Panel(rt, "Bus", new Vector2(0.16f, 0.492f), new Vector2(0.84f, 0.5f), line);
-            Dashes(rt, new Vector2(0.2f, 0.49f), new Vector2(0.2f, 0.42f), 2, line);
-            Dashes(rt, new Vector2(0.5f, 0.49f), new Vector2(0.5f, 0.42f), 2, line);
-            Dashes(rt, new Vector2(0.8f, 0.49f), new Vector2(0.8f, 0.42f), 2, line);
-
-            // Equipment row: conveyor strip, gate, arm.
-            Box(rt, new Vector2(0.08f, 0.33f), new Vector2(0.32f, 0.42f), line);
-            var l1 = UIBuilder.Label(rt, "L1", "ЛЕНТА", 12, PhosphorDim, TextAnchor.MiddleCenter);
-            SetRect(l1.rectTransform, new Vector2(0.08f, 0.33f), new Vector2(0.32f, 0.42f));
-            Box(rt, new Vector2(0.38f, 0.33f), new Vector2(0.62f, 0.42f), line);
-            var l2 = UIBuilder.Label(rt, "L2", "ВОРОТА", 12, PhosphorDim, TextAnchor.MiddleCenter);
-            SetRect(l2.rectTransform, new Vector2(0.38f, 0.33f), new Vector2(0.62f, 0.42f));
-            Box(rt, new Vector2(0.68f, 0.33f), new Vector2(0.92f, 0.42f), line);
-            var l3 = UIBuilder.Label(rt, "L3", "МАНИПУЛ.", 12, PhosphorDim, TextAnchor.MiddleCenter);
-            SetRect(l3.rectTransform, new Vector2(0.68f, 0.33f), new Vector2(0.92f, 0.42f));
-
-            // Engineer silhouette inside a restrained warning frame.
-            Box(rt, new Vector2(0.38f, 0.06f), new Vector2(0.62f, 0.26f), new Color(0.9f, 0.42f, 0.3f, 0.55f));
-            var head = UIBuilder.Panel(rt, "Head", new Vector2(0.475f, 0.2f), new Vector2(0.525f, 0.235f), Warn);
-            head.GetComponent<Image>().sprite = TextureFactory.SoftCircle();
-            UIBuilder.Panel(rt, "Torso", new Vector2(0.465f, 0.115f), new Vector2(0.535f, 0.195f), Warn);
-            UIBuilder.Panel(rt, "LegL", new Vector2(0.472f, 0.08f), new Vector2(0.492f, 0.118f), Warn);
-            UIBuilder.Panel(rt, "LegR", new Vector2(0.508f, 0.08f), new Vector2(0.528f, 0.118f), Warn);
-            var eng = UIBuilder.Label(rt, "EngLabel", "ДЕЖУРНЫЙ ИНЖЕНЕР", 12, Warn, TextAnchor.MiddleCenter);
-            SetRect(eng.rectTransform, new Vector2(0.02f, 0.0f), new Vector2(0.98f, 0.055f));
-
-            return rt.gameObject;
-        }
-
-        // ================= tutorial choice =================
-
-        void BuildTutorialChoice(Transform root)
-        {
-            RectTransform rt = UIBuilder.Panel(root, "TutorialChoice", Vector2.zero, Vector2.one, new Color(0f, 0f, 0f, 0f));
-            choiceRoot = rt.gameObject;
-
-            RectTransform card = UIBuilder.Panel(rt, "Card", new Vector2(0.26f, 0.16f), new Vector2(0.74f, 0.84f), PanelFill);
-            Frame(card, Border);
-            Brackets(card, Amber);
-            Scanlines(card, 0.22f);
-
-            var header = UIBuilder.Label(card, "Header", Loc.TutorialChoiceHeader, 40, Amber, TextAnchor.MiddleCenter);
-            SetRect(header.rectTransform, new Vector2(0f, 0.82f), new Vector2(1f, 0.94f));
-            UIBuilder.Panel(card, "HeaderLine", new Vector2(0.08f, 0.805f), new Vector2(0.92f, 0.8075f),
-                new Color(0.35f, 0.7f, 0.45f, 0.55f));
-
-            var body = UIBuilder.Label(card, "Body", Loc.TutorialChoiceBody, 24, Phosphor, TextAnchor.UpperCenter);
-            SetRect(body.rectTransform, new Vector2(0.06f, 0.55f), new Vector2(0.94f, 0.78f));
-
-            string[] options = { Loc.TutorialChoiceYes, Loc.TutorialChoiceNo };
-            for (int i = 0; i < options.Length; i++)
-            {
-                RectTransform row = UIBuilder.Panel(card, "Option" + i,
-                    new Vector2(0.16f, 0.38f - i * 0.12f), new Vector2(0.84f, 0.48f - i * 0.12f),
-                    new Color(0f, 0f, 0f, 0f));
-                choiceMenuBgs.Add(row.GetComponent<Image>());
-                // Thin technical border, lit only for the selected row.
-                var edges = new List<Image>();
-                foreach (Transform child in BuildRowFrame(row)) edges.Add(child.GetComponent<Image>());
-                choiceMenuEdges.Add(edges);
-                choiceMenu.Add(UIBuilder.Label(row, "Label", options[i], 27, PhosphorDim, TextAnchor.MiddleCenter));
-            }
-
-            var footer = UIBuilder.Label(card, "Footer", Loc.TutorialChoiceFooter, 16,
-                new Color(0.45f, 0.62f, 0.5f), TextAnchor.MiddleCenter);
-            SetRect(footer.rectTransform, new Vector2(0f, 0.05f), new Vector2(1f, 0.16f));
+            var footer = UIBuilder.Label(rt, "Footer", Loc.FooterNext, 26, Amber, TextAnchor.MiddleCenter);
+            SetRect(footer.rectTransform, new Vector2(0f, 0.15f), new Vector2(1f, 0.21f));
         }
 
         // ================= flow =================
-
-        void ShowScreen(Screen screen)
-        {
-            current = screen;
-            titleRoot.SetActive(screen == Screen.Title);
-            instructionRoot.SetActive(screen == Screen.Instructions);
-            choiceRoot.SetActive(screen == Screen.TutorialChoice);
-
-            if (screen == Screen.TutorialChoice)
-            {
-                choiceIndex = 0; // default: «ПРОЙТИ УРОК»
-                RefreshChoiceMenu();
-            }
-        }
-
-        void StartInstructions()
-        {
-            pageIndex = 0;
-            ShowScreen(Screen.Instructions);
-            ApplyPage();
-        }
-
-        void ApplyPage()
-        {
-            int total = Loc.InstructionHeaders.Length;
-            pageIndex = Mathf.Clamp(pageIndex, 0, total - 1);
-            pageHeader.text = Loc.InstructionHeaders[pageIndex];
-            pageSubheader.text = Loc.InstructionSubheaders[pageIndex];
-            pageBody.text = Loc.InstructionBodies[pageIndex];
-            pageFooter.text = pageIndex == total - 1 ? Loc.FooterContinue : Loc.FooterNext;
-            // «ИНСТРУКЦИЯ 1 / 1» is noise on a single-page briefing.
-            pageCounter.text = total > 1 ? string.Format(Loc.InstructionCounter, pageIndex + 1, total) : "";
-            for (int i = 0; i < pageDiagrams.Count; i++)
-                if (pageDiagrams[i] != null) pageDiagrams[i].SetActive(i == pageIndex);
-            StartCoroutine(FadePage());
-        }
-
-        IEnumerator FadePage()
-        {
-            if (pageGroup == null) yield break;
-            float t = 0f;
-            const float dur = 0.3f;
-            pageGroup.alpha = 0f;
-            while (t < dur)
-            {
-                t += Time.unscaledDeltaTime;
-                pageGroup.alpha = Mathf.Clamp01(t / dur);
-                yield return null;
-            }
-            pageGroup.alpha = 1f;
-        }
 
         void LoadLevel1(bool tutorial)
         {
@@ -408,95 +196,17 @@ namespace LastShift.UI
             }
 
             if (loading) return;
-
-            switch (current)
-            {
-                case Screen.Title:
-                    if (GameInput.ConfirmPressed) Confirm();
-                    break;
-
-                case Screen.Instructions:
-                    // Red only: no Up/Down needed on the instruction pages.
-                    if (GameInput.ConfirmPressed) Confirm();
-                    break;
-
-                case Screen.TutorialChoice:
-                    if (GameInput.UpPressed || GameInput.DownPressed)
-                    {
-                        choiceIndex = 1 - choiceIndex; // two options: navigation wraps
-                        UiSfx.TerminalMove();
-                        RefreshChoiceMenu();
-                    }
-                    if (GameInput.ConfirmPressed) Confirm();
-                    break;
-            }
+            if (GameInput.ConfirmPressed) Confirm();
         }
 
         void Confirm()
         {
-            switch (current)
-            {
-                case Screen.Title:
-                    UiSfx.Confirm();
-                    StartInstructions();
-                    break;
-
-                case Screen.Instructions:
-                    if (pageIndex < Loc.InstructionHeaders.Length - 1)
-                    {
-                        UiSfx.PageFlip();
-                        pageIndex++;
-                        ApplyPage();
-                    }
-                    else
-                    {
-                        // The tutorial choice always comes after the instruction page(s).
-                        UiSfx.Confirm();
-                        ShowScreen(Screen.TutorialChoice);
-                    }
-                    break;
-
-                case Screen.TutorialChoice:
-                    UiSfx.Confirm();
-                    // 0 = «ПРОЙТИ УРОК» (interactive lesson first), 1 = «НАЧАТЬ СМЕНУ».
-                    LoadLevel1(choiceIndex == 0);
-                    break;
-            }
+            UiSfx.Confirm();
+            // Straight into the lesson: there is no way for a player to refuse it.
+            LoadLevel1(!DevSkipTutorial);
         }
 
-        /// <summary>Headless smoke-test hook: behaves exactly like pressing Enter.</summary>
+        /// <summary>Headless smoke-test hook: behaves exactly like the red button.</summary>
         public void DevAdvance() => Confirm();
-
-        /// <summary>Smoke-test introspection: is the tutorial choice on screen?</summary>
-        public bool DevAtTutorialChoice => current == Screen.TutorialChoice;
-        /// <summary>Currently selected tutorial-choice row (0 = «ПРОЙТИ УРОК»).</summary>
-        public int DevTutorialChoiceIndex => choiceIndex;
-
-        /// <summary>Smoke-test hook: behaves exactly like pressing Down.</summary>
-        public void DevNavigateNext()
-        {
-            if (current == Screen.TutorialChoice)
-            {
-                choiceIndex = 1 - choiceIndex;
-                RefreshChoiceMenu();
-            }
-        }
-
-        void RefreshChoiceMenu()
-        {
-            for (int i = 0; i < choiceMenu.Count; i++)
-            {
-                bool sel = i == choiceIndex;
-                string baseLabel = i == 0 ? Loc.TutorialChoiceYes : Loc.TutorialChoiceNo;
-                choiceMenu[i].text = (sel ? "> " : "") + baseLabel + (sel ? " <" : "");
-                choiceMenu[i].color = sel ? new Color(0.95f, 1f, 0.7f) : PhosphorDim;
-                choiceMenu[i].fontStyle = sel ? FontStyle.Bold : FontStyle.Normal;
-                choiceMenuBgs[i].color = sel ? new Color(0.1f, 0.3f, 0.16f, 0.95f) : new Color(0f, 0f, 0f, 0f);
-                Color edge = sel ? new Color(0.95f, 0.85f, 0.45f, 0.85f) : new Color(0f, 0f, 0f, 0f);
-                foreach (var img in choiceMenuEdges[i])
-                    if (img != null) img.color = edge;
-            }
-        }
-
     }
 }

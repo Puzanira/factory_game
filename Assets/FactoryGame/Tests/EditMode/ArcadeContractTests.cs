@@ -84,15 +84,35 @@ namespace LastShift.Tests
                 "В меню остаётся один пункт — «ПОВТОРИТЬ ЦЕХ».");
         }
 
+        /// <summary>
+        /// The intro must never offer a way out of the game. It used to be a
+        /// multi-screen flow and the guard watched its Screen enum for a
+        /// «ConfirmQuit» value; the 2026-09 onboarding rewrite left one title card
+        /// and no enum at all, so the guard now watches both shapes: the enum value
+        /// if the flow ever grows screens again, and the wording either way.
+        /// </summary>
         [Test]
-        public void IntroFlow_HasNoQuitScreen()
+        public void IntroFlow_OffersNoWayOutOfTheGame()
         {
             var screen = typeof(IntroFlowUI).GetNestedType("Screen",
                 BindingFlags.Public | BindingFlags.NonPublic);
-            Assert.IsNotNull(screen, "IntroFlowUI still drives its flow through a Screen enum");
-            CollectionAssert.DoesNotContain(System.Enum.GetNames(screen), "ConfirmQuit",
-                "Вступление снова предлагает выйти из игры. Этого пункта на стойке нет: " +
-                "процессом владеет лаунчер, выход — кнопка «меню» (контракт §5).");
+            if (screen != null)
+                CollectionAssert.DoesNotContain(System.Enum.GetNames(screen), "ConfirmQuit",
+                    "Вступление снова предлагает выйти из игры. Этого пункта на стойке нет: " +
+                    "процессом владеет лаунчер, выход — кнопка «меню» (контракт §5).");
+
+            string intro = GameScripts().FirstOrDefault(f => Path.GetFileName(f) == "IntroFlowUI.cs");
+            Assert.IsNotNull(intro, "IntroFlowUI.cs не найден среди скриптов игры");
+            string code = CodeOf(intro);
+            var offenders = new List<string>();
+            if (code.Contains("Application.Quit(")) offenders.Add("Application.Quit()");
+            foreach (Match m in Regex.Matches(code, @"""[^""]*(ВЫЙТИ|ВЫХОД ИЗ ИГРЫ|ЗАВЕРШИТЬ РАБОТУ)[^""]*"""))
+                offenders.Add(m.Value);
+
+            Assert.IsEmpty(offenders,
+                "Вступление снова предлагает выйти из игры: " + string.Join(", ", offenders) + ".\n" +
+                "Такого пункта у игрока на стойке нет — процессом владеет лаунчер, " +
+                "выход только кнопкой «меню» (контракт §5).");
         }
 
         /// <summary>

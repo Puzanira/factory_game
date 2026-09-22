@@ -40,8 +40,17 @@ namespace LastShift.EditorTools
         static Camera pendingCam;
         static RenderTexture pendingPrevTarget;
         static string pendingPath;
+        static int settleTicks;
         static readonly List<Canvas> switched = new List<Canvas>();
         static readonly List<int> switchedOrder = new List<int>();
+        static readonly List<string> switchedLayer = new List<string>();
+
+        // World-space labels (the engineer's state, the repair plate) live in a
+        // sorting LAYER above Default, and a layer always beats a sorting order. In
+        // the game that is invisible — an overlay canvas is composited after every
+        // layer — but a canvas rendering through the camera would end up under them,
+        // and the frame would show the engineer standing on top of the lesson card.
+        const string TopLayer = "WorldUI";
 
         // Overlay UI is composited last, above every sprite, whatever its sorting
         // order. Once the canvas renders THROUGH the camera it sorts with the world
@@ -66,10 +75,21 @@ namespace LastShift.EditorTools
             SessionState.SetInt(DoneKey, 0);
         }
 
+        /// <summary>True while a capture is in flight (canvases are in camera space).</summary>
+        public static bool Capturing => pending != null;
+
         /// <summary>Call once per smoke tick while playing.</summary>
         public static void Tick(double elapsed)
         {
-            if (pending != null) { Finish(); return; }
+            if (pending != null)
+            {
+                // One settling frame: the canvases have just changed space, and the
+                // lesson's absolute placements are only correct once their canvas has
+                // been resized AND the camera is already rendering into the texture.
+                if (settleTicks > 0 && pendingCam != null) { settleTicks--; Relayout(); return; }
+                Finish();
+                return;
+            }
 
             string dir = SessionState.GetString(DirKey, "");
             if (string.IsNullOrEmpty(dir)) return;
@@ -91,15 +111,18 @@ namespace LastShift.EditorTools
 
             switched.Clear();
             switchedOrder.Clear();
+            switchedLayer.Clear();
             foreach (var c in Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude))
             {
                 if (!c.isRootCanvas || c.renderMode != RenderMode.ScreenSpaceOverlay) continue;
                 switched.Add(c);
                 switchedOrder.Add(c.sortingOrder);
+                switchedLayer.Add(c.sortingLayerName);
                 c.renderMode = RenderMode.ScreenSpaceCamera;
                 c.worldCamera = cam;
                 c.planeDistance = 1f;
                 c.sortingOrder += OverlayLift;
+                if (LastShift.Utilities.Viz.HasSortingLayer(TopLayer)) c.sortingLayerName = TopLayer;
             }
 
             pendingCam = cam;
@@ -107,38 +130,80 @@ namespace LastShift.EditorTools
             pending = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32);
             pendingPath = path;
             cam.targetTexture = pending;
+            settleTicks = 1;
+            Relayout();
         }
 
+        /// <summary>
+        /// Recomputes the lesson's absolute placements for the space being captured.
+        /// The callout and its highlight are positioned in screen pixels, which mean
+        /// one thing on an overlay canvas at the batch screen size and another on a
+        /// camera canvas at capture size — without this, every lesson frame came back
+        /// with the card sliced off an edge or missing entirely.
+        /// </summary>
+        static void Relayout()
+        {
+            Canvas.ForceUpdateCanvases();
+            var lm = LastShift.Core.LevelManager.Instance;
+            var flow = lm != null ? lm.GetComponent<LastShift.Core.TutorialFlowController>() : null;
+            if (flow != null && flow.DevSteps != null) flow.DevSteps.DevRelayout();
+        }
+
+        /// <summary>
+        /// Reads the frame and restores everything. A capture straddles two ticks, and
+        /// a scene can load in between (the title card hands over to the room) — which
+        /// destroys the camera mid-capture. That must cost one frame, not the run: the
+        /// state is always cleared, whatever happened.
+        /// </summary>
         static void Finish()
         {
-            var tex = new Texture2D(Width, Height, TextureFormat.RGB24, false);
-            RenderTexture prevActive = RenderTexture.active;
-            RenderTexture.active = pending;
-            tex.ReadPixels(new Rect(0, 0, Width, Height), 0, 0);
-            tex.Apply();
-            RenderTexture.active = prevActive;
-
-            Directory.CreateDirectory(Path.GetDirectoryName(pendingPath));
-            File.WriteAllBytes(pendingPath, tex.EncodeToPNG());
-            Debug.Log("SMOKE_SHOT " + pendingPath);
-
-            pendingCam.targetTexture = pendingPrevTarget;
-            for (int i = 0; i < switched.Count; i++)
+            try
             {
-                if (switched[i] == null) continue;
-                switched[i].renderMode = RenderMode.ScreenSpaceOverlay;
-                switched[i].worldCamera = null;
-                switched[i].sortingOrder = switchedOrder[i];
-            }
-            switched.Clear();
-            switchedOrder.Clear();
+                if (pendingCam == null)
+                {
+                    Debug.Log("SMOKE_SHOT_SKIP camera gone mid-capture: " + pendingPath);
+                    return;
+                }
 
-            Object.DestroyImmediate(tex);
-            pending.Release();
-            Object.DestroyImmediate(pending);
-            pending = null;
-            pendingCam = null;
-            pendingPath = null;
+                var tex = new Texture2D(Width, Height, TextureFormat.RGB24, false);
+                RenderTexture prevActive = RenderTexture.active;
+                RenderTexture.active = pending;
+                tex.ReadPixels(new Rect(0, 0, Width, Height), 0, 0);
+                tex.Apply();
+                RenderTexture.active = prevActive;
+
+                Directory.CreateDirectory(Path.GetDirectoryName(pendingPath));
+                File.WriteAllBytes(pendingPath, tex.EncodeToPNG());
+                Debug.Log("SMOKE_SHOT " + pendingPath);
+
+                pendingCam.targetTexture = pendingPrevTarget;
+                Object.DestroyImmediate(tex);
+            }
+            finally
+            {
+                for (int i = 0; i < switched.Count; i++)
+                {
+                    if (switched[i] == null) continue;
+                    switched[i].renderMode = RenderMode.ScreenSpaceOverlay;
+                    switched[i].worldCamera = null;
+                    switched[i].sortingOrder = switchedOrder[i];
+                    switched[i].sortingLayerName = switchedLayer[i];
+                }
+                switched.Clear();
+                switchedOrder.Clear();
+                switchedLayer.Clear();
+                Relayout();
+
+                if (pending != null)
+                {
+                    pending.Release();
+                    Object.DestroyImmediate(pending);
+                }
+                pending = null;
+                pendingCam = null;
+                pendingPath = null;
+                settleTicks = 0;
+            }
         }
     }
 }

@@ -67,7 +67,8 @@ namespace LastShift.UI
 
         void SetHoleRects(Rect h, bool useHole)
         {
-            float w = UnityEngine.Screen.width, sh = UnityEngine.Screen.height;
+            Rect view = TutorialUiSpace.Viewport(canvas);
+            float w = view.width, sh = view.height;
             if (!useHole)
             {
                 TutorialUiSpace.Apply(bands[0], new Rect(0f, 0f, w, sh), canvas);

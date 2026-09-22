@@ -144,6 +144,18 @@ namespace LastShift.Machines
             // No ready command: keep the current one visible ("ALL SYSTEMS COOLDOWN").
         }
 
+        /// <summary>
+        /// Lesson-only: put the cursor on a given system without the player moving
+        /// it. Step 1 asks for the gate, so the cursor must start somewhere else —
+        /// otherwise «ДЖОЙСТИК ВВЕРХ» would be a no-op and teach nothing.
+        /// </summary>
+        public void TutorialPreselect(InteractableMachine machine)
+        {
+            if (machine == null) return;
+            for (int i = 0; i < items.Count; i++)
+                if (items[i].machine == machine) { Select(i); return; }
+        }
+
         void Select(int index)
         {
             if (SelectedIndex == index) return;

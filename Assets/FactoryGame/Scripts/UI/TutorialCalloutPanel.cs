@@ -97,7 +97,7 @@ namespace LastShift.UI
 
             UIBuilder.Panel(panel, "FooterLine", new Vector2(0.05f, 0.135f), new Vector2(0.95f, 0.14f),
                 new Color(0.34f, 0.7f, 0.45f, 0.45f));
-            footerText = UIBuilder.Label(panel, "Footer", Loc.TutorialFooterAck, 17, Amber, TextAnchor.MiddleCenter);
+            footerText = UIBuilder.Label(panel, "Footer", Loc.FooterNext, 17, Amber, TextAnchor.MiddleCenter);
             SetRect(footerText.rectTransform, new Vector2(0.05f, 0.02f), new Vector2(0.95f, 0.13f));
         }
 
@@ -178,6 +178,18 @@ namespace LastShift.UI
         /// <summary>Screen-pixel rect of the card (used by the headless layout checks).</summary>
         public Rect ScreenRect => panel != null ? TutorialUiSpace.ScreenRectOf(panel) : new Rect();
 
+        /// <summary>
+        /// Frame-grabber hook: place again from scratch, whatever moved. The headless
+        /// capture renders the canvas through a camera at a different size than the
+        /// batch screen, so every absolute placement has to be recomputed in that
+        /// space or the card lands outside the picture.
+        /// </summary>
+        public void Replace(Rect targetScreenRect, bool hasTarget)
+        {
+            if (!visible) return;
+            Place(targetScreenRect, hasTarget);
+        }
+
         /// <summary>Reposition against a moving target (only when it actually moved).</summary>
         public void Follow(Rect targetScreenRect, bool hasTarget)
         {
@@ -215,11 +227,12 @@ namespace LastShift.UI
             placedWithSize = size;
             float w = size.x;
             float h = size.y;
-            float sw = UnityEngine.Screen.width, sh = UnityEngine.Screen.height;
+            Rect view = TutorialUiSpace.Viewport(canvas);
+            float sw = view.width, sh = view.height;
 
             if (!hasTarget)
             {
-                TutorialUiSpace.ApplyPosition(panel, new Vector2(sw * 0.5f, sh * 0.5f));
+                TutorialUiSpace.ApplyPosition(panel, new Vector2(sw * 0.5f, sh * 0.5f), canvas);
                 connectorImg.color = new Color(0.97f, 0.82f, 0.4f, 0f);
                 return;
             }
@@ -253,7 +266,7 @@ namespace LastShift.UI
             float bestScore = float.MinValue;
             for (int i = 0; i < candidates.Length; i++)
             {
-                Rect r = TutorialUiSpace.ClampToScreen(candidates[i], pad);
+                Rect r = TutorialUiSpace.ClampTo(candidates[i], pad, view);
                 float score = 0f;
                 if (Overlaps(r, TutorialUiSpace.Expand(target, 12f))) score -= 1000f;   // never cover the target
                 if (!targetInTerminal && r.xMin < terminalEdge) score -= 300f;          // keep the command list clear
@@ -265,7 +278,7 @@ namespace LastShift.UI
                 if (score > bestScore) { bestScore = score; best = r; }
             }
 
-            TutorialUiSpace.ApplyPosition(panel, best.center);
+            TutorialUiSpace.ApplyPosition(panel, best.center, canvas);
             DrawConnector(best, target, canvas != null ? Mathf.Max(0.0001f, canvas.scaleFactor) : 1f);
         }
 

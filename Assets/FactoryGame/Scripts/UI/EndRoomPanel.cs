@@ -131,7 +131,7 @@ namespace LastShift.UI
                 menuTexts.Add(label);
                 menuBgs.Add(bg);
             }
-            var hint = UIBuilder.Label(menuRoot, "MenuHint", Loc.MenuHint, 15,
+            var hint = UIBuilder.Label(menuRoot, "MenuHint", Loc.FooterNext, 15,
                 new Color(0.4f, 0.55f, 0.45f), TextAnchor.MiddleCenter);
             SetRect(hint.rectTransform, new Vector2(0f, -0.28f), new Vector2(1f, -0.02f));
             menuRoot.gameObject.SetActive(false);
@@ -186,7 +186,7 @@ namespace LastShift.UI
         public void ShowRoomComplete()
         {
             LastShift.Audio.AudioManager.OnRoomWon();
-            Show(Loc.EngineerRetreated, Loc.RoomIsYours, Loc.NextRoomPrompt);
+            Show(Loc.EngineerRetreated, Loc.RoomIsYours, Loc.FooterNext);
         }
 
         public void ShowRoomStabilized()

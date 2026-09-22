@@ -10,16 +10,30 @@ using LastShift.Utilities;
 namespace LastShift.Core
 {
     /// <summary>
-    /// The interactive lesson in «УЧЕБНЫЙ ЦЕХ»: nine steps on the real machines, the
-    /// real engineer AI and the real interface. Each step darkens everything else,
-    /// marks exactly one target and waits for Submit; the practical steps hand the
-    /// room back and only allow the system the step is about. The lesson can never
-    /// hard-fail — a mistake resets the current small task, nothing more.
-    /// Input is the shared Up/Down/Enter funnel; no tutorial-only input path.
+    /// The lesson in «УЧЕБНЫЙ ЦЕХ»: THREE things done by hand, on the real machines,
+    /// the real engineer AI and the real interface.
+    ///   1. pick a system in the terminal list  (joystick)
+    ///   2. switch it on and see what it does   (red button)
+    ///   3. wait for «ПОДХОДЯЩИЙ МОМЕНТ», then fire
+    ///
+    /// It used to be nine steps, most of them cards of text at a frozen room, and it
+    /// sat behind a «пройти урок / начать смену» choice. At the live cabinet
+    /// (founder, 2026-09) nobody took it and nobody understood the game: «игрок не
+    /// успевает вообще понимать, что происходит». So the choice is gone — every
+    /// player walks this — and everything that was explained rather than done was
+    /// cut: the control resource, the resolve gauge and combinations are now learnt
+    /// by playing the first room, which announces them as they happen.
+    ///
+    /// The lesson can never hard-fail — a mistake replays the current situation,
+    /// nothing more. Input is the shared Up/Down/Enter funnel; no tutorial-only
+    /// input path.
     /// </summary>
     public class TutorialFlowController : MonoBehaviour
     {
-        const int TotalSteps = 9;
+        const int TotalSteps = 3;
+
+        /// <summary>How long «УПРАВЛЕНИЕ ОСВОЕНО» stays up before the shift starts.</summary>
+        const float DoneAutoStartSeconds = 3.2f;
 
         LevelManager lm;
         RoomRefs refs;
@@ -41,14 +55,9 @@ namespace LastShift.Core
         float repairWatch;
         const float StepRetrySeconds = 26f;
 
-        // Step 8 sub-sequence: gate, then conveyor. The lesson ends there — the arm
-        // was already taught (and practised) in steps 6-7.
-        enum ComboPhase { None, GateInfo, GateAct, BeltInfo, BeltAct }
-        ComboPhase combo = ComboPhase.None;
-        float gateClosedAt = -999f;
-
         // Completion panel.
         GameObject donePanel;
+        bool doneStarting;
 
         public void Init(LevelManager levelManager, RoomRefs roomRefs, HUDController hudController)
         {
@@ -77,9 +86,6 @@ namespace LastShift.Core
 
         // ================= target providers =================
 
-        static Func<Rect> WorldTarget(Transform t, Vector2 size, Vector2 offset) =>
-            () => t == null ? new Rect() : TutorialUiSpace.ScreenRectOfWorld((Vector2)t.position + offset, size);
-
         static Func<Rect> ZoneTarget(InteractableMachine m) => () =>
         {
             if (m == null) return new Rect();
@@ -98,84 +104,43 @@ namespace LastShift.Core
         {
             step = index;
             advancing = false;
-            combo = ComboPhase.None;
             armCycleSeen = false;
-            gateClosedAt = -999f;
             situationResetAt = Time.time;
             repairWatch = 0f;
 
             var terminalUi = TerminalUi;
             switch (step)
             {
-                case 1: // the engineer himself — irregular shape, corner brackets only
+                case 1: // pick a system — the joystick, and nothing else
                     SetGate(m => false);
-                    steps.ShowInfo(1, TotalSteps, Loc.TutStep1Header, Loc.TutStep1Body,
-                        lm.Engineer != null ? WorldTarget(lm.Engineer.transform, new Vector2(1.3f, 1.9f), new Vector2(0f, 0.25f)) : null,
-                        TutorialHighlightShape.Brackets, () => StartStep(2),
-                        // He spawns at the bottom of the room: the card belongs above
-                        // him, not squeezed into the bottom-right corner.
-                        TutorialCalloutSide.Above);
-                    break;
-
-                case 2: // repair console — rectangular object, rectangular frame
-                    SetGate(m => false);
-                    steps.ShowInfo(2, TotalSteps, Loc.TutStep2Header, Loc.TutStep2Body,
-                        refs.objectives.Count > 0
-                            ? WorldTarget(refs.objectives[0].transform, new Vector2(1.9f, 2.6f), new Vector2(0f, 0.15f))
-                            : null,
-                        TutorialHighlightShape.Rect, () => StartStep(3));
-                    break;
-
-                case 3: // command list — rectangular UI panel
-                    SetGate(m => false);
-                    steps.ShowInfo(3, TotalSteps, Loc.TutStep3Header, Loc.TutStep3Body,
-                        terminalUi != null ? UiTarget(terminalUi.CommandListRect) : null,
-                        TutorialHighlightShape.Rect, () => StartStep(4));
-                    break;
-
-                // The step that explained the lower-left detail panel is gone with
-                // the panel itself (live-cabinet playtest): nothing on screen
-                // describes the selected system any more. Its text stays in Loc
-                // (TutStep4*) for the coming rewrite.
-
-                case 4: // control-resource gauge in the top strip
-                    SetGate(m => false);
-                    steps.ShowInfo(4, TotalSteps, Loc.TutStep5Header, Loc.TutStep5Body,
-                        terminalUi != null ? UiTarget(terminalUi.Detail.ResourceRect) : null,
-                        TutorialHighlightShape.Rect, () => StartStep(5));
-                    break;
-
-                case 5: // engineer-resolve gauge in the top strip
-                    SetGate(m => false);
-                    steps.ShowInfo(5, TotalSteps, Loc.TutStep6Header, Loc.TutStep6Body,
-                        terminalUi != null ? UiTarget(terminalUi.Detail.ResolveRect) : null,
-                        TutorialHighlightShape.Rect, () => StartStep(6));
-                    break;
-
-                case 6: // the arm's real effective zone in world space
-                    SetGate(m => false);
+                    // The cursor starts on the belt so that «ДЖОЙСТИК ВВЕРХ» is a
+                    // real move to a different row, not a press that changes nothing.
+                    if (lm.Terminal != null) lm.Terminal.TutorialPreselect(conveyor);
                     OpenRouteThroughArm();
-                    steps.ShowInfo(6, TotalSteps, Loc.TutStep7Header, Loc.TutStep7Body,
-                        arm != null ? ZoneTarget(arm) : null,
-                        TutorialHighlightShape.Rect, () => StartStep(7));
+                    steps.ShowPractical(1, TotalSteps, Loc.TutStep1Header, Loc.TutStep1Body, Loc.TutStep1Footer,
+                        terminalUi != null ? UiTarget(terminalUi.CommandListRect) : null,
+                        TutorialHighlightShape.Rect, TutorialCalloutSide.Right, dimAround: true);
+                    steps.SetStatus("", false);
                     break;
 
-                case 7: // first activation: only the arm, only at the right moment
+                case 2: // switch it on: the gate cuts the route in front of him
+                    OpenRouteThroughArm();
+                    SetGate(m => m == door);
+                    steps.ShowPractical(2, TotalSteps, Loc.TutStep2Header, Loc.TutStep2Body, Loc.TutActFooter,
+                        door != null ? ZoneTarget(door) : null, TutorialHighlightShape.Rect);
+                    steps.SetStatus("", false);
+                    break;
+
+                case 3: // the moment: only the arm, and only while he is in its zone
                     OpenRouteThroughArm();
                     ResetSituation(null);
                     SetGate(m => m == arm);
-                    steps.ShowPractical(7, TotalSteps, Loc.TutStep8Header, Loc.TutStep8Body,
+                    steps.ShowPractical(3, TotalSteps, Loc.TutStep3Header, Loc.TutStep3Body, Loc.TutStep3Footer,
                         arm != null ? ZoneTarget(arm) : null, TutorialHighlightShape.Rect);
                     steps.SetStatus(Loc.TutWaitOutOfZone, false);
                     break;
 
-                case 8: // combination: gate → conveyor → arm, one target at a time
-                    OpenRouteThroughArm();
-                    ResetSituation(null);
-                    EnterComboPhase(ComboPhase.GateInfo);
-                    break;
-
-                case 9:
+                case 4:
                     ShowDonePanel();
                     break;
             }
@@ -207,98 +172,32 @@ namespace LastShift.Core
             if (door != null && door.IsClosed) door.ForceActivate();
         }
 
-        // ================= step 8: the combination sub-sequence =================
-
-        void EnterComboPhase(ComboPhase phase)
-        {
-            combo = phase;
-            situationResetAt = Time.time;
-            switch (phase)
-            {
-                case ComboPhase.GateInfo:
-                    SetGate(m => false);
-                    steps.ShowInfo(8, TotalSteps, Loc.TutStep9Header, Loc.TutStep9Body,
-                        door != null ? ZoneTarget(door) : null, TutorialHighlightShape.Rect,
-                        () => EnterComboPhase(ComboPhase.GateAct));
-                    break;
-
-                case ComboPhase.GateAct:
-                    SetGate(m => m == door);
-                    steps.ShowPractical(8, TotalSteps, Loc.TutComboGateHeader, Loc.TutComboGateBody,
-                        door != null ? ZoneTarget(door) : null, TutorialHighlightShape.Rect);
-                    steps.SetStatus(Loc.TutorialFooterAction, false);
-                    break;
-
-                case ComboPhase.BeltInfo:
-                    SetGate(m => false);
-                    steps.ShowInfo(8, TotalSteps, Loc.TutComboConveyorHeader, Loc.TutComboConveyorBody,
-                        conveyor != null ? ZoneTarget(conveyor) : null, TutorialHighlightShape.Rect,
-                        () => EnterComboPhase(ComboPhase.BeltAct));
-                    break;
-
-                case ComboPhase.BeltAct:
-                    SetGate(m => m == conveyor);
-                    steps.ShowPractical(8, TotalSteps, Loc.TutComboConveyorHeader, Loc.TutComboConveyorBody,
-                        conveyor != null ? ZoneTarget(conveyor) : null, TutorialHighlightShape.Rect);
-                    break;
-            }
-        }
-
-        /// <summary>A mistake resets this small sequence only — never the whole lesson.</summary>
-        void ResetCombo()
-        {
-            if (advancing) return;
-            lm.ShowToast(Loc.TutSequenceReset, 2.8f, warning: true);
-            gateClosedAt = -999f;
-            ResetSituation(null); // re-opens the route as well
-            EnterComboPhase(ComboPhase.GateAct);
-        }
-
         // ================= machine / engineer signals =================
 
         void OnJudged(InteractableMachine machine, bool effective)
         {
             if (advancing) return;
 
-            if (step == 7 && machine == arm && !effective)
+            if (step == 2 && machine == door)
+            {
+                // Judged fires before the slab toggles: an open gate means this
+                // activation is the closing move the step asks for.
+                if (!door.IsClosed)
+                {
+                    steps.SetHighlightColor(TutorialHighlightTarget.Green);
+                    steps.SetStatus(Loc.TutStep2Done, false);
+                    Advance(3, 2.6f);
+                }
+                return;
+            }
+
+            if (step == 3 && machine == arm && !effective)
             {
                 // Fired too early: a warning and a fresh approach, never a failure.
                 steps.SetStatus(Loc.TutEarlyActivation, true);
                 lm.ShowToast(Loc.TutEarlyActivation, 2.8f, warning: true);
                 steps.LockInput(0.8f);
                 StartCoroutine(RetryAfter(1.6f));
-                return;
-            }
-
-            if (step != 8) return;
-
-            switch (combo)
-            {
-                case ComboPhase.GateAct:
-                    // Judged fires before the slab toggles: an open gate means this
-                    // activation is the closing move the step asks for.
-                    if (machine == door && !door.IsClosed)
-                    {
-                        gateClosedAt = Time.time;
-                        EnterComboPhase(ComboPhase.BeltInfo);
-                    }
-                    break;
-
-                case ComboPhase.BeltAct:
-                    if (machine == conveyor)
-                    {
-                        if (gateClosedAt > 0f)
-                        {
-                            // Gate then belt: that is the combination. «ПЕРЕНАПРАВЛЕНИЕ»
-                            // is announced by the real combination tracker when it
-                            // genuinely lands, so no toast is duplicated here.
-                            steps.SetHighlightColor(TutorialHighlightTarget.Green);
-                            steps.SetStatus(effective ? Loc.ComboRedirect : Loc.EffectiveActivation, false);
-                            Advance(9, 2.4f);
-                        }
-                        else ResetCombo();
-                    }
-                    break;
             }
         }
 
@@ -313,13 +212,13 @@ namespace LastShift.Core
         void OnStunned(string source)
         {
             if (advancing) return;
-            if (step == 7)
+            if (step == 3)
             {
                 // «ЭФФЕКТИВНОЕ ВОЗДЕЙСТВИЕ» and «РЕШИМОСТЬ −10» already arrive through
                 // the shared feedback path; the step just confirms and moves on.
                 steps.SetHighlightColor(TutorialHighlightTarget.Green);
                 steps.SetStatus(Loc.EffectiveActivation, false);
-                Advance(8, 2.4f);
+                Advance(4, 2.4f);
             }
         }
 
@@ -352,8 +251,8 @@ namespace LastShift.Core
         {
             if (lm == null || steps == null) return;
 
-            // TutorialStepController applies the clock freeze and the input lock
-            // itself (execution order -60, before the terminal polls Submit).
+            // TutorialStepController applies the input lock itself (execution order
+            // -60, before the terminal polls Submit).
             bool doneVisible = donePanel != null && donePanel.activeSelf;
             steps.ExternalBlock = doneVisible;
 
@@ -361,18 +260,38 @@ namespace LastShift.Core
             if (canvas != null) canvas.enabled = !lm.IsPaused;
             if (lm.IsPaused) return;
 
-            if (doneVisible) { HandleDoneMenu(); return; }
+            if (doneVisible) { HandleDonePanel(); return; }
             if (advancing) return;
 
             // Safety net: the engineer must never finish the training repair.
             if (refs.objectives.Count > 0 && refs.objectives[0].Progress01 > 0.3f)
                 OnObjectiveRepaired();
 
-            if (step == 7) UpdateFirstActivation();
-            else if (step == 8) UpdateCombination();
+            if (step == 1) UpdateSelection();
+            else if (step == 2) UpdateGateStep();
+            else if (step == 3) UpdateTheMoment();
         }
 
-        void UpdateFirstActivation()
+        /// <summary>Step 1 ends when the player has actually steered to the gate.</summary>
+        void UpdateSelection()
+        {
+            if (lm.Terminal == null || door == null) return;
+            if (lm.Terminal.Selected == door)
+            {
+                // Chosen: give the room back to the eye before the next step starts.
+                steps.Undim();
+                steps.SetHighlightColor(TutorialHighlightTarget.Green);
+                Advance(2, 0.7f);
+            }
+        }
+
+        void UpdateGateStep()
+        {
+            WatchRepairStall();
+            WatchStall();
+        }
+
+        void UpdateTheMoment()
         {
             if (arm == null) return;
             bool inZone = arm.EngineerInEffectiveZone;
@@ -388,31 +307,21 @@ namespace LastShift.Core
             WatchStall();
         }
 
-        void UpdateCombination()
+        /// <summary>
+        /// Slipping through to the panel means the step's trap failed: replay the
+        /// approach once he has visibly been repairing for a moment.
+        /// </summary>
+        void WatchRepairStall()
         {
-            if (combo == ComboPhase.BeltAct && conveyor != null)
+            var e = lm.Engineer;
+            bool repairing = e != null && e.Fsm != null &&
+                e.Fsm.CurrentId == LastShift.Engineer.EngineerStateId.RepairObjective;
+            if (repairing)
             {
-                bool onBelt = conveyor.EngineerInEffectiveZone;
-                steps.SetStatus(onBelt ? Loc.TutGoodMoment : Loc.TutWaitOutOfZone, false);
-                steps.SetHighlightColor(onBelt ? TutorialHighlightTarget.Green : TutorialHighlightTarget.Amber);
+                repairWatch += Time.deltaTime;
+                if (repairWatch >= 2f) { repairWatch = 0f; ResetSituation(null); }
             }
-
-            // Slipping through to the panel means the trap failed: reset this
-            // sequence (and only it) after he visibly repairs for a moment.
-            if (combo == ComboPhase.GateAct || combo == ComboPhase.BeltAct)
-            {
-                var e = lm.Engineer;
-                bool repairing = e != null && e.Fsm != null &&
-                    e.Fsm.CurrentId == LastShift.Engineer.EngineerStateId.RepairObjective;
-                if (repairing)
-                {
-                    repairWatch += Time.deltaTime;
-                    if (repairWatch >= 2f) { repairWatch = 0f; ResetCombo(); }
-                }
-                else repairWatch = 0f;
-            }
-
-            WatchStall();
+            else repairWatch = 0f;
         }
 
         /// <summary>Nothing happened for a long while: replay the situation silently.</summary>
@@ -445,24 +354,19 @@ namespace LastShift.Core
 
             var title = UIBuilder.Label(card, "Title", Loc.TutorialDoneHeader, 52,
                 new Color(0.78f, 1f, 0.7f), TextAnchor.MiddleCenter);
-            SetRect(title.rectTransform, new Vector2(0f, 0.68f), new Vector2(1f, 0.86f));
-            UIBuilder.Panel(card, "TitleLine", new Vector2(0.2f, 0.665f), new Vector2(0.8f, 0.6685f),
+            SetRect(title.rectTransform, new Vector2(0f, 0.62f), new Vector2(1f, 0.82f));
+            UIBuilder.Panel(card, "TitleLine", new Vector2(0.2f, 0.605f), new Vector2(0.8f, 0.6085f),
                 new Color(0.34f, 0.7f, 0.45f, 0.55f));
 
-            var body = UIBuilder.Label(card, "Body", Loc.TutorialDoneBody, 24,
-                new Color(0.7f, 0.95f, 0.76f), TextAnchor.UpperCenter);
-            SetRect(body.rectTransform, new Vector2(0.06f, 0.4f), new Vector2(0.94f, 0.64f));
+            var body = UIBuilder.Label(card, "Body", Loc.TutorialDoneBody, 28,
+                new Color(0.7f, 0.95f, 0.76f), TextAnchor.MiddleCenter);
+            SetRect(body.rectTransform, new Vector2(0.06f, 0.34f), new Vector2(0.94f, 0.58f));
 
-            RectTransform button = UIBuilder.Panel(card, "StartButton", new Vector2(0.28f, 0.2f), new Vector2(0.72f, 0.31f),
-                new Color(0.1f, 0.3f, 0.16f, 0.95f));
-            Frame(button, new Color(0.95f, 0.85f, 0.45f, 0.85f), 2f);
-            var doneButton = UIBuilder.Label(button, "Label", "> " + Loc.TutorialStartShift + " <", 28,
-                new Color(0.95f, 1f, 0.7f), TextAnchor.MiddleCenter);
-            doneButton.fontStyle = FontStyle.Bold;
-
-            var hint = UIBuilder.Label(card, "Hint", Loc.FooterContinue, 16,
-                new Color(0.45f, 0.62f, 0.5f), TextAnchor.MiddleCenter);
-            SetRect(hint.rectTransform, new Vector2(0f, 0.1f), new Vector2(1f, 0.17f));
+            // No menu here on purpose: the shift starts by itself. One press fewer
+            // between a person at the cabinet and the game.
+            var starts = UIBuilder.Label(card, "ShiftStarts", Loc.TutorialDoneShiftStarts, 26,
+                new Color(0.95f, 0.85f, 0.45f), TextAnchor.MiddleCenter);
+            SetRect(starts.rectTransform, new Vector2(0f, 0.18f), new Vector2(1f, 0.27f));
 
             donePanel.SetActive(false);
         }
@@ -522,47 +426,63 @@ namespace LastShift.Core
             Time.timeScale = 1f;
             donePanel.SetActive(true);
             Audio.AudioManager.Play("room_won", Audio.SfxBus.UI, 0.5f);
+            StartCoroutine(AutoStartShift());
         }
 
-        void HandleDoneMenu()
+        IEnumerator AutoStartShift()
+        {
+            yield return new WaitForSecondsRealtime(DoneAutoStartSeconds);
+            StartShift();
+        }
+
+        /// <summary>The red button only makes the waiting shorter; it is not required.</summary>
+        void HandleDonePanel()
         {
             if (steps.BlocksGameInput) return;
             if (!GameInput.ConfirmPressed) return;
             Audio.UiSfx.Confirm();
-            // «НАЧАТЬ СМЕНУ»: straight into the first real room — the instruction
-            // pages have already been read, so they are never repeated.
+            StartShift();
+        }
+
+        void StartShift()
+        {
+            if (doneStarting) return;
+            doneStarting = true;
             GameManager.TutorialRequested = false;
             SceneLoader.Load(GameManager.Level1Scene);
         }
 
-        /// <summary>Smoke-test introspection: current lesson step (1..9).</summary>
+        /// <summary>Smoke-test introspection: current lesson step (1..3).</summary>
         public int DevStep => step;
 
         /// <summary>
-        /// Smoke-test introspection: the system the current practical step needs
-        /// (null while a text step is up).
+        /// Smoke-test introspection: the system the current step needs SELECTED
+        /// (null unless the step is the selection one).
+        /// </summary>
+        public InteractableMachine DevRequiredSelection => step == 1 ? (InteractableMachine)door : null;
+
+        /// <summary>
+        /// Smoke-test introspection: the system the current step needs ACTIVATED
+        /// (null while no activation is asked for).
         /// </summary>
         public InteractableMachine DevRequiredMachine
         {
             get
             {
-                if (step == 7) return arm;
-                if (step != 8) return null;
-                switch (combo)
-                {
-                    case ComboPhase.GateAct: return door;
-                    case ComboPhase.BeltAct: return conveyor;
-                    default: return null;
-                }
+                if (step == 2) return door;
+                if (step == 3) return arm;
+                return null;
             }
         }
 
         /// <summary>
-        /// Smoke-test guard: a practical step must never require a system the player
-        /// is not allowed to activate. Must always be false.
+        /// Smoke-test guard: a step must never require a system the player is not
+        /// allowed to activate, or a route the previous step left blocked.
+        /// Must always be false.
         /// </summary>
         public bool DevRouteBlocked =>
-            step == 7 && door != null && door.IsClosed;
+            step == 3 && door != null && door.IsClosed;
+
         /// <summary>Smoke-test introspection: the step presenter (layout checks).</summary>
         public TutorialStepController DevSteps => steps;
     }

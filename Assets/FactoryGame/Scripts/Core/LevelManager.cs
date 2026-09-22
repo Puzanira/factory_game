@@ -269,16 +269,17 @@ namespace LastShift.Core
             hud.ShowToast(string.Format(Data.Loc.ResolveLossToast, Mathf.RoundToInt(amount)), 2.2f);
         }
 
+        /// <summary>
+        /// One toast, and only the goal. «ДЖОЙСТИК — ВЫБРАТЬ СИСТЕМУ», «КРАСНАЯ
+        /// КНОПКА — АКТИВИРОВАТЬ» and «ВЫБРАННАЯ СИСТЕМА ПОДСВЕЧЕНА» used to follow
+        /// it: four toasts in fourteen seconds, overlapping each other and the
+        /// combination hints. Every player now arrives here straight from the
+        /// lesson, where both controls were used by hand.
+        /// </summary>
         System.Collections.IEnumerator TutorialHints()
         {
             yield return new WaitForSeconds(2f);
             if (hud != null && !RoomEnded) hud.ShowToast(Data.Loc.HintGoal, 4.5f);
-            yield return new WaitForSeconds(4.5f);
-            if (hud != null && !RoomEnded) hud.ShowToast(Data.Loc.HintSelect, 4.5f);
-            yield return new WaitForSeconds(4.5f);
-            if (hud != null && !RoomEnded) hud.ShowToast(Data.Loc.HintActivate, 4.5f);
-            yield return new WaitForSeconds(4.5f);
-            if (hud != null && !RoomEnded) hud.ShowToast(Data.Loc.HintHighlight, 4.5f);
         }
 
         void SpawnEngineer()
