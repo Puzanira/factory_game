@@ -6,19 +6,17 @@ using LastShift.Data;
 namespace LastShift.UI
 {
     /// <summary>
-    /// The two permanent readouts of the factory terminal — «РЕШИМОСТЬ ИНЖЕНЕРА»
-    /// and «РЕСУРС УПРАВЛЕНИЯ» — laid out as one thin strip along the very top of
-    /// the play area, left to right: resolve bar, then the control-resource cells.
+    /// The two permanent readouts of the factory terminal, each in its own corner
+    /// (founder, 2026-09-22):
+    ///   «РЕСУРС УПРАВЛЕНИЯ» — bottom of the terminal column, where it used to live
+    ///   «РЕШИМОСТЬ ИНЖЕНЕРА» — top right of the play area
     ///
-    /// They used to sit in a lower-left detail panel together with the selected
-    /// system's name, purpose and zone status. The live-cabinet playtest (founder,
-    /// 2026-09) killed that panel: at the machine it read as noise in the corner of
-    /// the eye and nobody looked at it. The two gauges survived the panel and moved
-    /// up here, where they are in the player's line of sight; the descriptive rows
-    /// went away with it.
-    ///
-    /// Pure view; built in code like the rest of the UI. Exposes its sub-rects so
-    /// the tutorial can highlight one gauge at a time.
+    /// They spent one pass together as a thin strip along the top of the play area,
+    /// after the lower-left detail panel that had held them was killed by the
+    /// live-cabinet playtest. The strip put the player's own resource and the
+    /// target's resolve side by side, as if they were the same kind of thing; split
+    /// across two corners, each reads as what it is — yours down by your commands,
+    /// his up by the room.
     /// </summary>
     public class TacticalDetailPanelController
     {
@@ -28,57 +26,64 @@ namespace LastShift.UI
         readonly List<Image> resourceCells = new List<Image>();
         float resourceFlashUntil;
 
-        RectTransform panelRect;
-        RectTransform resourceRow;
-        RectTransform resolveRow;
-
-        /// <summary>The whole top strip.</summary>
-        public RectTransform PanelRect => panelRect;
-        /// <summary>Control-resource row (tutorial step «РЕСУРС УПРАВЛЕНИЯ»).</summary>
-        public RectTransform ResourceRect => resourceRow;
-        /// <summary>Engineer-resolve row (tutorial step «РЕШИМОСТЬ ИНЖЕНЕРА»).</summary>
-        public RectTransform ResolveRect => resolveRow;
 
         /// <summary>
-        /// Builds the strip on the game canvas (anchors are screen-relative). It is
-        /// kept clear of the terminal frame on the left and of the room title, which
-        /// now flashes just below it.
+        /// Builds both readouts. <paramref name="canvas"/> is the game canvas (the
+        /// resolve bar sits in its top-right corner); <paramref name="terminalScreen"/>
+        /// is the CRT screen of the command terminal, whose bottom the control
+        /// resource takes back — the command list stops above it.
         /// </summary>
-        public void Build(Transform canvas, Vector2 anchorMin, Vector2 anchorMax)
+        public void Build(Transform canvas, Transform terminalScreen)
         {
-            panelRect = UIBuilder.PanelPx(canvas, "TopStatusStrip", anchorMin, anchorMax,
+            BuildResolve(canvas);
+            BuildResource(terminalScreen);
+        }
+
+        /// <summary>Top-right of the play area: his resolve, over his room.</summary>
+        void BuildResolve(Transform canvas)
+        {
+            RectTransform panel = UIBuilder.PanelPx(canvas, "ResolveReadout",
+                new Vector2(0.60f, 0.905f), new Vector2(0.995f, 0.99f),
                 Vector2.zero, Vector2.zero, new Color(0.01f, 0.04f, 0.025f, 0.88f));
-            panelRect.GetComponent<Image>().raycastTarget = false;
-            var outline = panelRect.gameObject.AddComponent<Outline>();
+            panel.GetComponent<Image>().raycastTarget = false;
+            var outline = panel.gameObject.AddComponent<Outline>();
             outline.effectColor = new Color(0.35f, 0.7f, 0.45f, 0.45f);
             outline.effectDistance = new Vector2(1.5f, 1.5f);
 
-            // Left half: «РЕШИМОСТЬ ИНЖЕНЕРА» + bar, on one line.
-            resolveRow = UIBuilder.Panel(panelRect, "ResolveRow",
-                new Vector2(0.015f, 0.12f), new Vector2(0.62f, 0.88f), new Color(0f, 0f, 0f, 0f));
-            resolveRow.GetComponent<Image>().raycastTarget = false;
-            resolveLabel = UIBuilder.Label(resolveRow, "ResolveLabel", Loc.EngineerResolve, 19,
+            resolveLabel = UIBuilder.Label(panel, "ResolveLabel", Loc.EngineerResolve, 19,
                 new Color(1f, 0.72f, 0.42f), TextAnchor.MiddleLeft);
-            SetRect(resolveLabel.rectTransform, new Vector2(0f, 0f), new Vector2(0.42f, 1f));
-            resolveFill = UIBuilder.Bar(resolveRow, "ResolveBar", new Vector2(0.44f, 0.26f), new Vector2(1f, 0.74f),
+            SetRect(resolveLabel.rectTransform, new Vector2(0.03f, 0.12f), new Vector2(0.52f, 0.88f));
+            resolveFill = UIBuilder.Bar(panel, "ResolveBar", new Vector2(0.54f, 0.28f), new Vector2(0.97f, 0.72f),
                 Vector2.zero, Vector2.zero, new Color(0.12f, 0.1f, 0.08f), new Color(1f, 0.6f, 0.25f));
+        }
 
-            // Right half: «РЕСУРС УПРАВЛЕНИЯ ■ ■ ■».
-            resourceRow = UIBuilder.Panel(panelRect, "ResourceRow",
-                new Vector2(0.65f, 0.12f), new Vector2(0.985f, 0.88f), new Color(0f, 0f, 0f, 0f));
-            resourceRow.GetComponent<Image>().raycastTarget = false;
-            resourceLabel = UIBuilder.Label(resourceRow, "ResourceLabel", Loc.ControlResource, 19,
-                new Color(0.6f, 0.9f, 0.68f), TextAnchor.MiddleLeft);
-            SetRect(resourceLabel.rectTransform, new Vector2(0f, 0f), new Vector2(0.70f, 1f));
+        /// <summary>Bottom of the terminal column: your resource, under your commands.</summary>
+        void BuildResource(Transform terminalScreen)
+        {
+            RectTransform block = UIBuilder.Panel(terminalScreen, "ResourceReadout",
+                new Vector2(0.02f, 0.02f), new Vector2(0.98f, 0.155f), new Color(0f, 0f, 0f, 0f));
+            block.GetComponent<Image>().raycastTarget = false;
+
+            UIBuilder.Panel(block, "TopLine", new Vector2(0.02f, 0.965f), new Vector2(0.98f, 0.98f),
+                new Color(0.35f, 0.7f, 0.45f, 0.5f));
+
+            resourceLabel = UIBuilder.Label(block, "ResourceLabel", Loc.ControlResource, 19,
+                new Color(0.6f, 0.9f, 0.68f), TextAnchor.MiddleCenter);
+            SetRect(resourceLabel.rectTransform, new Vector2(0f, 0.55f), new Vector2(1f, 0.93f));
+
+            // Three cells, centred under the label.
             int maxCells = TacticsData.Get().resourceMax;
+            const float cellW = 0.105f, gap = 0.04f;
+            float total = maxCells * cellW + (maxCells - 1) * gap;
+            float x = (1f - total) * 0.5f;
             for (int i = 0; i < maxCells; i++)
             {
                 var cellGO = new GameObject("Cell" + i);
-                cellGO.transform.SetParent(resourceRow, false);
+                cellGO.transform.SetParent(block, false);
                 var cellRt = cellGO.AddComponent<RectTransform>();
-                float x0 = 0.725f + i * 0.093f;
-                cellRt.anchorMin = new Vector2(x0, 0.24f);
-                cellRt.anchorMax = new Vector2(x0 + 0.072f, 0.76f);
+                float x0 = x + i * (cellW + gap);
+                cellRt.anchorMin = new Vector2(x0, 0.14f);
+                cellRt.anchorMax = new Vector2(x0 + cellW, 0.44f);
                 cellRt.offsetMin = Vector2.zero;
                 cellRt.offsetMax = Vector2.zero;
                 var img = cellGO.AddComponent<Image>();

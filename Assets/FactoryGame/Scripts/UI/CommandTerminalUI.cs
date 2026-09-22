@@ -114,7 +114,10 @@ namespace LastShift.UI
             // clipped viewport: rows shrink to fit, and if there are too many for a
             // readable height the list scrolls with the selection instead of
             // running off the panel.
-            const float ListBottom = 0.05f, ListTop = 0.888f;
+            // The list stops above the control-resource block at the bottom of the
+            // column (founder, 2026-09-22: «ресурс управления надо перенести вниз в
+            // левый нижний, где он и был»).
+            const float ListBottom = 0.175f, ListTop = 0.888f;
             var rowsGO = new GameObject("Rows");
             rowsGO.transform.SetParent(screen, false);
             rowsRt = rowsGO.AddComponent<RectTransform>();
@@ -148,10 +151,10 @@ namespace LastShift.UI
             scrollUpMark.enabled = false;
             scrollDownMark.enabled = false;
 
-            // The two permanent gauges live on the game canvas, not in this panel:
-            // a thin strip along the top row of the play area, clear of the
-            // terminal frame on the left.
-            detail.Build(root, new Vector2(0.29f, 0.905f), new Vector2(0.995f, 0.99f));
+            // The two permanent gauges, each in its own corner: the control resource
+            // at the bottom of this column, the engineer's resolve in the top right
+            // of the play area.
+            detail.Build(root, screen);
         }
 
         void AddBolt(RectTransform frame, Vector2 anchor)
