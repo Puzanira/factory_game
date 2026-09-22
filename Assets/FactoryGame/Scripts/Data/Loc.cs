@@ -211,8 +211,10 @@ namespace LastShift.Data
             "Оглушите инженера манипулятором, когда он будет вблизи.\n" +
             "Выберите манипулятор и нажмите красную кнопку, когда отображается «Подходящий момент».";
         public const string TutStep3Footer = "ДЖОЙСТИК — ВЫБОР · КРАСНАЯ КНОПКА — ВКЛЮЧИТЬ";
-        public const string TutWaitOutOfZone = "ЦЕЛЬ ВНЕ ЗОНЫ — ПОДОЖДИТЕ";
-        public const string TutGoodMoment = "ПОДХОДЯЩИЙ МОМЕНТ";
+        // The step shows no status line of its own: «ПОДХОДЯЩИЙ МОМЕНТ» is the card's
+        // title and the mark in the manipulator's row already, and «ЦЕЛЬ ВНЕ ЗОНЫ —
+        // ПОДОЖДИТЕ» / «ЭФФЕКТИВНОЕ ВОЗДЕЙСТВИЕ» under it just got in the way
+        // (founder, 2026-09-22). Only a genuine mistake speaks, and it speaks as a toast.
         public const string TutEarlyActivation = "ЦЕЛЬ ВНЕ ЗОНЫ. ДОЖДИТЕСЬ ПОДХОДЯЩЕГО МОМЕНТА.";
 
         // Completion — no menu: the shift starts by itself a moment later.

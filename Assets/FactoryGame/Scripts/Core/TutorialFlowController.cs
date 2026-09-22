@@ -139,7 +139,11 @@ namespace LastShift.Core
                     SetGate(m => m == arm);
                     steps.ShowPractical(3, TotalSteps, Loc.TutStep3Header, Loc.TutStep3Body, Loc.TutStep3Footer,
                         arm != null ? ZoneTarget(arm) : null, TutorialHighlightShape.Rect);
-                    steps.SetStatus(Loc.TutWaitOutOfZone, false);
+                    // No status line on this step: «ПОДХОДЯЩИЙ МОМЕНТ» is already the
+                    // card's title AND the mark in the manipulator's row, and a third
+                    // copy of it (plus «ЭФФЕКТИВНОЕ ВОЗДЕЙСТВИЕ» after the hit) only
+                    // got in the way. The row is the thing to watch.
+                    steps.SetStatus("", false);
                     break;
 
                 case 4:
@@ -196,7 +200,7 @@ namespace LastShift.Core
             if (step == 3 && machine == arm && !effective)
             {
                 // Fired too early: a warning and a fresh approach, never a failure.
-                steps.SetStatus(Loc.TutEarlyActivation, true);
+                // The warning is a toast, not a permanent line on the card.
                 lm.ShowToast(Loc.TutEarlyActivation, 2.8f, warning: true);
                 steps.LockInput(0.8f);
                 StartCoroutine(RetryAfter(1.6f));
@@ -208,7 +212,6 @@ namespace LastShift.Core
             yield return new WaitForSecondsRealtime(seconds);
             if (advancing) yield break;
             ResetSituation(null);
-            steps.SetStatus(Loc.TutWaitOutOfZone, false);
         }
 
         void OnStunned(string source)
@@ -217,9 +220,8 @@ namespace LastShift.Core
             if (step == 3)
             {
                 // «ЭФФЕКТИВНОЕ ВОЗДЕЙСТВИЕ» and «РЕШИМОСТЬ −10» already arrive through
-                // the shared feedback path; the step just confirms and moves on.
+                // the shared feedback path; the step just goes green and moves on.
                 steps.SetHighlightColor(TutorialHighlightTarget.Green);
-                steps.SetStatus(Loc.EffectiveActivation, false);
                 Advance(4, 2.4f);
             }
         }
@@ -314,7 +316,6 @@ namespace LastShift.Core
         {
             if (arm == null) return;
             bool inZone = arm.EngineerInEffectiveZone;
-            steps.SetStatus(inZone ? Loc.TutGoodMoment : Loc.TutWaitOutOfZone, false);
             steps.SetHighlightColor(inZone
                 ? TutorialHighlightTarget.Green
                 : TutorialHighlightTarget.Amber);
